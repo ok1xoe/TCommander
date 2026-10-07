@@ -25,7 +25,7 @@ struct ContentView: View {
         .frame(minWidth: 900, minHeight: 520)
         .overlay(alignment: .bottomTrailing) {
             if let busy = model.busy {
-                HStack { ProgressView().controlSize(.small); Text(busy) }
+                HStack { ProgressView().controlSize(.small); Text(L(busy)) }
                     .padding(8).background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 8)).padding(40)
             }
         }
@@ -43,7 +43,7 @@ struct CommandLineBar: View {
                 .onSubmit { model.runCommandLine() }
                 .onKeyPress(.upArrow) { model.historyPrevious(); return .handled }
                 .onKeyPress(.downArrow) { model.historyNext(); return .handled }
-            if let s = model.status { Text(s).font(.system(size: 11)).foregroundStyle(.secondary) }
+            if let s = model.status { Text(L(s)).font(.system(size: 11)).foregroundStyle(.secondary) }
         }
         .padding(.horizontal, 8).padding(.vertical, 5)
         .background(.bar)
@@ -82,9 +82,9 @@ struct JobsBar: View {
             VStack(spacing: 4) {
                 ForEach(jobs.jobs) { job in
                     HStack(spacing: 8) {
-                        Text(job.title).font(.system(size: 12, weight: .medium)).lineLimit(1).frame(maxWidth: 260, alignment: .leading)
+                        Text(L(job.title)).font(.system(size: 12, weight: .medium)).lineLimit(1).frame(maxWidth: 260, alignment: .leading)
                         ProgressView(value: job.progress.fraction).frame(maxWidth: 260)
-                        Text(job.detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                        Text(L(job.detail)).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                         Spacer()
                         if job.state != .queued {
                             Button { jobs.togglePause(job) } label: { Image(systemName: job.state == .paused ? "play.fill" : "pause.fill") }

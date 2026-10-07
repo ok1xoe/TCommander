@@ -117,11 +117,11 @@ struct StatusBar: View {
             if let message {
                 Text(message).foregroundStyle(.red).lineLimit(1)
             } else if tab.isBranch && s.markedCount == 0 {
-                Text("Branch view · \(s.fileCount) souborů · \(Fmt.human(s.totalBytes))").foregroundStyle(.orange)
+                Text(L("Branch view · \(s.fileCount) souborů · \(Fmt.human(s.totalBytes))")).foregroundStyle(.orange)
             } else if s.markedCount > 0 {
-                Text("Označeno \(s.markedCount) z \(s.fileCount + s.dirCount) · \(Fmt.human(s.markedBytes))").foregroundStyle(.red)
+                Text(L("Označeno \(s.markedCount) z \(s.fileCount + s.dirCount) · \(Fmt.human(s.markedBytes))")).foregroundStyle(.red)
             } else {
-                Text("\(s.fileCount) souborů, \(s.dirCount) adresářů · \(Fmt.human(s.totalBytes))")
+                Text(L("\(s.fileCount) souborů, \(s.dirCount) adresářů · \(Fmt.human(s.totalBytes))"))
             }
             Spacer()
             Text(freeSpace())
@@ -134,7 +134,7 @@ struct StatusBar: View {
     private func freeSpace() -> String {
         guard let v = try? tab.path.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey]),
               let free = v.volumeAvailableCapacityForImportantUsage, let total = v.volumeTotalCapacity else { return "" }
-        return "\(Fmt.human(free)) volných z \(Fmt.human(Int64(total)))"
+        return L("\(Fmt.human(free)) volných z \(Fmt.human(Int64(total)))")
     }
 }
 

@@ -5,6 +5,7 @@ import TCCore
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         ContentColumnRegistry.shared.register(BuiltinContentColumns())
+        WindowTranslator.install()
         PluginHost.shared.reload()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
