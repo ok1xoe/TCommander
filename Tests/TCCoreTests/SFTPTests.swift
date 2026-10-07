@@ -117,3 +117,20 @@ import Foundation
         #expect(tab.remote == nil && tab.path == d.standardizedFileURL)
     }
 }
+
+@Suite(.serialized, .enabled(if: MockSSHD.available, "sshd nelze na tomto stroji spustit")) struct SFTPProxyIntegrationTests {
+    @Test(arguments: ["socks5", "connect"]) func sftpWorksThroughProxy(_ mode: String) throws {
+        let d = try makeTempDir()
+        let root = d.appendingPathComponent("server"); try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try write(root, "via-proxy.txt", "x")
+        let srv = try MockSSHD(), proxy = try MockProxy(mode: mode, dir: d)
+        defer { srv.stop(); proxy.stop(); try? FileManager.default.removeItem(at: d) }
+        var conn = srv.connection()
+        conn.proxy = (mode == "socks5" ? "socks5" : "http") + "://127.0.0.1:\(proxy.port)"
+        let fs = SFTPFileSystem(connection: conn)
+        defer { fs.close() }
+        let names = try fs.list(root, includeHidden: true).map(\.name)
+        #expect(names == ["via-proxy.txt"], "\(mode): \(names)")
+        #expect(proxy.connections >= 1, "\(mode): spojení nešlo přes proxy")
+    }
+}

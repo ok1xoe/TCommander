@@ -277,3 +277,32 @@ import Foundation
         #expect(d.timeIntervalSince1970 == 1_705_244_400)      // 2024-01-15 00:00 v Tokiu = 2024-01-14 15:00 UTC
     }
 }
+
+@Suite(.serialized) struct FTPProxyTests {
+    @Test func ftpWorksThroughSocks5AndTrafficGoesThroughTheProxy() throws {
+        let d = try makeTempDir()
+        let root = d.appendingPathComponent("server"); try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try write(root, "a.txt", "hello through proxy"); try write(root, "dir/b.txt", "B")
+        let ftp = try MockFTP(root: root), proxy = try MockProxy(mode: "socks5", dir: d)
+        defer { ftp.stop(); proxy.stop(); try? FileManager.default.removeItem(at: d) }
+        var conn = ftp.connection(); conn.proxy = "socks5://127.0.0.1:\(proxy.port)"
+        let fs = RemoteFileSystem(connection: conn)
+        let list = try fs.list(URL(fileURLWithPath: "/"), includeHidden: true)
+        #expect(Set(list.map(\.name)) == ["a.txt", "dir"])
+        #expect(proxy.connections >= 2, "řídicí i datové spojení musí jít přes proxy, bylo \(proxy.connections)")
+        let out = d.appendingPathComponent("out"); try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+        let before = proxy.connections
+        #expect(RemoteTransfer.download(fs, ["/a.txt"], to: out).failures.isEmpty)
+        #expect(try String(contentsOf: out.appendingPathComponent("a.txt"), encoding: .utf8) == "hello through proxy")
+        #expect(proxy.connections > before)
+    }
+
+    @Test func deadProxyGivesAnErrorInsteadOfFallingBackToDirectConnection() throws {
+        let d = try makeTempDir()
+        let root = d.appendingPathComponent("server"); try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let ftp = try MockFTP(root: root)
+        defer { ftp.stop(); try? FileManager.default.removeItem(at: d) }
+        var conn = ftp.connection(); conn.proxy = "socks5://127.0.0.1:1"
+        #expect(throws: Error.self) { try RemoteFileSystem(connection: conn).list(URL(fileURLWithPath: "/"), includeHidden: true) }
+    }
+}

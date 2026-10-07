@@ -94,7 +94,7 @@ Síť | FTP a FTPS (obnovení stahování, fronta) | D | 5 | Enter na server jak
 Síť | SFTP | D | 5 | přes systémový sftp (OpenSSH): výpis, stahování s obnovením a přesnými časy, nahrávání, mazání, přejmenování, sdílené spojení; ověřeno proti skutečnému sshd s klíčem; ověření heslem (SSH_ASKPASS) neověřeno
 Síť | SMB (sdílené složky) | D | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem; ověřeno uživatelem proti skutečné sdílené složce
 Síť | WebDAV | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem | Ověření proti skutečnému serveru; vlastní klient s obnovením přenosu a průběhem.
-Síť | Proxy SOCKS / HTTP pro FTP a SFTP | P | 5 | pole Proxy ve správci spojení: FTP přes libcurl, SFTP přes ProxyCommand (nc); sestavení příkazu otestováno | Ověření proti skutečnému proxy serveru.
+Síť | Proxy SOCKS / HTTP pro FTP a SFTP | D | 7 | pole Proxy ve správci spojení: FTP přes libcurl (SOCKS5), SFTP přes ProxyCommand (SOCKS5 i HTTP CONNECT); ověřeno testy proti lokálnímu proxy serveru, včetně kontroly, že provoz skutečně proxy použil, a chyby při nedostupné proxy |
 Síť | Správce spojení | D | 5 | menu Síť (⌘K), uložená připojení, hesla v Klíčence; dialog ručně neověřen
 Síť | FXP (přímý přenos server → server) | X | - | nahrazeno kopií přes dočasné stažení (server ↔ server funguje)
 Síť | Přenos paralelním portem | X | - | zastaralé, na macOS nemá smysl
