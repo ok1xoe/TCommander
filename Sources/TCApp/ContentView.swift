@@ -33,6 +33,8 @@ struct CommandLineBar: View {
             TextField("příkaz (Enter spustí, „cd cesta“ změní adresář)", text: $model.commandLine)
                 .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced))
                 .onSubmit { model.runCommandLine() }
+                .onKeyPress(.upArrow) { model.historyPrevious(); return .handled }
+                .onKeyPress(.downArrow) { model.historyNext(); return .handled }
             if let s = model.status { Text(s).font(.system(size: 11)).foregroundStyle(.secondary) }
         }
         .padding(.horizontal, 8).padding(.vertical, 5)

@@ -36,11 +36,22 @@ struct PanelView: View {
                 .padding(.horizontal, 6).padding(.bottom, 4)
                 .onAppear { filterFocus = true }
             }
-            FileTableView(
-                tab: tab, revision: tab.revision, isActive: isActive,
-                onFocus: { if model.activeSide != side { model.activeSide = side } },
-                onKey: { model.handleKey($0, side: side) },
-                onOpen: { model.activeSide = side; model.open() })
+            if model.quickViewOn && !isActive {
+                QuickViewPane(url: model.source.cursorEntry.flatMap { $0.isDirectory ? nil : $0.url })
+            } else if tab.viewMode == .thumbnails {
+                ThumbnailGridView(
+                    tab: tab, revision: tab.revision, isActive: isActive,
+                    onFocus: { if model.activeSide != side { model.activeSide = side } },
+                    onKey: { model.handleKey($0, side: side) },
+                    onOpen: { model.activeSide = side; model.open() })
+            } else {
+                FileTableView(
+                    tab: tab, revision: tab.revision, isActive: isActive,
+                    onFocus: { if model.activeSide != side { model.activeSide = side } },
+                    onKey: { model.handleKey($0, side: side) },
+                    onOpen: { model.activeSide = side; model.open() },
+                    onDrop: { urls, dest, move in model.drop(urls, into: dest, move: move) })
+            }
             StatusBar(tab: tab, message: tab.error)
         }
         .overlay(alignment: .top) {

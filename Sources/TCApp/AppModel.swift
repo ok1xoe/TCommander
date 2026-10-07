@@ -19,6 +19,9 @@ final class AppModel {
     var pathEdit: [Bool: String] = [:]
     var busy: String?
     let jobs = JobManager()
+    var quickViewOn = false
+    private(set) var commandHistory: [String] = UserDefaults.standard.stringArray(forKey: "commandHistory") ?? []
+    @ObservationIgnored private var historyIndex: Int?
     let hotlist = Hotlist(file: Hotlist.defaultFile())
     /// Zobrazený rychlý filtr v panelech (klíč: levý = true).
     var filterVisible: [Bool: Bool] = [:]
@@ -73,7 +76,7 @@ final class AppModel {
         switch e.keyCode {
         case 48: // Tab
             if m == .control { group(side).nextTab() } else if m == [.control, .shift] { group(side).previousTab() }
-            else { activeSide = side.other }
+            else if !quickViewOn { activeSide = side.other }
             return true
         case 36, 76: // Return
             if m == .option { properties(); return true }
@@ -91,6 +94,7 @@ final class AppModel {
         case 67: if m == [] { source.invertMarks(); return true }
         case 11: if m == .control { toggleBranchView(); return true }   // Ctrl+B
         case 1: if m == .control { toggleFilter(); return true }        // Ctrl+S
+        case 12: if m == .control { quickViewOn.toggle(); return true } // Ctrl+Q
         case 53: // Esc
             if filterVisible[side.key] == true { filterVisible[side.key] = false; source.quickFilter = ""; return true }
             if !source.quickFilter.isEmpty { source.quickFilter = "" } else { commandLine = ""; source.marked.isEmpty ? () : source.unmarkAll() }
@@ -160,8 +164,12 @@ final class AppModel {
         let initial = target.path.path + "/"
         guard let text = Dialogs.prompt(title: "\(verb) \(what)", message: "Cíl:", initial: initial, ok: verb) else { return }
         guard let items = resolveTransfer(sources: sources, destination: text, base: src.path) else { return }
-        guard !items.isEmpty else { return }
+        enqueueTransfer(kind, items, what: what)
+    }
 
+    func enqueueTransfer(_ kind: TransferKind, _ items: [TransferItem], what: String) {
+        guard !items.isEmpty else { return }
+        let verb = kind == .copy ? "Kopírovat" : "Přesunout"
         var policy = ConflictPolicy.overwrite
         let conflicts = ops.conflicts(items)
         if !conflicts.isEmpty {
@@ -174,6 +182,19 @@ final class AppModel {
         }, onFinish: { [weak self] report in
             self?.finish(report, success: kind == .copy ? "Zkopírováno" : "Přesunuto")
         })
+    }
+
+    /// Přetažení souborů do panelu nebo na adresář (Finder: stejný svazek = přesun, jinak kopie; ⌥ = kopie).
+    func drop(_ urls: [URL], into dir: URL, move: Bool) {
+        let items = ops.plan(sources: urls, into: dir)
+        enqueueTransfer(move ? .move : .copy, items, what: urls.count == 1 ? "„\(urls[0].lastPathComponent)“" : "\(urls.count) položek")
+    }
+
+    static func dropIsMove(source: URL, destination: URL, option: Bool) -> Bool {
+        if option { return false }
+        var a = stat(), b = stat()
+        guard stat(source.path, &a) == 0, stat(destination.path, &b) == 0 else { return false }
+        return a.st_dev == b.st_dev
     }
 
     private func resolveTransfer(sources: [URL], destination text: String, base: URL) -> [TransferItem]? {
@@ -380,10 +401,31 @@ final class AppModel {
 
     // MARK: Příkazová řádka
 
+    private func remember(_ cmd: String) {
+        commandHistory.removeAll { $0 == cmd }
+        commandHistory.append(cmd)
+        if commandHistory.count > 100 { commandHistory.removeFirst() }
+        historyIndex = nil
+        UserDefaults.standard.set(commandHistory, forKey: "commandHistory")
+    }
+
+    func historyPrevious() {
+        guard !commandHistory.isEmpty else { return }
+        let i = max(0, (historyIndex ?? commandHistory.count) - 1)
+        historyIndex = i; commandLine = commandHistory[i]
+    }
+
+    func historyNext() {
+        guard let i = historyIndex else { return }
+        if i + 1 < commandHistory.count { historyIndex = i + 1; commandLine = commandHistory[i + 1] }
+        else { historyIndex = nil; commandLine = "" }
+    }
+
     func runCommandLine() {
         let cmd = commandLine.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cmd.isEmpty, busy == nil else { return }
         commandLine = ""
+        remember(cmd)
         if cmd == "cd" || cmd.hasPrefix("cd ") {
             let arg = String(cmd.dropFirst(2)).trimmingCharacters(in: .whitespaces)
             let expanded = arg.isEmpty ? NSHomeDirectory() : (arg as NSString).expandingTildeInPath

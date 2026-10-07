@@ -1,6 +1,8 @@
 import Foundation
 import Observation
 
+public enum ViewMode: String, Sendable, CaseIterable { case full, brief, thumbnails }
+
 public struct PanelSummary: Sendable, Equatable {
     public var markedCount = 0, markedBytes: Int64 = 0
     public var fileCount = 0, dirCount = 0, totalBytes: Int64 = 0
@@ -17,6 +19,7 @@ public final class PanelTab: Identifiable {
     /// Zvyšuje se při každé změně viditelného stavu; UI podle něj překresluje tabulku.
     public private(set) var revision = 0
     public var cursor = 0
+    public var viewMode = ViewMode.full
     /// Naposledy navštívené adresáře (nejnovější první).
     public private(set) var recent: [URL] = []
     /// Branch view: všechny soubory z podadresářů v jednom seznamu.
