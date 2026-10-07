@@ -67,6 +67,8 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Otevřít adresář jako záložku?": "Open folder as a tab?",
+        "Otevřít záložku": "Open Tab",
         "PlantUML (příkaz nebo .jar):": "PlantUML (command or .jar):",
         "prázdné = automaticky (Homebrew, Application Support)": "empty = automatic (Homebrew, Application Support)",
         "Diagram": "Diagram",
@@ -431,6 +433,7 @@ public enum Localization {
 
     /// Frázové úpravy pro složené texty (čísla, názvy souborů); aplikují se po sobě na celý řetězec.
     public static let phrases: [(pattern: String, replacement: String)] = [
+        ("Adresář „(.*)“ se otevře v nové záložce\\.", "Folder “$1” will be opened in a new tab."),
         ("(\\d[\\d  ]*) souborů, (\\d[\\d ]*) adresářů", "$1 files, $2 folders"),
         ("(\\d+) souborů", "$1 files"),
         ("(\\d+) soubor(?!ů)", "$1 file"),

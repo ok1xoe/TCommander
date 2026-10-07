@@ -45,7 +45,8 @@ struct PanelView: View {
                     tab: tab, revision: tab.revision, isActive: isActive,
                     onFocus: { if model.activeSide != side { model.activeSide = side } },
                     onKey: { model.handleKey($0, side: side) },
-                    onOpen: { model.activeSide = side; model.open() })
+                    onOpen: { model.activeSide = side; model.open() },
+                    onRightLongPress: { model.offerTab(forEntryAt: $0, side: side) })
             } else if tab.viewMode == .tree {
                 HSplitView {
                     TreeView(tab: tab, revision: tab.revision, onNavigate: { url in model.activeSide = side; tab.navigateLocal(url) })
@@ -71,6 +72,7 @@ struct PanelView: View {
             onFocus: { if model.activeSide != side { model.activeSide = side } },
             onKey: { model.handleKey($0, side: side) },
             onOpen: { model.activeSide = side; model.open() },
+            onRightLongPress: { model.offerTab(forEntryAt: $0, side: side) },
             onDrop: { urls, dest, move in model.drop(urls, into: dest, move: move) },
             onRename: { entry, name in model.performInlineRename(entry, newName: name) })
     }

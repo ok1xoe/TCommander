@@ -8,6 +8,18 @@ final class KeyTableView: NSTableView {
     var focusHandler: (() -> Void)?
     /// PageUp/PageDown/Home/End: posun kurzoru (o `delta` řádků, nebo na začátek či konec při `toEnd`).
     var cursorMove: ((_ delta: Int, _ toEnd: Bool) -> Void)?
+    /// Dlouhé podržení pravého tlačítka nad řádkem (index řádku).
+    var rightLongPress: ((Int) -> Void)?
+    private var pressTimer: Timer?
+
+    override func rightMouseDown(with event: NSEvent) {
+        pressTimer?.invalidate()
+        let r = row(at: convert(event.locationInWindow, from: nil))
+        guard r >= 0 else { return }
+        pressTimer = Timer.scheduledTimer(withTimeInterval: RightLongPress.delay, repeats: false) { [weak self] _ in self?.rightLongPress?(r) }
+    }
+
+    override func rightMouseUp(with event: NSEvent) { pressTimer?.invalidate(); pressTimer = nil }
 
     override func keyDown(with event: NSEvent) {
         if keyHandler?(event) == true { return }
@@ -104,6 +116,7 @@ struct FileTableView: NSViewRepresentable {
     let onFocus: () -> Void
     let onKey: (NSEvent) -> Bool
     let onOpen: () -> Void
+    var onRightLongPress: (Int) -> Void = { _ in }
     var onDrop: ([URL], URL, Bool) -> Void = { _, _, _ in }
     var onRename: (FileEntry, String) -> Void = { _, _ in }
 
@@ -130,6 +143,7 @@ struct FileTableView: NSViewRepresentable {
         table.doubleAction = #selector(Coordinator.doubleClicked)
         table.keyHandler = { [weak c] e in c?.parent.onKey(e) ?? false }
         table.focusHandler = { [weak c] in c?.parent.onFocus() }
+        table.rightLongPress = { [weak c] row in c?.parent.onRightLongPress(row) }
         table.cursorMove = { [weak c] delta, toEnd in
             guard let tab = c?.parent.tab else { return }
             tab.moveCursor(to: toEnd ? (delta < 0 ? 0 : tab.entries.count - 1) : tab.cursor + delta)

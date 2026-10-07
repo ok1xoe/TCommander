@@ -8,6 +8,17 @@ final class KeyCollectionView: NSCollectionView {
     var focusHandler: (() -> Void)?
     /// PageUp/PageDown/Home/End: posun kurzoru (o `delta` položek, nebo na začátek či konec při `toEnd`).
     var cursorMove: ((_ delta: Int, _ toEnd: Bool) -> Void)?
+    /// Dlouhé podržení pravého tlačítka nad položkou (index položky).
+    var rightLongPress: ((Int) -> Void)?
+    private var pressTimer: Timer?
+
+    override func rightMouseDown(with event: NSEvent) {
+        pressTimer?.invalidate()
+        guard let ip = indexPathForItem(at: convert(event.locationInWindow, from: nil)) else { return }
+        pressTimer = Timer.scheduledTimer(withTimeInterval: RightLongPress.delay, repeats: false) { [weak self] _ in self?.rightLongPress?(ip.item) }
+    }
+
+    override func rightMouseUp(with event: NSEvent) { pressTimer?.invalidate(); pressTimer = nil }
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -131,6 +142,7 @@ struct ThumbnailGridView: NSViewRepresentable {
     let onFocus: () -> Void
     let onKey: (NSEvent) -> Bool
     let onOpen: () -> Void
+    var onRightLongPress: (Int) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -156,6 +168,7 @@ struct ThumbnailGridView: NSViewRepresentable {
         grid.dataSource = c; grid.delegate = c
         grid.keyHandler = { [weak c] e in c?.parent.onKey(e) ?? false }
         grid.focusHandler = { [weak c] in c?.parent.onFocus() }
+        grid.rightLongPress = { [weak c] item in c?.parent.onRightLongPress(item) }
         grid.cursorMove = { [weak c] delta, toEnd in
             guard let tab = c?.parent.tab else { return }
             tab.moveCursor(to: toEnd ? (delta < 0 ? 0 : tab.entries.count - 1) : tab.cursor + delta)
