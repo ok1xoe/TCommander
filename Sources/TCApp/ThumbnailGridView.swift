@@ -6,11 +6,23 @@ import TCCore
 final class KeyCollectionView: NSCollectionView {
     var keyHandler: ((NSEvent) -> Bool)?
     var focusHandler: (() -> Void)?
+    /// PageUp/PageDown/Home/End: posun kurzoru (o `delta` položek, nebo na začátek či konec při `toEnd`).
+    var cursorMove: ((_ delta: Int, _ toEnd: Bool) -> Void)?
 
     override var acceptsFirstResponder: Bool { true }
 
     override func keyDown(with event: NSEvent) {
         if keyHandler?(event) == true { return }
+        if event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+            let page = max(1, indexPathsForVisibleItems().count - 1)
+            switch event.keyCode {
+            case 116: cursorMove?(-page, false); return
+            case 121: cursorMove?(page, false); return
+            case 115: cursorMove?(-1, true); return
+            case 119: cursorMove?(1, true); return
+            default: break
+            }
+        }
         super.keyDown(with: event)
     }
 
@@ -144,6 +156,10 @@ struct ThumbnailGridView: NSViewRepresentable {
         grid.dataSource = c; grid.delegate = c
         grid.keyHandler = { [weak c] e in c?.parent.onKey(e) ?? false }
         grid.focusHandler = { [weak c] in c?.parent.onFocus() }
+        grid.cursorMove = { [weak c] delta, toEnd in
+            guard let tab = c?.parent.tab else { return }
+            tab.moveCursor(to: toEnd ? (delta < 0 ? 0 : tab.entries.count - 1) : tab.cursor + delta)
+        }
         grid.backgroundColors = [.textBackgroundColor]
         c.grid = grid
         let click = NSClickGestureRecognizer(target: c, action: #selector(Coordinator.doubleClicked(_:)))
@@ -176,7 +192,7 @@ struct ThumbnailGridView: NSViewRepresentable {
             let cur = parent.tab.cursor
             if parent.tab.entries.indices.contains(cur), grid.selectionIndexPaths != [IndexPath(item: cur, section: 0)] {
                 grid.selectionIndexPaths = [IndexPath(item: cur, section: 0)]
-                grid.scrollToItems(at: [IndexPath(item: cur, section: 0)], scrollPosition: .nearestVerticalEdge)
+                grid.scrollToItems(at: [IndexPath(item: cur, section: 0)], scrollPosition: [.nearestVerticalEdge, .nearestHorizontalEdge])
             }
             syncing = false
             if parent.isActive && !lastActive, let w = grid.window, w.firstResponder !== grid, !(w.firstResponder is NSText) {

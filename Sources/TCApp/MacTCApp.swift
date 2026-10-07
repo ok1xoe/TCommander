@@ -108,6 +108,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--keys-demo"), i + 2 < CommandLine.arguments.count {         // ladění: PageDown/PageUp/End/Home v panelu
+            let m = AppModel.shared
+            m.source.navigate(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated {
+                func find(_ v: NSView) -> KeyTableView? { if let t = v as? KeyTableView { return t }; for s in v.subviews { if let t = find(s) { return t } }; return nil }
+                guard let w = NSApp.windows.first(where: { $0.contentView != nil && find($0.contentView!) != nil }), let table = find(w.contentView!) else {
+                    try? "tabulka nenalezena".write(toFile: CommandLine.arguments[i + 2], atomically: true, encoding: .utf8); NSApp.terminate(nil); return
+                }
+                var log = "řádků \(m.source.entries.count), viditelných ≈ \(Int(table.visibleRect.height / table.rowHeight))\n"
+                @MainActor func press(_ code: UInt16, _ name: String) {
+                    let e = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: w.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: code)!
+                    table.keyDown(with: e)
+                    DispatchQueue.main.async { }
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+                    log += "\(name): kurzor \(m.source.cursor), vybraný řádek \(table.selectedRow), horní viditelný řádek \(table.row(at: NSPoint(x: 5, y: table.visibleRect.minY + 2)))\n"
+                }
+                press(121, "PageDown"); press(121, "PageDown"); press(116, "PageUp"); press(119, "End"); press(115, "Home")
+                try? log.write(toFile: CommandLine.arguments[i + 2], atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            } }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }
