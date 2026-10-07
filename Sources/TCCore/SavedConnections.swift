@@ -5,10 +5,10 @@ import Observation
 public struct SavedConnection: Codable, Hashable, Identifiable, Sendable {
     public enum Kind: String, Codable, CaseIterable, Sendable {
         case ftp = "FTP", ftpExplicitTLS = "FTP + explicitní TLS", ftpsImplicit = "FTPS (implicitní TLS)",
-             sftp = "SFTP", smb = "SMB (sdílená složka)", webdav = "WebDAV (http)", webdavs = "WebDAV (https)"
+             sftp = "SFTP", smb = "SMB (sdílená složka)", webdav = "WebDAV (http)", webdavs = "WebDAV (https)", plugin = "Plugin (souborový systém)"
 
         public var defaultPort: Int? {
-            switch self { case .ftp, .ftpExplicitTLS: 21; case .ftpsImplicit: 990; case .sftp: 22; case .smb: 445; case .webdav: 80; case .webdavs: 443 }
+            switch self { case .ftp, .ftpExplicitTLS: 21; case .ftpsImplicit: 990; case .sftp: 22; case .smb: 445; case .webdav: 80; case .webdavs: 443; case .plugin: nil }
         }
         /// Připojení přes FTP klienta v aplikaci (ostatní typy se připojují jako svazek nebo přes SFTP).
         public var isFTP: Bool { self == .ftp || self == .ftpExplicitTLS || self == .ftpsImplicit }

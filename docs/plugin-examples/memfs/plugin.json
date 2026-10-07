@@ -1,0 +1,1 @@
+{"name": "memfs", "executable": "plugin.py", "interpreter": "/usr/bin/python3", "capabilities": {"filesystem": {"scheme": "mem"}}}

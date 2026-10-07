@@ -154,6 +154,7 @@ struct FileTableView: NSViewRepresentable {
                 lastRevision = parent.revision
                 table.reloadData()
                 updateHeaders()
+                fillPluginColumns()
             }
             if table.selectedRow != tab.cursor, tab.entries.indices.contains(tab.cursor) {
                 table.selectRowIndexes(IndexSet(integer: tab.cursor), byExtendingSelection: false)
@@ -164,6 +165,17 @@ struct FileTableView: NSViewRepresentable {
                 DispatchQueue.main.async { w.makeFirstResponder(table) }
             }
             lastActive = parent.isActive
+        }
+
+        /// Hodnoty sloupců z pluginů se zjišťují na pozadí; po doplnění se tabulka překreslí.
+        private func fillPluginColumns() {
+            let cols = installedColumns.filter(\.isPlugin)
+            guard !cols.isEmpty else { return }
+            let entries = parent.tab.entries
+            Task.detached { [weak self] in
+                let added = ContentColumnRegistry.shared.fill(cols, for: entries)
+                if added { await MainActor.run { self?.table?.reloadData() } }
+            }
         }
 
         func installColumns(on table: NSTableView, _ columns: [PanelColumn]) {
@@ -186,7 +198,7 @@ struct FileTableView: NSViewRepresentable {
             let s = parent.tab.sort
             let keys: [PanelColumn: SortKey] = [.name: .name, .ext: .ext, .size: .size, .date: .date]
             for col in table.tableColumns {
-                guard let pc = PanelColumn(rawValue: col.identifier.rawValue) else { continue }
+                let pc = PanelColumn(rawValue: col.identifier.rawValue)
                 var t = pc.title
                 if keys[pc] == s.key { t += s.ascending ? " ▲" : " ▼" }
                 col.title = t
@@ -206,7 +218,7 @@ struct FileTableView: NSViewRepresentable {
             let id = col.identifier
             let cell = (tv.makeView(withIdentifier: id, owner: nil) as? FileCell) ?? FileCell(
                 identifier: id, withIcon: id.rawValue == "name",
-                alignment: id.rawValue == "size" ? .right : .left,
+                alignment: (id.rawValue == "size" || ContentColumnRegistry.shared.info(for: PanelColumn(rawValue: id.rawValue))?.rightAligned == true) ? .right : .left,
                 mono: Self.monoColumns.contains(id.rawValue))
             let isMarked = tab.marked.contains(e.url)
             let text: String
@@ -219,7 +231,8 @@ struct FileTableView: NSViewRepresentable {
             case "accessed": text = e.isParentLink ? "" : Fmt.date(e.accessed)
             case "kind": text = e.isParentLink ? "" : Fmt.kind(of: e)
             case "owner": text = e.isParentLink ? "" : Fmt.owner(e.ownerID)
-            default: text = e.isParentLink ? "" : e.permissionString
+            case "attr": text = e.isParentLink ? "" : e.permissionString
+            default: text = e.isDirectory || e.isParentLink ? "" : (ContentColumnRegistry.shared.cached(PanelColumn(rawValue: id.rawValue), e) ?? "…")
             }
             cell.label.stringValue = text
             var color: NSColor = e.isHidden ? .secondaryLabelColor : .labelColor

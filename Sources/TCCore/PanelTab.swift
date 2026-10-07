@@ -3,17 +3,44 @@ import Observation
 
 public enum ViewMode: String, Sendable, CaseIterable { case full, brief, thumbnails, tree }
 
-/// Dostupné sloupce seznamu souborů.
-public enum PanelColumn: String, Sendable, CaseIterable, Codable {
-    case name, ext, size, date, attr, created, accessed, kind, owner
-    public var title: String {
-        switch self { case .name: "Název"; case .ext: "Přípona"; case .size: "Velikost"; case .date: "Změněno"; case .attr: "Atr"
-                      case .created: "Vytvořeno"; case .accessed: "Otevřeno"; case .kind: "Druh"; case .owner: "Vlastník" }
+/// Sloupec seznamu souborů: vestavěný (name, ext, size, …) nebo z pluginu ("plugin:<plugin>:<sloupec>").
+public struct PanelColumn: RawRepresentable, Hashable, Codable, Sendable {
+    public let rawValue: String
+    public init(rawValue: String) { self.rawValue = rawValue }
+    public init?(parsing text: String) {
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        if let b = PanelColumn.builtins.first(where: { $0.rawValue == t }) { self = b; return }
+        let original = text.trimmingCharacters(in: .whitespaces)
+        if original.hasPrefix("plugin:") { self.init(rawValue: original); return }
+        return nil
     }
-    public var defaultWidth: Double {
-        switch self { case .name: 200; case .ext: 55; case .size: 85; case .date: 125; case .attr: 80; case .created: 125; case .accessed: 125; case .kind: 130; case .owner: 90 }
-    }
+
+    public static let name = PanelColumn(rawValue: "name"), ext = PanelColumn(rawValue: "ext"), size = PanelColumn(rawValue: "size")
+    public static let date = PanelColumn(rawValue: "date"), attr = PanelColumn(rawValue: "attr"), created = PanelColumn(rawValue: "created")
+    public static let accessed = PanelColumn(rawValue: "accessed"), kind = PanelColumn(rawValue: "kind"), owner = PanelColumn(rawValue: "owner")
+    public static let builtins: [PanelColumn] = [.name, .ext, .size, .date, .attr, .created, .accessed, .kind, .owner]
     public static let standard: [PanelColumn] = [.name, .ext, .size, .date, .attr]
+
+    /// Vestavěné a dostupné sloupce z pluginů.
+    public static var allCases: [PanelColumn] { builtins + ContentColumnRegistry.shared.allColumns.map(\.panelColumn) }
+    public var isPlugin: Bool { rawValue.hasPrefix("plugin:") }
+
+    public var title: String {
+        switch rawValue {
+        case "name": return "Název"; case "ext": return "Přípona"; case "size": return "Velikost"; case "date": return "Změněno"
+        case "attr": return "Atr"; case "created": return "Vytvořeno"; case "accessed": return "Otevřeno"; case "kind": return "Druh"
+        case "owner": return "Vlastník"
+        default: return ContentColumnRegistry.shared.info(for: self)?.title ?? rawValue
+        }
+    }
+
+    public var defaultWidth: Double {
+        switch rawValue {
+        case "name": return 200; case "ext": return 55; case "size": return 85; case "date": return 125; case "attr": return 80
+        case "created": return 125; case "accessed": return 125; case "kind": return 130; case "owner": return 90
+        default: return ContentColumnRegistry.shared.info(for: self)?.width ?? 100
+        }
+    }
 }
 
 public struct PanelSummary: Sendable, Equatable {

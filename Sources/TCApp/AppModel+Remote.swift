@@ -206,6 +206,7 @@ extension AppModel {
         case .ftp, .ftpExplicitTLS, .ftpsImplicit: connectFTP(c, password)
         case .sftp: connectSFTP(c, password)
         case .smb, .webdav, .webdavs: mountVolume(c, password)
+        case .plugin: connectPlugin(c)
         }
     }
 
@@ -228,6 +229,17 @@ extension AppModel {
             let wanted = c.path.trimmingCharacters(in: .whitespaces)
             let initial = (wanted.isEmpty || wanted == "~") ? try sftp.homeDirectory() : RemoteFileSystem.normalize(wanted)
             return (initial, try fs.list(URL(fileURLWithPath: initial), includeHidden: hidden))
+        }
+    }
+
+    /// Souborový systém z pluginu: v poli Server je schéma pluginu, v poli Cesta řetězec připojení.
+    func connectPlugin(_ c: SavedConnection) {
+        guard let plugin = PluginHost.shared.filesystemPlugin(scheme: c.host) else {
+            Dialogs.error("Plugin", "Nenalezen plugin se schématem „\(c.host)“. Nainstalované pluginy jsou v Nastavení › Pluginy."); return
+        }
+        let fs = PluginFileSystem(plugin: plugin, connection: c.path)
+        connectRemote(fs, label: fs.displayName, host: c.host) { fs, hidden in
+            ("/", try fs.list(URL(fileURLWithPath: "/"), includeHidden: hidden))
         }
     }
 

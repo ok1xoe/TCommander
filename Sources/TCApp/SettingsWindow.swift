@@ -52,6 +52,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         add("Přidružení souborů", associationsTab())
         add("Sloupce", columnsTab())
         add("Barvy", colorsTab())
+        add("Pluginy", pluginsTab())
     }
 
     private func add(_ title: String, _ content: NSView) {
@@ -220,6 +221,35 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         let hint = NSTextField(labelWithString: "Pohled vyberete v menu Zobrazení › Sloupce. Název je vždy první sloupec.")
         hint.textColor = .secondaryLabelColor; hint.font = .systemFont(ofSize: 11)
         return stackWithFooter(table.view, [hint])
+    }
+
+    // MARK: Pluginy
+
+    private func pluginsTab() -> NSView {
+        func rows() -> [[String]] {
+            PluginHost.shared.plugins.map { p in
+                guard let m = p.manifest else { return [p.directory.lastPathComponent, "", "", "CHYBA: \(p.error ?? "?")"] }
+                var caps: [String] = []
+                if let c = m.capabilities.columns, !c.isEmpty { caps.append("sloupce: " + c.map(\.title).joined(separator: ", ")) }
+                if let v = m.capabilities.viewer { caps.append("prohlížeč: " + v.extensions.joined(separator: ", ")) }
+                if let a = m.capabilities.archive { caps.append("archivy: " + a.extensions.joined(separator: ", ")) }
+                if let f = m.capabilities.filesystem { caps.append("souborový systém: \(f.scheme)://") }
+                return [m.name, m.version ?? "", caps.joined(separator: "; "), "načten"]
+            }
+        }
+        let table = StringTable(columns: [.init(title: "Plugin", width: 150, editable: false), .init(title: "Verze", width: 60, editable: false),
+                                          .init(title: "Schopnosti", width: 480, editable: false), .init(title: "Stav", width: 140, editable: false)],
+                                rows: rows(), canAddRemove: false)
+        let reload = NSButton(title: "Znovu načíst", target: nil, action: nil)
+        let openFolder = NSButton(title: "Otevřít složku pluginů", target: nil, action: nil)
+        let h1 = ResetHandler { PluginHost.shared.reload(); table.setRows(rows()) }
+        let h2 = ResetHandler { NSWorkspace.shared.open(PluginHost.shared.directory) }
+        reload.target = h1; reload.action = #selector(ResetHandler.fire)
+        openFolder.target = h2; openFolder.action = #selector(ResetHandler.fire)
+        keepAlive += [table, h1, h2]
+        let hint = NSTextField(wrappingLabelWithString: "Plugin je složka s plugin.json a spustitelným souborem; viz docs/plugins.md. Složka: \(PluginHost.shared.directory.path)")
+        hint.textColor = .secondaryLabelColor; hint.font = .systemFont(ofSize: 11)
+        return stackWithFooter(table.view, [hint, NSView(), openFolder, reload])
     }
 
     // MARK: Barvy

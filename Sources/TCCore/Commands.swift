@@ -265,6 +265,23 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var colorRules: [ColorRule] = ColorRule.defaults
     public var columnSets: [ColumnSet] = ColumnSet.defaults
     public init() {}
+
+    /// Starší soubory nastavení nemají nová pole; chybějící hodnoty se doplní výchozími.
+    public init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        editorApp = try c.decodeIfPresent(String.self, forKey: .editorApp) ?? editorApp
+        terminalApp = try c.decodeIfPresent(String.self, forKey: .terminalApp) ?? terminalApp
+        deleteToTrash = try c.decodeIfPresent(Bool.self, forKey: .deleteToTrash) ?? deleteToTrash
+        verifyCopies = try c.decodeIfPresent(Bool.self, forKey: .verifyCopies) ?? verifyCopies
+        showHidden = try c.decodeIfPresent(Bool.self, forKey: .showHidden) ?? showHidden
+        rowHeight = try c.decodeIfPresent(Double.self, forKey: .rowHeight) ?? rowHeight
+        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? fontSize
+        language = try c.decodeIfPresent(String.self, forKey: .language) ?? language
+        panelsStacked = try c.decodeIfPresent(Bool.self, forKey: .panelsStacked) ?? panelsStacked
+        colorRules = try c.decodeIfPresent([ColorRule].self, forKey: .colorRules) ?? colorRules
+        columnSets = try c.decodeIfPresent([ColumnSet].self, forKey: .columnSets) ?? columnSets
+    }
 }
 
 /// Barva názvu podle masky (obdoba barev podle typu souboru v TC).
