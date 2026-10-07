@@ -7,9 +7,8 @@
 @phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 9 273 793 (cache čtení 9 067 468, output 93 127)
 @phase | 3 | Multi-Rename, porovnání, synchronizace, duplicity, kódování | hotovo | 4 364 489 (cache čtení 4 257 286, output 52 593)
 @phase | 4 | Archivy jako adresáře | hotovo | 8 919 438 (cache čtení 8 779 513, output 66 180)
-@phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | hotovo | 13 939 083 (cache čtení 13 707 198, output 110 477), stav k PR 5c
-@phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | probíhá | -
-
+@phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | hotovo | 14 468 481 (cache čtení 14 233 788, output 112 195)
+@phase | 6 | Plugin API, příkazy a zkratky, nastavení, vzhled panelů, terminál, editor, import z TC | hotovo | 38 280 487 (cache čtení 37 846 210, output 195 893), stav k závěru
 Panely a zobrazení | Dva panely vedle sebe | D | 1 |
 Panely a zobrazení | Panely nad sebou | D | 6 | Nastavení › Obecné; ověřeno jen překladem
 Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |
