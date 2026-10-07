@@ -1,7 +1,7 @@
 # Zdroj pravdy pro docs/index.html. Upravit stav a spustit: python3 scripts/build_docs.py
 # Stavy: D = hotovo, P = částečně, T = plánováno, X = nepřenáší se (nemá smysl na macOS)
 # Formát fází:     @phase | číslo | název | stav (hotovo/probíhá/plán) | tokeny (nebo -)
-# Formát funkcí:   kategorie | funkce | stav | fáze | poznámka
+# Formát funkcí:   kategorie | funkce | stav | fáze | poznámka (u P: co je hotovo) | co chybí (jen u P)
 @phase | 0 | Průzkum TC a návrh | hotovo | 582 208 (cache čtení 533 596, output 9 064)
 @phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 3 237 493 (cache čtení 3 067 722, output 76 954)
 @phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 9 273 793 (cache čtení 9 067 468, output 93 127)
@@ -25,7 +25,7 @@ Panely a zobrazení | Rychlý filtr (Ctrl+S, ⌘F) | D | 2 | pole nad seznamem, 
 Panely a zobrazení | Skryté soubory (⇧⌘.) | D | 1 |
 Panely a zobrazení | Quick View panel (Ctrl+Q) | D | 2 | druhý panel ukazuje náhled souboru pod kurzorem; ověřeno jen překladem
 Panely a zobrazení | Barvy podle typu souboru | D | 6 | pravidla podle masek v Nastavení › Barvy
-Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků; tlačítková lišta disků ve fázi 6
+Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků a oblíbených složek (Domů, Desktop, Dokumenty, Stažené, Aplikace, připojené svazky) | Lišta s tlačítky disků (jedno kliknutí na disk jako v TC) a rychlé přepínání oblíbených složek čísly.
 Panely a zobrazení | Historie adresářů (zpět / vpřed) | D | 1 | ⌘[ ⌘]
 Panely a zobrazení | Seznam historie a Directory hotlist (⌘D) | D | 2 | menu Oblíbené a Historie; hotlist uložen v Application Support
 Panely a zobrazení | Branch view (Ctrl+B, všechny soubory podadresářů) | D | 2 |
@@ -43,7 +43,7 @@ Označování | Spočítat velikosti všech adresářů | D | 1 |
 
 Souborové operace | Kopírovat (F5) | D | 1 | i pod novým názvem
 Souborové operace | Přesunout (F6) | D | 1 |
-Souborové operace | Přejmenovat (F2 / ⇧F6) | P | 1 | dialog; přejmenování přímo v seznamu později
+Souborové operace | Přejmenovat (F2 / ⇧F6) | P | 1 | přejmenování dialogem s původním názvem, kontrola existence a neplatných znaků | Přejmenování přímo v seznamu (úprava názvu na místě); dnes se otevře dialog.
 Souborové operace | Nový adresář (F7), i vnořený a/b/c | D | 1 |
 Souborové operace | Nový soubor (⇧F4) | D | 1 |
 Souborové operace | Smazat (F8) do koše nebo trvale (⇧F8) | D | 1 |
@@ -55,34 +55,34 @@ Souborové operace | Okamžitá kopie na APFS (clonefile), zachování atributů
 Souborové operace | Fronta operací s průběhem, rychlostí, pozastavením a zrušením | D | 2 | úlohy běží postupně; logika pokryta testy, pruh fronty v UI ověřen jen překladem
 Souborové operace | Ověření kopie (SHA-256) | D | 2 | volba v menu Soubor
 Souborové operace | Atributy, časy, oprávnění | D | 2 | oprávnění osmičkově a datum změny (⌥↩); příznaky souboru zatím ne
-Souborové operace | Vlastnosti (Alt+Enter) | P | 2 | cesta, velikost, oprávnění, datum; bez karty s náhledem
+Souborové operace | Vlastnosti (Alt+Enter) | P | 2 | dialog s cestou, velikostí (u složek po spočítání), oprávněními osmičkově a datem změny; platí i pro více položek | Karta s náhledem, vlastník a skupina, příznaky souboru (ACL, uchg), změna vlastníka, součet velikosti složky přímo v dialogu, rekurzivní úprava atributů.
 Souborové operace | Symbolické a pevné odkazy | D | 2 | menu Nástroje
 Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | D | 2 | menu Nástroje, uložení do .sha256/.md5…, ověření ze souboru
 Souborové operace | Rozdělit a spojit soubory | D | 2 | části .001, .002 …
 Souborové operace | Kódování UUE / XXE / MIME | D | 3 | kódování i dekódování, menu Nástroje; ověřeno testy včetně známého vektoru
 
-Hledání | Hledání podle masky, velikosti a data (Alt+F7) | P | 2 | podadresáře, skryté, velikost od–do, změněno za N dní; podle atributů zatím ne
+Hledání | Hledání podle masky, velikosti a data (Alt+F7) | P | 2 | více masek najednou, podadresáře, skryté soubory, velikost od–do, změněno za posledních N dní, text v obsahu (regex), v archivech | Hledání podle atributů souboru, vyloučení masek, hledání souborů starších než N dní (dnes jen novějších), uložení nastavení hledání.
 Hledání | Hledání textu v souborech (regex, kódování) | D | 2 | rozpoznání kódování, regex, bez ohledu na diakritiku; binární soubory po bajtech
 Hledání | Hledání uvnitř archivů | D | 4 | volba „V archivech“ v hledání (název, velikost, datum i text); nález otevře archiv na daném souboru
-Hledání | Výsledky jako panel, uložené šablony hledání | P | 2 | výsledky v okně s přechodem na soubor a zobrazením; jako virtuální panel a šablony ne
+Hledání | Výsledky jako panel, uložené šablony hledání | P | 2 | výsledky v okně s průběžným doplňováním, přechod na soubor v panelu, zobrazení v Listeru | Výsledky jako virtuální panel, na který lze použít F5/F6/F8 jako na běžný seznam; uložené šablony hledání.
 Hledání | Hledání duplicitních souborů | D | 3 | podle velikosti a obsahu (SHA-256), okno s označením nadbytečných kopií a smazáním do koše; okno ověřeno jen spuštěním
 
 Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | D | 3 | ⌃M; `[N1-3]`, `[N2,5]`, `[C10+5:3]`, `[P]`, datum `[Y][M][D][h][m][s]`
 Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | D | 3 | zvlášť maska názvu a přípony
 Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | D | 3 | živý náhled s kontrolou konfliktů, bezpečné záměny názvů; okno ručně neověřeno
 
-Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | P | 3 | rozdíly vedle sebe se synchronním posunem a skokem na další rozdíl (Myers diff); editace přímo v okně chybí
+Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | P | 3 | rozdíly vedle sebe (Myers diff), zvýraznění změn, synchronní posun, skok na další a předchozí rozdíl | Úprava textu přímo v okně porovnání, přenos jednotlivého rozdílu doleva/doprava, porovnání binárních souborů s vyznačením rozdílných bajtů.
 Porovnání a synchronizace | Porovnání adresářů | D | 3 | označí rozdílné soubory v obou panelech
 Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | D | 3 | pět směrů včetně zrcadlení, úprava akcí po řádcích, běží ve frontě; okno ověřeno jen spuštěním
 Porovnání a synchronizace | Synchronizace s ZIP | T | 4 |
 
-Prohlížení a editace | Zobrazit (F3) otevře Lister | D | 2 |
-Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | P | 2 | hex přes mmap pro libovolnou velikost; text zobrazí prvních 16 MB
+Prohlížení a editace | Zobrazit (F3) podle typu souboru | D | 2 | text, obrázky, PDF a média v Listeru, dokumenty (Word, Pages, Excel…) přes Quick Look, vlastní příkaz podle přípony v Nastavení › Přidružení
+Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | P | 2 | text (UTF-8, UTF-16, Windows-1250) do 16 MB; hex režim přes mmap pro soubory libovolné velikosti | Stránkování textu nad 16 MB (dnes se zobrazí jen začátek), ruční výběr kódování, zalamování řádků, přechod na offset v hex režimu.
 Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8, UTF-16, Windows-1250 (automaticky)
-Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementováno; vizuálně ověřen zatím jen textový režim
-Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém režimu (⌘F); v hex režimu chybí
-Prohlížení a editace | Editace (F4) v externím editoru | D | 1 | TextEdit
-Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | P | 6 | editor pro F4 lze zvolit v Nastavení; vestavěný editor chybí
+Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementované režimy obrázek, PDF, HTML a přehrávač médií; vizuálně ověřen zatím jen textový režim | Vizuální ověření režimů obrázek, PDF, HTML a média; přiblížení a otočení obrázků, listování dalším a předchozím souborem klávesami.
+Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém režimu přes ⌘F (lišta hledání macOS) | Hledání v hex režimu (bajty i text), hledání dalšího výskytu klávesou F3 jako v TC.
+Prohlížení a editace | Editace (F4) podle typu souboru | D | 1 | text a zdrojové soubory ve zvoleném editoru, ostatní typy v jejich výchozí aplikaci, vlastní příkaz podle přípony v Nastavení › Přidružení
+Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | P | 6 | externí editor pro F4 lze zvolit v Nastavení; podle typu souboru se otevře i jiná aplikace (přidružení) | Vestavěný textový editor (dnes se používá externí aplikace).
 
 Archivy | Prohlížení archivu jako adresáře (ZIP, TAR, GZ, 7z, RAR…) | D | 4 | Enter na archivu, „..“ vystoupí; čtení přes systémovou libarchive (zip, tar.*, 7z, rar, cab, iso …); otestováno na zip a tar.gz
 Archivy | Balení (Alt+F5) do zip, tar.gz, tar.bz2, tar.xz, 7z, na pozadí | D | 4 | menu Nástroje, průběh ve frontě
@@ -93,9 +93,9 @@ Archivy | Kopie do archivu, mazání, přejmenování a nové složky uvnitř ar
 
 Síť | FTP a FTPS (obnovení stahování, fronta) | D | 5 | Enter na server jako do adresáře (načítání na pozadí), F5/F6/F8/F7/F2 se serverem, otevření/zobrazení/editace přes dočasné stažení, kopie server ↔ disk ↔ archiv ↔ server, obnovení přerušeného stahování; ověřeno proti testovacímu serveru, TLS neověřeno klient hotový a ověřený proti testovacímu serveru (MLSD i LIST, stahování s obnovením, nahrávání, mazání, přejmenování, TLS volba); napojení na panely přijde v dalším kroku
 Síť | SFTP | D | 5 | přes systémový sftp (OpenSSH): výpis, stahování s obnovením a přesnými časy, nahrávání, mazání, přejmenování, sdílené spojení; ověřeno proti skutečnému sshd s klíčem; ověření heslem (SSH_ASKPASS) neověřeno
-Síť | SMB (sdílené složky) | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem; bez testovacího serveru neověřeno
-Síť | WebDAV | P | 5 | připojení jako systémový svazek (NetFS); bez testovacího serveru neověřeno
-Síť | Proxy SOCKS / HTTP pro FTP | P | 5 | pole Proxy ve správci spojení (libcurl); bez proxy serveru neověřeno
+Síť | SMB (sdílené složky) | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem | Ověření proti skutečnému serveru; procházení sdílených složek bez připojení svazku; vlastní SMB klient s průběhem přenosu.
+Síť | WebDAV | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem | Ověření proti skutečnému serveru; vlastní klient s obnovením přenosu a průběhem.
+Síť | Proxy SOCKS / HTTP pro FTP | P | 5 | pole Proxy ve správci spojení, hodnota se předává libcurl (FTP) | Ověření proti proxy serveru; proxy pro SFTP (ProxyCommand) a samostatné nastavení HTTP proxy.
 Síť | Správce spojení | D | 5 | menu Síť (⌘K), uložená připojení, hesla v Klíčence; dialog ručně neověřen
 Síť | FXP (přímý přenos server → server) | X | - | nahrazeno kopií přes dočasné stažení (server ↔ server funguje)
 Síť | Přenos paralelním portem | X | - | zastaralé, na macOS nemá smysl
@@ -113,8 +113,8 @@ Přizpůsobení | Button bar a Start menu | D | 6 | upravitelné v Nastavení (n
 Přizpůsobení | Uživatelské příkazy (em_*) s parametry %P %N %S %T %F %L | D | 6 | spuštění i v Terminálu; parametry se ošetří proti injekci (testováno)
 Přizpůsobení | Interní příkazy (cm_*) a jejich registr | D | 6 | 60 příkazů, použitelné ze zkratek, tlačítek i uživatelských příkazů
 Přizpůsobení | Nastavení (dialog), barvy, fonty | D | 6 | editor, terminál, písmo, výška řádku, barvy
-Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 6 | UI je nyní jen česky
-Přizpůsobení | Import nastavení z `wincmd.ini` | T | 6 |
+Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 6 | menu, tlačítková lišta, lišta F-kláves, názvy záložek Nastavení a výchozí tlačítka; přepínač v Nastavení › Obecné | Překlad dialogů, chybových hlášek, stavových zpráv, oken Hledání, Synchronizace a Multi-Rename a obsahu záložek Nastavení.
+Přizpůsobení | Import nastavení z `wincmd.ini` | D | 6 | tlačítka, uživatelské příkazy (usercmd.ini), zkratky a oblíbené adresáře; Windows programy a cesty se přeskočí a vypíšou; menu Nástroje; dialog ručně neověřen
 Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | D | 6 | složka s plugin.json a spustitelným souborem, JSON přes standardní vstup/výstup (viz docs/plugins.md); sloupce, prohlížeče, archivy (jen čtení přes rozbalení), souborové systémy; ověřeno testy s ukázkovými pluginy
 Přizpůsobení | Vestavěné obsahové sloupce (rozměry obrázku, délka audia/videa, strany PDF, řádky textu) | D | 6 | sada sloupců Média; rozměry ověřeny vizuálně
 Přizpůsobení | Konfigurovatelné hlavní menu (přidávání vlastních položek) | T | 6 | zatím jen Start menu a tlačítková lišta

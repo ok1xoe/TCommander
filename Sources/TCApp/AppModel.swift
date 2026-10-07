@@ -569,20 +569,6 @@ final class AppModel {
 
     // MARK: Prohlížení a editace
 
-    func view() {
-        guard let e = source.targets.first, !e.isDirectory else { return }
-        if source.insideArchive { if let tmp = extractToTemp(e.url) { ListerWindow.show(tmp) }; return }
-        if source.remote != nil { withRemoteFile(e) { ListerWindow.show($0) }; return }
-        ListerWindow.show(e.url)
-    }
-
-    func edit() {
-        guard let e = source.targets.first, !e.isDirectory else { return }
-        if source.insideArchive { if let tmp = extractToTemp(e.url) { openInEditor(tmp) }; return }
-        if source.remote != nil { withRemoteFile(e) { [weak self] in self?.openInEditor($0) }; return }
-        openInEditor(e.url)
-    }
-
     func openInEditor(_ url: URL) {
         let editor = URL(fileURLWithPath: settings.editorApp)
         NSWorkspace.shared.open([url], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration())

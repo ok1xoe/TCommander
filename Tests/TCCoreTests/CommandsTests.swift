@@ -107,3 +107,75 @@ import Foundation
         #expect(store.load(default: AppSettings()) == s)          // zápis a čtení nových dat zůstává konzistentní
     }
 }
+
+@Suite struct ShortcutRoundTripTests {
+    @Test func everyRegistryShortcutSurvivesTextRoundTrip() {
+        for c in CommandRegistry.all { for s in c.defaultShortcuts { #expect(Shortcut(s.description) == s, "\(c.id): \(s)") } }
+        #expect(Shortcut("kp+") == Shortcut(key: "kp+") && Shortcut("ctrl+kp-")?.modifiers == [.ctrl])
+        #expect(Shortcut("ctrl++")?.key == "+" && Shortcut("+")?.key == "+")
+    }
+}
+
+@Suite struct LocalizationTests {
+    @Test func translatesOnlyWhenEnglishIsSelected() {
+        #expect(Localization.translate("Soubor", language: "cs") == "Soubor" && Localization.translate("Soubor", language: "en") == "File")
+        #expect(Localization.translate("Neznámý text", language: "en") == "Neznámý text")
+    }
+
+    @Test func everyEntryHasARealTranslation() {
+        for (cs, en) in Localization.en {
+            #expect(!en.isEmpty && (en != cs || Localization.untranslated.contains(cs)), "\(cs)")
+            #expect(!en.contains(where: { "ěščřžýáíéúůťďň".contains($0) }), "\(en) obsahuje českou diakritiku")
+        }
+        #expect(Localization.en.count > 100)
+    }
+
+    @Test func menuStringsInSourcesAreCovered() throws {
+        // každý český řetězec předaný funkci L(...) v aplikaci musí mít překlad
+        let dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Sources/TCApp")
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return }
+        let re = try NSRegularExpression(pattern: #"\bL\("((?:[^"\\]|\\.)*)"\)"#)
+        var missing: [String] = []
+        for f in files where f.hasSuffix(".swift") {
+            let text = try String(contentsOf: dir.appendingPathComponent(f), encoding: .utf8)
+            for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                let key = (text as NSString).substring(with: m.range(at: 1))
+                if Localization.en[key] == nil && !Localization.untranslated.contains(key) { missing.append("\(f): \(key)") }
+            }
+        }
+        #expect(missing.isEmpty, "\(missing)")
+    }
+}
+
+@Suite struct FileOpenPolicyTests {
+    let bin = Data([0, 1, 2, 3]), text = Data("hello".utf8)
+
+    @Test func viewByFileType() {
+        func v(_ n: String, _ s: Data = Data()) -> FileOpenPolicy.ViewAction { FileOpenPolicy.viewAction(fileName: n, sample: s, associations: []) }
+        for n in ["a.txt", "a.swift", "a.json", "a.md", "a.png", "a.jpg", "a.pdf", "a.mp3", "a.mp4", "a.html", "README", "a.unknownext"] { #expect(v(n) == .lister, "\(n)") }
+        for n in ["a.docx", "a.xlsx", "a.pptx", "a.pages", "a.numbers", "a.key"] { #expect(v(n) == .quickLook, "\(n)") }
+    }
+
+    @Test func editByFileType() {
+        func e(_ n: String, _ s: Data = Data()) -> FileOpenPolicy.EditAction { FileOpenPolicy.editAction(fileName: n, sample: s, associations: []) }
+        for n in ["a.txt", "a.swift", "a.json", "a.md", "a.xml", "a.sh", "a.yaml", "a.plist", "a.py", "a.css", "a.html"] { #expect(e(n) == .editor, "\(n)") }
+        for n in ["a.png", "a.jpg", "a.pdf", "a.docx", "a.mp4", "a.mp3", "a.zip"] { #expect(e(n) == .systemDefault, "\(n)") }
+        #expect(e("Makefile", text) == .editor && e("data.zzqq", text) == .editor)          // neznámé: podle obsahu
+        #expect(e("blob.zzqq", bin) == .systemDefault && e("noext", bin) == .systemDefault)
+    }
+
+    @Test func associationsOverrideDefaults() {
+        let list = [FileAssociation(extensions: ["png"], command: "", viewCommand: "open -a Preview %F", editCommand: "/Applications/Pixelmator Pro.app"),
+                    FileAssociation(extensions: ["txt"], command: "x", editCommand: "")]
+        #expect(FileOpenPolicy.viewAction(fileName: "A.PNG", associations: list) == .command("open -a Preview %F"))
+        #expect(FileOpenPolicy.editAction(fileName: "a.png", associations: list) == .command("/Applications/Pixelmator Pro.app"))
+        #expect(FileOpenPolicy.editAction(fileName: "a.txt", associations: list) == .editor)        // prázdný příkaz = výchozí pravidla
+        #expect(FileOpenPolicy.viewAction(fileName: "a.docx", associations: list) == .quickLook)
+    }
+
+    @Test func olderAssociationsDecode() throws {
+        let json = #"[{"id":"\#(UUID().uuidString)","extensions":["md"],"command":"typora","parameters":""}]"#
+        let list = try JSONDecoder().decode([FileAssociation].self, from: Data(json.utf8))
+        #expect(list.count == 1 && list[0].viewCommand.isEmpty && list[0].editCommand.isEmpty && list[0].command == "typora")
+    }
+}
