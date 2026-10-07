@@ -21,7 +21,13 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | 4 – archivy | 10:46:33 – 11:06:56 (sloučení PR #12) | 24 | 48 | 73 697 | 8 779 513 | 66 180 | 8 919 438 |
 | 5 – síť | 11:06:56 – 11:33:43 (sloučení PR #15) | 30 | 60 | 122 438 | 14 233 788 | 112 195 | 14 468 481 |
 | 6 – příkazy, nastavení, vzhled, pluginy, terminál, editor | 11:33:43 – závěr | 58 | 116 | 238 268 | 37 846 210 | 195 893 | 38 280 487 |
-| **Celkem** | 09:37 – závěr | 202 | 404 | 734 396 | 77 785 583 | 606 006 | 79 126 389 |
+| 7 – SMB  dokončení rozpracovaných funkcí (7a) | 12:44:10 – 13:07:24 (sloučení PR #24) | 17 | 34 | 66 418 | 13 552 621 | 47 837 | 13 666 910 |
+| 7b – terminál a Lister | 13:07:24 – 13:20:59 (PR #25) | 19 | 38 | 60 714 | 16 387 923 | 29 612 | 16 478 287 |
+| 7c – angličtina oken a dialogů | 13:20:59 – 13:35:19 (PR #26) | 12 | 24 | 60 795 | 11 092 283 | 29 440 | 11 182 542 |
+| 7d – ověření proxy | 13:35:19 – 13:38:19 (PR #27) | 7 | 14 | 84 915 | 1 529 490 | 9 116 | 1 623 535 |
+| 8 – zvýrazňování syntaxe | 13:38:19 – 13:45:47 (PR #28) | 8 | 16 | 20 898 | 939 755 | 12 736 | 973 405 |
+| 8b – úpravy v okně porovnání | 13:45:47 – 13:49:38 (PR #29) | 9 | 18 | 21 978 | 1 273 762 | 8 419 | 1 304 177 |
+| **Celkem** | 09:37 – 13:49:38 (PR #29) | 274 | 548 | 1 050 114 | 122 561 417 | 743 166 | 124 355 245 |
 
 Poznámka: hodnoty fází 1 a 2 byly původně změřeny před kroky PR/sloučení a jsou opraveny na celé okno fáze (konec = sloučení posledního PR fáze). Původní hodnota fáze 1 (2 747 398) byla změřena před kroky PR/sloučení; zde je opravená hodnota za celé okno fáze.
 
@@ -30,6 +36,6 @@ Autoritativní kontrola: `/cost` v Claude Code (měla by se shodovat se součtem
 ## Jak číst „celkem“
 
 Sloupec **cache čtení** při každém volání znovu započítává celou dosavadní konverzaci, proto je největší a součet „CELKEM“ vypadá vysoko.
-Skutečně nově zpracované tokeny za celý vývoj: **input 404 + cache zápis 734 396 + output 606 006 = 1 340 806**.
+Skutečně nově zpracované tokeny za celý vývoj (do PR #29): **input 548 + cache zápis 1 050 114 + output 743 166 = 1 793 828**.
 Cache čtení se obvykle účtuje se silnou slevou, takže pro cenu je důležité sledovat druhy zvlášť (cenu odvodíte z aktuálního ceníku).
 Hodnoty se dají kdykoli přepočítat: `scripts/token_usage.py --since <ISO UTC> --until <ISO UTC>`; autoritativní kontrola je `/cost`.
