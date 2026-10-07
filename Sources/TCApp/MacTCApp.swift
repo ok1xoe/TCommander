@@ -76,6 +76,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { m.source.moveCursor(to: 1) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { m.rename() }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--properties-demo"), i + 1 < CommandLine.arguments.count {   // ladění: dialog Vlastnosti
+            let u = URL(fileURLWithPath: CommandLine.arguments[i + 1])
+            if let e = try? LocalFileSystem().stat(u) { DispatchQueue.main.async { _ = PropertiesDialog(entries: [e]).run() } }
+        }
         if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě

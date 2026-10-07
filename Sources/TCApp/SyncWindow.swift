@@ -93,6 +93,7 @@ final class SyncWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTab
             bottom.leadingAnchor.constraint(equalTo: c.leadingAnchor, constant: 14), bottom.trailingAnchor.constraint(equalTo: c.trailingAnchor, constant: -14),
             bottom.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -12),
         ])
+        Dialogs.fitWindow(window, form: form)
     }
 
     private var leftURL: URL { URL(fileURLWithPath: (leftField.stringValue as NSString).expandingTildeInPath) }

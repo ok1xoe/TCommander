@@ -43,7 +43,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private let archives = NSButton(checkboxWithTitle: "V archivech", target: nil, action: nil)
     private let caseSens = NSButton(checkboxWithTitle: "Rozlišovat velikost písmen", target: nil, action: nil)
     private let regex = NSButton(checkboxWithTitle: "Regulární výraz", target: nil, action: nil)
-    private let minKB = NSTextField(), maxKB = NSTextField(), days = NSTextField()
+    private let minKB = NSTextField(), maxKB = NSTextField(), days = NSTextField(), olderDays = NSTextField()
     private let searchButton = NSButton(title: "Hledat", target: nil, action: nil)
     private let status = NSTextField(labelWithString: "")
     private let table = NSTableView()
@@ -67,7 +67,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         attrs.addItems(withTitles: AttributeFilter.allCases.map(\.rawValue))
         reloadTemplates()
         text.placeholderString = "text v souboru (nepovinné)"
-        for f in [minKB, maxKB, days] { f.placeholderString = "—"; f.alignment = .right }
+        for f in [minKB, maxKB, days, olderDays] { f.placeholderString = "—"; f.alignment = .right }
 
         func row(_ label: String, _ views: [NSView]) -> NSStackView {
             let l = NSTextField(labelWithString: label); l.alignment = .right
@@ -75,7 +75,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             let s = NSStackView(views: [l] + views); s.spacing = 8; return s
         }
         for f in [masks, root, text] { f.setContentHuggingPriority(.defaultLow, for: .horizontal) }
-        for f in [minKB, maxKB, days] { f.widthAnchor.constraint(equalToConstant: 70).isActive = true }
+        for f in [minKB, maxKB, days, olderDays] { f.widthAnchor.constraint(equalToConstant: 70).isActive = true }
         searchButton.target = self; searchButton.action = #selector(toggleSearch); searchButton.keyEquivalent = "\r"
         let form = NSStackView(views: [
             row("Hledat soubory:", [masks]),
@@ -84,7 +84,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             row("Obsahující text:", [text]),
             row("", [subdirs, hidden, archives, caseSens, regex]),
             row("Velikost (KB):", [minKB, NSTextField(labelWithString: "až"), maxKB,
-                                   NSTextField(labelWithString: "   změněno za posledních"), days, NSTextField(labelWithString: "dní")]),
+                                   NSTextField(labelWithString: "   změněno za posledních"), days, NSTextField(labelWithString: "dní, starší než"), olderDays, NSTextField(labelWithString: "dní")]),
             row("Atributy:", [attrs, NSView(), templates]),
         ])
         form.orientation = .vertical; form.alignment = .leading; form.spacing = 6
@@ -117,6 +117,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             bottom.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -14),
             bottom.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
         ])
+        Dialogs.fitWindow(window, form: form)
     }
 
     // MARK: Hledání
@@ -140,6 +141,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         if let v = Int64(minKB.stringValue) { c.minSize = v * 1024 }
         if let v = Int64(maxKB.stringValue) { c.maxSize = v * 1024 }
         if let d = Double(days.stringValue) { c.modifiedAfter = Date().addingTimeInterval(-d * 86_400) }
+        if let d = Double(olderDays.stringValue) { c.modifiedBefore = Date().addingTimeInterval(-d * 86_400) }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: c.root.path, isDirectory: &isDir), isDir.boolValue else {
             Dialogs.error("Neplatný adresář", c.root.path); return nil
@@ -191,14 +193,14 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         SearchTemplate(name: name, masks: masks.stringValue, excludeMasks: exclude.stringValue, text: text.stringValue,
                        subdirectories: subdirs.state == .on, hidden: hidden.state == .on, archives: archives.state == .on,
                        caseSensitive: caseSens.state == .on, regex: regex.state == .on, minKB: minKB.stringValue, maxKB: maxKB.stringValue,
-                       days: days.stringValue, attributes: AttributeFilter.allCases[max(0, attrs.indexOfSelectedItem)])
+                       days: days.stringValue, olderDays: olderDays.stringValue, attributes: AttributeFilter.allCases[max(0, attrs.indexOfSelectedItem)])
     }
 
     private func apply(_ t: SearchTemplate) {
         masks.stringValue = t.masks; exclude.stringValue = t.excludeMasks; text.stringValue = t.text
         subdirs.state = t.subdirectories ? .on : .off; hidden.state = t.hidden ? .on : .off; archives.state = t.archives ? .on : .off
         caseSens.state = t.caseSensitive ? .on : .off; regex.state = t.regex ? .on : .off
-        minKB.stringValue = t.minKB; maxKB.stringValue = t.maxKB; days.stringValue = t.days
+        minKB.stringValue = t.minKB; maxKB.stringValue = t.maxKB; days.stringValue = t.days; olderDays.stringValue = t.olderDays
         attrs.selectItem(at: AttributeFilter.allCases.firstIndex(of: t.attributes) ?? 0)
     }
 

@@ -52,7 +52,69 @@ public enum ChecksumFile {
 
 // MARK: Vlastnosti
 
+public enum FileFlag: String, CaseIterable, Sendable {
+    case immutable = "uchg", hidden = "hidden", noDump = "nodump", appendOnly = "uappnd"
+    var bit: UInt32 {
+        switch self { case .immutable: UInt32(UF_IMMUTABLE); case .hidden: UInt32(UF_HIDDEN); case .noDump: UInt32(UF_NODUMP); case .appendOnly: UInt32(UF_APPEND) }
+    }
+    public var title: String {
+        switch self { case .immutable: "Zamčeno proti změnám (uchg)"; case .hidden: "Skryto (hidden)"; case .noDump: "Nezálohovat (nodump)"; case .appendOnly: "Jen přidávání (uappnd)" }
+    }
+}
+
 public enum FileAttributes {
+    public static func ownerName(_ uid: UInt32?) -> String {
+        guard let uid else { return "" }
+        return getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? String(uid)
+    }
+
+    public static func groupName(_ gid: UInt32?) -> String {
+        guard let gid else { return "" }
+        return getgrgid(gid).map { String(cString: $0.pointee.gr_name) } ?? String(gid)
+    }
+
+    /// Příznaky souboru (chflags), nebo nil, pokud je nelze přečíst.
+    public static func flags(of url: URL) -> Set<FileFlag>? {
+        var st = stat()
+        guard lstat(url.path, &st) == 0 else { return nil }
+        return Set(FileFlag.allCases.filter { st.st_flags & $0.bit != 0 })
+    }
+
+    /// Nastaví a zruší příznaky; ostatní příznaky zůstanou.
+    public static func setFlags(_ url: URL, set: Set<FileFlag>, clear: Set<FileFlag>) throws {
+        var st = stat()
+        guard lstat(url.path, &st) == 0 else { throw CocoaError(.fileNoSuchFile) }
+        var f = st.st_flags
+        for x in set { f |= x.bit }
+        for x in clear { f &= ~x.bit }
+        guard lchflags(url.path, f) == 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: [NSLocalizedDescriptionKey: String(cString: strerror(errno))]) }
+    }
+
+    /// Použije oprávnění, datum a příznaky na položku a (volitelně) na celý její obsah. Vrací chyby po položkách.
+    public static func applyRecursively(_ url: URL, permissions: UInt16?, modified: Date?, setFlags: Set<FileFlag> = [], clearFlags: Set<FileFlag> = [],
+                                        recursive: Bool) -> [(URL, String)] {
+        var errors: [(URL, String)] = []
+        func one(_ u: URL) {
+            do {
+                // zamčený soubor nejdřív odemknout, jinak by změna oprávnění a data selhala
+                let wasImmutable = flags(of: u)?.contains(.immutable) == true
+                if wasImmutable && !clearFlags.contains(.immutable) { try self.setFlags(u, set: [], clear: [.immutable]) }
+                try apply(u, permissions: permissions, modified: modified)
+                var toSet = setFlags, toClear = clearFlags
+                if wasImmutable && !clearFlags.contains(.immutable) { toSet.insert(.immutable); toClear.remove(.immutable) }
+                if !toSet.isEmpty || !toClear.isEmpty { try self.setFlags(u, set: toSet, clear: toClear) }
+            } catch { errors.append((u, error.localizedDescription)) }
+        }
+        // nejdřív obsah, potom samotný adresář (jinak by oprávnění bez práva vstupu zablokovala potomky)
+        if recursive, let e = try? LocalFileSystem().stat(url), e.isDirectory, !e.isSymlink {
+            for c in (try? LocalFileSystem().list(url, includeHidden: true)) ?? [] {
+                errors += applyRecursively(c.url, permissions: permissions, modified: modified, setFlags: setFlags, clearFlags: clearFlags, recursive: true)
+            }
+        }
+        one(url)
+        return errors
+    }
+
     public static func apply(_ url: URL, permissions: UInt16? = nil, modified: Date? = nil) throws {
         var a: [FileAttributeKey: Any] = [:]
         if let permissions { a[.posixPermissions] = NSNumber(value: permissions) }

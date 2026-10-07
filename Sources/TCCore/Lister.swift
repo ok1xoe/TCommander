@@ -40,6 +40,33 @@ public enum TextDecoding {
 }
 
 public extension TextDecoding {
+    /// Nabízená kódování pro ruční výběr v Listeru.
+    static let selectableEncodings: [String] = ["Automaticky", "UTF-8", "Windows-1250", "ISO-8859-2", "ISO-8859-1", "MacRoman", "UTF-16 LE", "UTF-16 BE"]
+
+    /// Dekódování ve vynuceném kódování (název z `selectableEncodings`); chybné bajty se nahradí.
+    static func decode(_ data: Data, forced name: String) -> String {
+        func make(_ cf: CFStringEncodings) -> String.Encoding { String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(cf.rawValue))) }
+        let enc: String.Encoding
+        switch name {
+        case "UTF-8": return String(decoding: data, as: UTF8.self)
+        case "Windows-1250": enc = make(.windowsLatin2)
+        case "ISO-8859-2": enc = make(.isoLatin2)
+        case "ISO-8859-1": enc = .isoLatin1
+        case "MacRoman": enc = .macOSRoman
+        case "UTF-16 LE": return String(data: data.starts(with: [0xFF, 0xFE]) ? data.dropFirst(2) : data, encoding: .utf16LittleEndian) ?? ""
+        case "UTF-16 BE": return String(data: data.starts(with: [0xFE, 0xFF]) ? data.dropFirst(2) : data, encoding: .utf16BigEndian) ?? ""
+        default: return decode(data).text
+        }
+        return String(data: data, encoding: enc) ?? String(decoding: data, as: UTF8.self)
+    }
+
+    /// Offset z textu: "255", "0xFF", "ff" (bez předpony se bere desítkově, pokud jde, jinak šestnáctkově).
+    static func parseOffset(_ text: String) -> Int? {
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        if t.hasPrefix("0x") { return Int(t.dropFirst(2), radix: 16) }
+        return Int(t) ?? Int(t, radix: 16)
+    }
+
     /// Zakóduje text zpět do kódování, ve kterém byl načten (název z `decode`); nil, pokud některé znaky nelze v kódování vyjádřit.
     static func encode(_ text: String, as encoding: String) -> Data? {
         switch encoding {

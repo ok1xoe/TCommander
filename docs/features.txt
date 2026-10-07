@@ -54,13 +54,13 @@ Souborové operace | Okamžitá kopie na APFS (clonefile), zachování atributů
 Souborové operace | Fronta operací s průběhem, rychlostí, pozastavením a zrušením | D | 2 | úlohy běží postupně; logika pokryta testy, pruh fronty v UI ověřen jen překladem
 Souborové operace | Ověření kopie (SHA-256) | D | 2 | volba v menu Soubor
 Souborové operace | Atributy, časy, oprávnění | D | 2 | oprávnění osmičkově a datum změny (⌥↩); příznaky souboru zatím ne
-Souborové operace | Vlastnosti (Alt+Enter) | P | 2 | dialog s cestou, velikostí (u složek po spočítání), oprávněními osmičkově a datem změny; platí i pro více položek | Karta s náhledem, vlastník a skupina, příznaky souboru (ACL, uchg), změna vlastníka, součet velikosti složky přímo v dialogu, rekurzivní úprava atributů.
+Souborové operace | Vlastnosti (Alt+Enter) | D | 2 | cesta, druh, velikost (u složek spočtená na pozadí), vlastník a skupina, časy vytvoření/otevření/změny, oprávnění, datum, příznaky (uchg, hidden, nodump, uappnd), rekurzivní použití; změna vlastníka vyžaduje správce a není k dispozici; ověřeno vizuálně
 Souborové operace | Symbolické a pevné odkazy | D | 2 | menu Nástroje
 Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | D | 2 | menu Nástroje, uložení do .sha256/.md5…, ověření ze souboru
 Souborové operace | Rozdělit a spojit soubory | D | 2 | části .001, .002 …
 Souborové operace | Kódování UUE / XXE / MIME | D | 3 | kódování i dekódování, menu Nástroje; ověřeno testy včetně známého vektoru
 
-Hledání | Hledání podle masky, velikosti, data a atributů (Alt+F7) | P | 2 | více masek, vyloučení masek, podadresáře, skryté, velikost od–do, změněno za posledních N dní, atributy (spustitelné, jen pro čtení, skryté), text v obsahu, v archivech | Hledání souborů starších než N dní (dnes jen novějších).
+Hledání | Hledání podle masky, velikosti, data a atributů (Alt+F7) | D | 2 | více masek, vyloučení masek, podadresáře, skryté, velikost od–do, změněno za posledních N dní i starší než N dní, atributy, text v obsahu, v archivech
 Hledání | Hledání textu v souborech (regex, kódování) | D | 2 | rozpoznání kódování, regex, bez ohledu na diakritiku; binární soubory po bajtech
 Hledání | Hledání uvnitř archivů | D | 4 | volba „V archivech“ v hledání (název, velikost, datum i text); nález otevře archiv na daném souboru
 Hledání | Výsledky jako panel, uložené šablony hledání | D | 6 | tlačítko „Výsledky do panelu“ (s nimi lze pracovat jako s běžným seznamem), šablony hledání v okně; jádro otestováno
@@ -70,13 +70,13 @@ Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | D | 3 | ⌃M; `[
 Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | D | 3 | zvlášť maska názvu a přípony
 Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | D | 3 | živý náhled s kontrolou konfliktů, bezpečné záměny názvů; okno ručně neověřeno
 
-Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | P | 3 | rozdíly vedle sebe (Myers diff), zvýraznění změn, synchronní posun, skok na další a předchozí rozdíl | Úprava textu přímo v okně porovnání, přenos jednotlivého rozdílu doleva/doprava, porovnání binárních souborů s vyznačením rozdílných bajtů.
+Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | P | 3 | rozdíly vedle sebe (Myers diff), přenos bloku doleva/doprava, uložení změn ve stejném kódování, porovnání binárních souborů po bajtech; ověřeno vizuálně | Psaní a úprava textu přímo v okně porovnání (měnit lze jen přenosem bloků).
 Porovnání a synchronizace | Porovnání adresářů | D | 3 | označí rozdílné soubory v obou panelech
 Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | D | 3 | pět směrů včetně zrcadlení, úprava akcí po řádcích, běží ve frontě; okno ověřeno jen spuštěním
 Porovnání a synchronizace | Synchronizace s archivem (ZIP, TAR, 7z) | D | 6 | adresář ↔ archiv: archiv se rozbalí, porovná a po synchronizaci znovu zabalí; porovnání ověřeno vizuálně, přebalení testy
 
 Prohlížení a editace | Zobrazit (F3) podle typu souboru | D | 2 | text, obrázky, PDF a média v Listeru, dokumenty (Word, Pages, Excel…) přes Quick Look, vlastní příkaz podle přípony v Nastavení › Přidružení
-Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | P | 2 | text po částech po 16 MB (části končí na konci řádku), hex režim přes mmap pro soubory libovolné velikosti, hledání v hex režimu | Ruční výběr kódování, zalamování řádků, přechod na zadaný offset.
+Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | D | 2 | text po částech po 16 MB, hex přes mmap pro libovolnou velikost, ruční výběr kódování, zalamování řádků, hledání a přechod na offset v hex režimu; ověřeno vizuálně
 Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8, UTF-16, Windows-1250 (automaticky)
 Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementované režimy obrázek, PDF, HTML a přehrávač médií; vizuálně ověřen zatím jen textový režim | Vizuální ověření režimů obrázek, PDF, HTML a média; přiblížení a otočení obrázků, listování dalším a předchozím souborem klávesami.
 Prohlížení a editace | Lister: hledání v obsahu | D | 2 | text přes ⌘F, hex režim hledá text i bajty (např. 4D 5A) od vybraného řádku, cyklicky
@@ -94,7 +94,7 @@ Síť | FTP a FTPS (obnovení stahování, fronta) | D | 5 | Enter na server jak
 Síť | SFTP | D | 5 | přes systémový sftp (OpenSSH): výpis, stahování s obnovením a přesnými časy, nahrávání, mazání, přejmenování, sdílené spojení; ověřeno proti skutečnému sshd s klíčem; ověření heslem (SSH_ASKPASS) neověřeno
 Síť | SMB (sdílené složky) | D | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem; ověřeno uživatelem proti skutečné sdílené složce
 Síť | WebDAV | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem | Ověření proti skutečnému serveru; vlastní klient s obnovením přenosu a průběhem.
-Síť | Proxy SOCKS / HTTP pro FTP | P | 5 | pole Proxy ve správci spojení, hodnota se předává libcurl (FTP) | Ověření proti proxy serveru; proxy pro SFTP (ProxyCommand) a samostatné nastavení HTTP proxy.
+Síť | Proxy SOCKS / HTTP pro FTP a SFTP | P | 5 | pole Proxy ve správci spojení: FTP přes libcurl, SFTP přes ProxyCommand (nc); sestavení příkazu otestováno | Ověření proti skutečnému proxy serveru.
 Síť | Správce spojení | D | 5 | menu Síť (⌘K), uložená připojení, hesla v Klíčence; dialog ručně neověřen
 Síť | FXP (přímý přenos server → server) | X | - | nahrazeno kopií přes dočasné stažení (server ↔ server funguje)
 Síť | Přenos paralelním portem | X | - | zastaralé, na macOS nemá smysl
