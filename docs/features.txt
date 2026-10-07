@@ -78,7 +78,7 @@ Porovnání a synchronizace | Synchronizace s archivem (ZIP, TAR, 7z) | D | 6 | 
 Prohlížení a editace | Zobrazit (F3) podle typu souboru | D | 2 | text, obrázky, PDF a média v Listeru, dokumenty (Word, Pages, Excel…) přes Quick Look, vlastní příkaz podle přípony v Nastavení › Přidružení
 Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | D | 2 | text po částech po 16 MB, hex přes mmap pro libovolnou velikost, ruční výběr kódování, zalamování řádků, hledání a přechod na offset v hex režimu; ověřeno vizuálně
 Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8, UTF-16, Windows-1250 (automaticky)
-Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementované režimy obrázek, PDF, HTML a přehrávač médií; vizuálně ověřen zatím jen textový režim | Vizuální ověření režimů obrázek, PDF, HTML a média; přiblížení a otočení obrázků, listování dalším a předchozím souborem klávesami.
+Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | D | 2 | obrázky (přiblížení, oddálení, 100 %, přizpůsobení, otočení), PDF, HTML (s opravou kódování), přehrávač zvuku a videa; přepínání na další a předchozí soubor tlačítky nebo klávesami N a P; obrázek, PDF, HTML a zvuk ověřeny vizuálně, video ne
 Prohlížení a editace | Lister: hledání v obsahu | D | 2 | text přes ⌘F, hex režim hledá text i bajty (např. 4D 5A) od vybraného řádku, cyklicky
 Prohlížení a editace | Editace (F4) podle typu souboru | D | 1 | text a zdrojové soubory ve zvoleném editoru, ostatní typy v jejich výchozí aplikaci, vlastní příkaz podle přípony v Nastavení › Přidružení
 Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | D | 6 | volba externího editoru i vestavěný editor (zachová kódování, hlídá neuložené změny, u souborů z archivu a serveru ukládá zpět); okno editoru ověřeno jen překladem
@@ -104,7 +104,7 @@ Příkazová řádka | Příkaz `cd` | D | 1 |
 Příkazová řádka | Vložit název souboru do příkazové řádky (Ctrl+Enter) | D | 1 |
 Příkazová řádka | Otevření souboru přidruženým programem (Enter) | D | 1 |
 Příkazová řádka | Historie příkazů | D | 2 | šipky nahoru/dolů v příkazové řádce
-Příkazová řádka | Vestavěný terminál | P | 6 | okno se shellem na pseudoterminálu (Ctrl+C, vkládání, historie šipkami); ověřeno v reálné aplikaci | Celoobrazovkové programy (vim, top), barvy, více karet terminálu a změna velikosti okna se promítne do terminálu.
+Příkazová řádka | Vestavěný terminál | P | 6 | okno se shellem na pseudoterminálu: barvy (SGR, 256 barev), změna velikosti okna se promítá do shellu, editace řádku, Ctrl+C, vkládání, historie; více oken najednou; ověřeno v reálné aplikaci | Celoobrazovkové programy (vim, top, htop) a plné řízení obrazovky (pozice kurzoru, mazání obrazovky), karty terminálu v jednom okně.
 Příkazová řádka | Vlastní přidružení souborů k programům | D | 6 | Nastavení › Přidružení; Enter na souboru spustí přidružený program
 
 Přizpůsobení | Konfigurovatelné klávesové zkratky | D | 6 | Nastavení › Zkratky, kontrola konfliktů; platí pro klávesy v panelech, zkratky v hlavním menu jsou pevné

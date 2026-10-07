@@ -248,7 +248,9 @@ extension AppModel {
         } else {
             switch FileOpenPolicy.viewAction(fileName: name, sample: sample, associations: associations) {
             case .command(let c): runOnFile(c, url)
-            case .lister: ListerWindow.show(url)
+            case .lister:
+                let siblings = source.isVirtual ? [] : source.entries.filter { !$0.isDirectory && !$0.isParentLink }.map(\.url)
+                ListerWindow.show(url, siblings: siblings.contains(url) ? siblings : [])
             case .quickLook: quickLook(url)
             }
         }

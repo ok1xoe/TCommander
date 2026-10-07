@@ -30,8 +30,10 @@ final class PTYShell: @unchecked Sendable {
         posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSID))
 
         var env = ProcessInfo.processInfo.environment
-        env["TERM"] = "dumb"
+        env["TERM"] = "xterm-256color"                                         // barvy; zpracování řízení kurzoru viz TerminalTextBuffer
         env["PROMPT_EOL_MARK"] = ""
+        env["CLICOLOR"] = "1"; env["CLICOLOR_FORCE"] = "1"
+        env["GIT_CONFIG_COUNT"] = "1"; env["GIT_CONFIG_KEY_0"] = "color.ui"; env["GIT_CONFIG_VALUE_0"] = "always"
         env["LC_ALL"] = env["LC_ALL"] ?? "en_US.UTF-8"
         let envp = env.map { strdup("\($0.key)=\($0.value)") } + [nil]
         let argv = [strdup(shell), strdup("-i"), strdup("-l"), nil]
@@ -54,6 +56,13 @@ final class PTYShell: @unchecked Sendable {
     func send(_ s: String) { let d = Array(s.utf8); _ = d.withUnsafeBufferPointer { write(master, $0.baseAddress, d.count) } }
 
     func interrupt() { send("\u{03}") }
+
+    /// Oznámí shellu velikost okna (sloupce × řádky), aby programy správně zalamovaly výstup.
+    func resize(columns: Int, rows: Int) {
+        var ws = winsize(ws_row: UInt16(max(1, min(rows, 1000))), ws_col: UInt16(max(1, min(columns, 1000))), ws_xpixel: 0, ws_ypixel: 0)
+        _ = ioctl(master, UInt(TIOCSWINSZ), &ws)
+        if pid > 0 { kill(pid, SIGWINCH) }
+    }
 
     func stop() {
         source?.cancel()
@@ -114,6 +123,7 @@ final class TerminalWindow: NSObject, NSWindowDelegate {
     var transcript: String { buffer.text }
     static var latest: TerminalWindow? { open.last }
     func sendDebug(_ s: String) { shell.send(s) }
+    var styleSummary: String { let r = buffer.runs; return "runs=\(r.count) colored=\(r.filter { $0.style.foreground != nil }.count)" }
 
     private init(shell: PTYShell, directory: URL) {
         self.shell = shell
@@ -141,6 +151,7 @@ final class TerminalWindow: NSObject, NSWindowDelegate {
         scroll.autoresizingMask = [.width, .height]
         window.contentView!.addSubview(scroll)
         window.makeFirstResponder(view)
+        DispatchQueue.main.async { [weak self] in self?.updateSize() }
         shell.onOutput = { [weak self] data in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.received(data) } }
         }
@@ -160,10 +171,26 @@ final class TerminalWindow: NSObject, NSWindowDelegate {
 
     private func refresh() {
         scheduled = false
-        view.string = buffer.text
-        view.textColor = NSColor(calibratedWhite: 0.92, alpha: 1)
-        view.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        let normal = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), bold = NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
+        let defaultColor = NSColor(calibratedWhite: 0.92, alpha: 1)
+        let out = NSMutableAttributedString()
+        for run in buffer.runs {
+            var color = defaultColor
+            if let rgb = run.style.rgb() { color = NSColor(srgbRed: CGFloat((rgb >> 16) & 255) / 255, green: CGFloat((rgb >> 8) & 255) / 255, blue: CGFloat(rgb & 255) / 255, alpha: 1) }
+            out.append(NSAttributedString(string: run.text, attributes: [.font: run.style.bold ? bold : normal, .foregroundColor: color]))
+        }
+        view.textStorage?.setAttributedString(out)
         view.scrollToEndOfDocument(nil)
+    }
+
+    func windowDidResize(_ notification: Notification) { updateSize() }
+
+    /// Počet sloupců a řádků podle velikosti textové oblasti a písma.
+    private func updateSize() {
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let cw = ("M" as NSString).size(withAttributes: [.font: font]).width, lh = NSLayoutManager().defaultLineHeight(for: font)
+        guard let scroll = view.enclosingScrollView, cw > 0, lh > 0 else { return }
+        shell.resize(columns: Int((scroll.contentSize.width - 10) / cw), rows: Int(scroll.contentSize.height / lh))
     }
 
     func windowWillClose(_ notification: Notification) {
