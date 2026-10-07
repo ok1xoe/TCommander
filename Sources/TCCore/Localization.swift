@@ -65,6 +65,11 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Upravit text": "Edit text",
+        "Blok → doprava": "Block → right",
+        "← Blok doleva": "← Block left",
+        "Režim úprav – po stisku „Hotovo“ se rozdíly přepočítají": "Edit mode – differences are recalculated when you press “Done”",
+        "Zapne psaní přímo do obou souborů; po dokončení se rozdíly přepočítají": "Enables typing directly into both files; differences are recalculated when finished",
         "   Počítadlo [C]: začátek": "   Counter [C]: start",
         "   změněno za posledních": "   modified in the last",
         " (ručně)": " (manual)",
