@@ -9,6 +9,11 @@
 @phase | 4 | Archivy jako adresáře | hotovo | 8 919 438 (cache čtení 8 779 513, output 66 180)
 @phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | hotovo | 14 468 481 (cache čtení 14 233 788, output 112 195)
 @phase | 6 | Plugin API, příkazy a zkratky, nastavení, vzhled panelů, terminál, editor, import z TC | hotovo | 38 280 487 (cache čtení 37 846 210, output 195 893), stav k závěru
+@phase | 7 | SMB, dokončení rozpracovaného, terminál a Lister, angličtina oken, proxy | hotovo | 42 951 274 (cache čtení 42 562 317, output 116 005)
+@phase | 8 | Zvýrazňování syntaxe, úpravy textu v okně porovnání | hotovo | 2 277 582 (cache čtení 2 213 517, output 21 155)
+@phase | 9 | Celoobrazovkový terminál, ověření WebDAV | hotovo | 5 246 704 (cache čtení 5 157 874, output 30 910)
+@phase | 10 | Konfigurovatelné hlavní menu | hotovo | 3 552 809 (cache čtení 3 488 459, output 21 872)
+@phase | 11 | PlantUML, další jazyky zvýrazňování (SQL, ADIF, YAML) | hotovo | 8 046 144 (cache čtení 7 928 036, output 46 777)
 Panely a zobrazení | Dva panely vedle sebe | D | 1 |
 Panely a zobrazení | Panely nad sebou | D | 6 | Nastavení › Obecné; ověřeno jen překladem
 Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |

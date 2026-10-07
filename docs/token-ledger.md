@@ -30,7 +30,8 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | 9 – celoobrazovkový terminál | 13:49:38 – 14:00:14 (PR #31) | 21 | 42 | 52 224 | 3 705 839 | 26 977 | 3 785 082 |
 | 9b – ověření WebDAV | 14:00:14 – 14:04:01 (PR #32) | 7 | 14 | 5 640 | 1 452 035 | 3 933 | 1 461 622 |
 | 10 – konfigurovatelné hlavní menu | 14:04:01 – 14:12:45 (PR #33) | 15 | 30 | 42 448 | 3 488 459 | 21 872 | 3 552 809 |
-| **Celkem** | 09:37 – 14:12:45 (PR #33) | 317 | 634 | 1 150 426 | 131 207 750 | 795 948 | 133 154 758 |
+| 11 – PlantUML, ADIF, YAML, SQL dialekty | 14:12:45 – 14:38:12 (PR #35) | 28 | 56 | 71 275 | 7 928 036 | 46 777 | 8 046 144 |
+| **Celkem** | 09:37 – 14:38:12 (PR #35) | 345 | 690 | 1 221 701 | 139 135 786 | 842 725 | 141 200 902 |
 
 Poznámka: hodnoty fází 1 a 2 byly původně změřeny před kroky PR/sloučení a jsou opraveny na celé okno fáze (konec = sloučení posledního PR fáze). Původní hodnota fáze 1 (2 747 398) byla změřena před kroky PR/sloučení; zde je opravená hodnota za celé okno fáze.
 
@@ -39,6 +40,6 @@ Autoritativní kontrola: `/cost` v Claude Code (měla by se shodovat se součtem
 ## Jak číst „celkem“
 
 Sloupec **cache čtení** při každém volání znovu započítává celou dosavadní konverzaci, proto je největší a součet „CELKEM“ vypadá vysoko.
-Skutečně nově zpracované tokeny za celý vývoj (do PR #33): **input 634 + cache zápis 1 150 426 + output 795 948 = 1 947 008**.
+Skutečně nově zpracované tokeny za celý vývoj (do PR #35): **input 690 + cache zápis 1 221 701 + output 842 725 = 2 065 116**.
 Cache čtení se obvykle účtuje se silnou slevou, takže pro cenu je důležité sledovat druhy zvlášť (cenu odvodíte z aktuálního ceníku).
 Hodnoty se dají kdykoli přepočítat: `scripts/token_usage.py --since <ISO UTC> --until <ISO UTC>`; autoritativní kontrola je `/cost`.
