@@ -33,8 +33,7 @@ private final class CenteringClipView: NSClipView {
 final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate, WKNavigationDelegate {
     private static var open: [ListerWindow] = []
 
-    static func show(_ url: URL, skipPlugins: Bool = false, siblings: [URL] = []) {
-        if !skipPlugins, PluginViewWindow.tryShow(url) { return }
+    static func show(_ url: URL, siblings: [URL] = []) {
         if let w = open.first(where: { $0.url == url }) { w.window.makeKeyAndOrderFront(nil); return }
         guard let w = ListerWindow(url: url, siblings: siblings) else { return }
         open.append(w)
@@ -61,6 +60,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private let data: Data
     private let window: ListerPanel
     private let modes: [ListerMode]
+    private let viewerPlugin: LoadedPlugin?
     private let container = NSView()
     private let segmented: NSSegmentedControl
     private let info = NSTextField(labelWithString: "")
@@ -93,8 +93,10 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             Dialogs.error("Soubor nelze otevřít", url.path); return nil
         }
         data = d
-        modes = ListerSupport.modes(for: url, sample: d.prefix(8192))
-        segmented = NSSegmentedControl(labels: modes.map(Self.title), trackingMode: .selectOne, target: nil, action: nil)
+        viewerPlugin = PluginHost.shared.viewerPlugin(for: url.lastPathComponent)
+        modes = ListerSupport.modes(for: url, sample: d.prefix(8192), hasViewerPlugin: viewerPlugin != nil)
+        let pluginName = viewerPlugin?.id ?? "Plugin"
+        segmented = NSSegmentedControl(labels: modes.map { $0 == .plugin ? pluginName : Self.title($0) }, trackingMode: .selectOne, target: nil, action: nil)
         window = ListerPanel(contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
                              styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         super.init()
@@ -134,12 +136,14 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             container.trailingAnchor.constraint(equalTo: c.trailingAnchor),
             container.bottomAnchor.constraint(equalTo: c.bottomAnchor),
         ])
-        show(modes[0])
+        var first = 0                                                           // ladění: --lister-mode <pořadí záložky>
+        if let i = CommandLine.arguments.firstIndex(of: "--lister-mode"), i + 1 < CommandLine.arguments.count, let n = Int(CommandLine.arguments[i + 1]) { first = min(max(0, n), modes.count - 1) }
+        show(modes[first])
     }
 
     private static func title(_ m: ListerMode) -> String {
         switch m {
-        case .text: "Text"; case .hex: "Hex"; case .image: "Obrázek"; case .pdf: "PDF"; case .media: "Přehrávač"; case .web: "HTML"; case .diagram: "Diagram"; case .markdown: "Markdown"
+        case .text: "Text"; case .hex: "Hex"; case .image: "Obrázek"; case .pdf: "PDF"; case .media: "Přehrávač"; case .web: "HTML"; case .diagram: "Diagram"; case .markdown: "Markdown"; case .plugin: "Plugin"
         }
     }
 
@@ -155,6 +159,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         case .image: view = imageView()
         case .diagram: view = diagramView()
         case .markdown: view = markdownView()
+        case .plugin: view = pluginView()
         case .pdf:
             let v = PDFView(); v.document = PDFDocument(url: url); v.autoScales = true; view = v
         case .media:
@@ -310,6 +315,54 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     @objc private func nextFile() { navigate(by: 1) }
 
     // MARK: Obrázky: přiblížení a otočení
+
+    // MARK: Plugin-prohlížeč (záložka vedle zvýrazněného textu)
+
+    private enum PluginViewState { case idle, running, done(PluginHost.ViewResult), failed(String) }
+    private var pluginState = PluginViewState.idle
+
+    private func pluginView() -> NSView {
+        switch pluginState {
+        case .idle:
+            startPluginRender()
+            return messageView("Plugin „\(viewerPlugin?.id ?? "")“ zpracovává soubor…")
+        case .running: return messageView("Plugin „\(viewerPlugin?.id ?? "")“ zpracovává soubor…")
+        case .failed(let message): return messageView("Plugin „\(viewerPlugin?.id ?? "")“ soubor nezobrazil.", hint: message + "\n\nZdroj souboru je v záložce Text.")
+        case .done(let r):
+            switch r.kind {
+            case "html":
+                let w = WKWebView(); w.loadHTMLString(r.content, baseURL: nil); return w
+            case "image":
+                return imageView(base: NSImage(contentsOfFile: r.content) ?? NSImage())
+            default:
+                let scroll = NSScrollView(); let tv = NSTextView()
+                tv.isEditable = false; tv.usesFindBar = true; tv.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+                tv.autoresizingMask = [.width]; tv.isVerticallyResizable = true; tv.string = r.content
+                if ["json", "plist", "mobileconfig", "entitlements"].contains(url.pathExtension.lowercased()), let st = tv.textStorage {
+                    SyntaxStyle.apply(to: st, language: "js", baseFont: tv.font!)
+                }
+                scroll.documentView = tv; scroll.hasVerticalScroller = true
+                return scroll
+            }
+        }
+    }
+
+    private func startPluginRender() {
+        guard let plugin = viewerPlugin else { pluginState = .failed("Plugin není k dispozici."); return }
+        pluginState = .running
+        let file = url
+        Task.detached {
+            let result = Result { try PluginHost.shared.render(file, with: plugin) }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                switch result {
+                case .success(let r): self.pluginState = .done(r)
+                case .failure(let e): self.pluginState = .failed(e.localizedDescription)
+                }
+                if self.modes[self.segmented.selectedSegment] == .plugin { self.show(.plugin) }
+            }
+        }
+    }
 
     // MARK: Čtečka Markdownu
 

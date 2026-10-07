@@ -39,7 +39,7 @@ Chybějící cesta = bez hodnoty. Aplikace volá plugin pro celou dávku soubor�
 
 Volání: `plugin view <cesta>`; výstup `{"kind": "text" | "html" | "image", "content": "..."}`.
 U `image` je `content` cesta k obrázku. Soubory s uvedenými příponami se při F3 zobrazí pluginem
-(při chybě se použije vestavěný Lister). Limit 30 s.
+(zobrazí se jako záložka vedle Text a Hex v Listeru; u souborů, které umí Lister zvýraznit, zůstává výchozím zobrazením zvýrazněný text, u ostatních a binárních je záložka pluginu první). Limit 30 s.
 
 ## Archivy (WCX)
 
