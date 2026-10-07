@@ -76,6 +76,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
+            TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--rename-demo"), i + 1 < CommandLine.arguments.count {   // ladění: F2 v adresáři
             let m = AppModel.shared
             m.source.navigate(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))

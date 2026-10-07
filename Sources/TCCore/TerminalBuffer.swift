@@ -4,12 +4,21 @@ import Foundation
 public struct TerminalStyle: Equatable, Sendable {
     /// 0–15 základní barvy; 0x1000000 | RGB pro 256 barev a TrueColor; nil = výchozí.
     public var foreground: Int?
+    public var background: Int?
     public var bold = false
-    public init(foreground: Int? = nil, bold: Bool = false) { self.foreground = foreground; self.bold = bold }
+    public var inverse = false
+    public var underline = false
+    public init(foreground: Int? = nil, bold: Bool = false, background: Int? = nil, inverse: Bool = false, underline: Bool = false) {
+        self.foreground = foreground; self.bold = bold; self.background = background; self.inverse = inverse; self.underline = underline
+    }
 
-    /// Barva jako RGB (0xRRGGBB) pro základní paletu, nebo přímo zadané RGB.
-    public func rgb() -> UInt32? {
-        guard let f = foreground else { return nil }
+    /// Barva písma jako RGB (0xRRGGBB) pro základní paletu, nebo přímo zadané RGB.
+    public func rgb() -> UInt32? { Self.rgb(of: foreground) }
+    /// Barva pozadí jako RGB.
+    public func backgroundRGB() -> UInt32? { Self.rgb(of: background) }
+
+    static func rgb(of value: Int?) -> UInt32? {
+        guard let f = value else { return nil }
         if f & 0x1000000 != 0 { return UInt32(f & 0xFFFFFF) }
         let basic: [UInt32] = [0x2E3436, 0xCC0000, 0x4E9A06, 0xC4A000, 0x3465A4, 0x75507B, 0x06989A, 0xD3D7CF,
                                0x555753, 0xEF2929, 0x8AE234, 0xFCE94F, 0x729FCF, 0xAD7FA8, 0x34E2E2, 0xEEEEEC]
@@ -40,13 +49,31 @@ public struct TerminalTextBuffer {
     private var csiParams = ""
     private var style = TerminalStyle()
     public let maxCharacters: Int
+    private var screen: TerminalScreen?
+    private var skipNext = false
+    private var size = (rows: 24, cols: 80)
+    /// Odpovědi pro program (např. pozice kurzoru na dotaz ESC[6n); okno je odešle do shellu a vyprázdní.
+    public var replies = ""
+    /// Program zapnul „aplikační“ režim šipek (ESC[?1h) – šipky se pak posílají jako ESC O A…
+    public private(set) var applicationCursor = false
+    /// Probíhá celoobrazovkový program (alternativní obrazovka).
+    public var isFullScreen: Bool { screen != nil }
+
+    /// Nastaví velikost obrazovky v buňkách (volá okno při změně velikosti).
+    public mutating func resize(columns: Int, rows: Int) {
+        size = (max(1, rows), max(1, columns))
+        screen?.resize(rows: size.rows, cols: size.cols)
+    }
 
     public init(maxCharacters: Int = 400_000) { self.maxCharacters = maxCharacters }
 
-    public var text: String { doneLines.map { $0.map(\.text).joined() }.joined() + String(current.map(\.ch)) }
+    public var text: String {
+        if let screen { return screen.plainLines.joined(separator: "\n") }
+        return doneLines.map { $0.map(\.text).joined() }.joined() + String(current.map(\.ch)) }
 
     /// Text jako souvislé úseky se stejným stylem (pro obarvené zobrazení).
     public var runs: [Run] {
+        if let screen { return screen.runs() }
         var out: [Run] = []
         for r in doneLines.joined() {
             if var last = out.last, last.style == r.style { last.text += r.text; out[out.count - 1] = last } else { out.append(r) }
@@ -95,19 +122,34 @@ public struct TerminalTextBuffer {
     }
 
     private mutating func feed(_ c: Unicode.Scalar) {
+        if skipNext { skipNext = false; return }                                         // znak za ESC ( / ESC ) / ESC #
         if osc { if c == "\u{07}" { osc = false; inEscape = false } else if c == "\u{1B}" { inEscape = true }; return }
         if inEscape {
             if csi {
                 if (0x40...0x7E).contains(c.value) {
-                    if c == "m" { applySGR(csiParams) } else { applyCursor(final: c, params: csiParams) }
+                    handleCSI(final: c, params: csiParams)
                     csi = false; inEscape = false; csiParams = ""
                 } else { csiParams.unicodeScalars.append(c) }
                 return
             }
             if c == "[" { csi = true; csiParams = ""; return }
             if c == "]" { osc = true; return }
-            inEscape = false; return
+            inEscape = false
+            if c == "(" || c == ")" || c == "#" { skipNext = true; return }
+            if screen != nil {
+                switch c {
+                case "M": screen?.reverseIndex()
+                case "D": screen?.lineFeed()
+                case "E": screen?.carriageReturn(); screen?.lineFeed()
+                case "7": screen?.saveCursor()
+                case "8": screen?.restoreCursor()
+                case "c": screen?.fullReset()
+                default: break
+                }
+            }
+            return
         }
+        if screen != nil { feedScreen(c); return }
         switch c {
         case "\u{1B}": inEscape = true
         case "\r": column = 0
@@ -119,6 +161,46 @@ public struct TerminalTextBuffer {
             while column < target { put(" ") }
         default: if c.value >= 32 { put(Character(c)) }
         }
+    }
+
+    private mutating func feedScreen(_ c: Unicode.Scalar) {
+        switch c {
+        case "\u{1B}": inEscape = true
+        case "\r": screen?.carriageReturn()
+        case "\n", "\u{0B}", "\u{0C}": screen?.lineFeed()
+        case "\u{08}": screen?.backspace()
+        case "\t": screen?.tab()
+        default: if c.value >= 32 && c.value != 0x7F { screen?.put(Character(c)) }
+        }
+    }
+
+    /// Soukromé režimy (ESC[?…h/l): alternativní obrazovka, aplikační šipky, viditelnost kurzoru; ostatní se ignorují.
+    private mutating func handlePrivateMode(final: Unicode.Scalar, params: String) {
+        guard final == "h" || final == "l" else { return }
+        let on = final == "h"
+        for code in params.dropFirst().split(separator: ";").compactMap({ Int($0) }) {
+            switch code {
+            case 1: applicationCursor = on
+            case 25: screen?.cursorVisible = on
+            case 47, 1047, 1049:
+                if on, screen == nil { screen = TerminalScreen(rows: size.rows, cols: size.cols) }
+                else if !on { screen = nil }
+            default: break
+            }
+        }
+    }
+
+    private mutating func handleCSI(final c: Unicode.Scalar, params: String) {
+        if params.hasPrefix("?") { handlePrivateMode(final: c, params: params); return }
+        if screen != nil {
+            if let reply = screen?.csi(final: c, params: params) { replies += reply }
+            return
+        }
+        if c == "m" { style.apply(sgr: params) }
+        else if c == "n" || c == "c" {                                                   // dotazy na pozici kurzoru a typ terminálu
+            if c == "n", params == "6" { replies += "\u{1B}[\(1);\(column + 1)R" }
+            else if c == "c" { replies += params.hasPrefix(">") ? "\u{1B}[>0;95;0c" : "\u{1B}[?1;2c" }
+        } else { applyCursor(final: c, params: params) }
     }
 
     private mutating func put(_ ch: Character) {
@@ -145,22 +227,36 @@ public struct TerminalTextBuffer {
         default: break                                                                  // A, B, H, J … se zatím nepodporují
         }
     }
+}
 
-    private mutating func applySGR(_ params: String) {
+extension TerminalStyle {
+    /// Použije SGR parametry (např. „1;31“, „38;5;208“, „7“, „48;2;10;20;30“).
+    public mutating func apply(sgr params: String) {
         let codes = params.isEmpty ? [0] : params.split(separator: ";", omittingEmptySubsequences: false).map { Int($0) ?? 0 }
         var i = 0
+        func extended() -> Int? {
+            if i + 2 < codes.count, codes[i + 1] == 5 { defer { i += 2 }; return TerminalStyle.palette256(codes[i + 2]) }
+            if i + 4 < codes.count, codes[i + 1] == 2 { defer { i += 4 }; return 0x1000000 | ((codes[i + 2] & 255) << 16) | ((codes[i + 3] & 255) << 8) | (codes[i + 4] & 255) }
+            return nil
+        }
         while i < codes.count {
             let c = codes[i]
             switch c {
-            case 0: style = TerminalStyle()
-            case 1: style.bold = true
-            case 22: style.bold = false
-            case 30...37: style.foreground = c - 30
-            case 90...97: style.foreground = c - 90 + 8
-            case 39: style.foreground = nil
-            case 38:
-                if i + 2 < codes.count, codes[i + 1] == 5 { style.foreground = TerminalStyle.palette256(codes[i + 2]); i += 2 }
-                else if i + 4 < codes.count, codes[i + 1] == 2 { style.foreground = 0x1000000 | ((codes[i + 2] & 255) << 16) | ((codes[i + 3] & 255) << 8) | (codes[i + 4] & 255); i += 4 }
+            case 0: self = TerminalStyle()
+            case 1: bold = true
+            case 4: underline = true
+            case 7: inverse = true
+            case 22: bold = false
+            case 24: underline = false
+            case 27: inverse = false
+            case 30...37: foreground = c - 30
+            case 90...97: foreground = c - 90 + 8
+            case 39: foreground = nil
+            case 40...47: background = c - 40
+            case 100...107: background = c - 100 + 8
+            case 49: background = nil
+            case 38: if let v = extended() { foreground = v }
+            case 48: if let v = extended() { background = v }
             default: break
             }
             i += 1
