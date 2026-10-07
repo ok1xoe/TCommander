@@ -51,12 +51,13 @@ Souborové operace | Slučování adresářů při kopii a přesunu | D | 1 |
 Souborové operace | Řešení konfliktů (přepsat / starší / přeskočit / ponechat obě) | D | 1 |
 Souborové operace | Ochrana: kopie do sebe sama, přepsání zdroje sebou samým | D | 1 |
 Souborové operace | Operace na pozadí (UI nezamrzá) | D | 1 |
-Souborové operace | Fronta operací s průběhem, pozastavení a zrušením | T | 2 |
-Souborové operace | Ověření kopie | T | 2 |
+Souborové operace | Okamžitá kopie na APFS (clonefile), zachování atributů a odkazů | D | 2 | kopírování po blocích jako záloha
+Souborové operace | Fronta operací s průběhem, rychlostí, pozastavením a zrušením | D | 2 | úlohy běží postupně; logika pokryta testy, pruh fronty v UI ověřen jen překladem
+Souborové operace | Ověření kopie (SHA-256) | D | 2 | volba v menu Soubor
 Souborové operace | Atributy, časy, oprávnění | T | 2 |
 Souborové operace | Vlastnosti (Alt+Enter) | T | 2 |
 Souborové operace | Symbolické a pevné odkazy | T | 2 |
-Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | T | 2 |
+Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | P | 2 | výpočet hotový a otestovaný, dialog v UI přijde
 Souborové operace | Rozdělit a spojit soubory | T | 2 |
 Souborové operace | Kódování UUE / XXE / MIME | T | 3 |
 

@@ -10,6 +10,7 @@ struct ContentView: View {
                 PanelView(model: model, side: .left).frame(minWidth: 380)
                 PanelView(model: model, side: .right).frame(minWidth: 380)
             }
+            JobsBar(jobs: model.jobs)
             CommandLineBar(model: model)
             FKeyBar(model: model)
         }
@@ -59,5 +60,31 @@ struct FKeyBar: View {
     private func btn(_ title: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).font(.system(size: 11)).frame(maxWidth: .infinity) }
             .buttonStyle(.bordered).controlSize(.small)
+    }
+}
+
+struct JobsBar: View {
+    let jobs: JobManager
+
+    var body: some View {
+        if !jobs.jobs.isEmpty {
+            VStack(spacing: 4) {
+                ForEach(jobs.jobs) { job in
+                    HStack(spacing: 8) {
+                        Text(job.title).font(.system(size: 12, weight: .medium)).lineLimit(1).frame(maxWidth: 260, alignment: .leading)
+                        ProgressView(value: job.progress.fraction).frame(maxWidth: 260)
+                        Text(job.detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                        Spacer()
+                        if job.state != .queued {
+                            Button { jobs.togglePause(job) } label: { Image(systemName: job.state == .paused ? "play.fill" : "pause.fill") }
+                        }
+                        Button { jobs.cancel(job) } label: { Image(systemName: "xmark") }
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(.bar)
+        }
     }
 }
