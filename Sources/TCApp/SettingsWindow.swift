@@ -44,15 +44,15 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             tabs.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 10),
             tabs.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -10),
         ])
-        add("Obecné", generalTab())
-        add("Zkratky", shortcutsTab())
-        add("Tlačítková lišta", buttonsTab(start: false))
-        add("Start menu", buttonsTab(start: true))
-        add("Uživatelské příkazy", commandsTab())
-        add("Přidružení souborů", associationsTab())
-        add("Sloupce", columnsTab())
-        add("Barvy", colorsTab())
-        add("Pluginy", pluginsTab())
+        add(L("Obecné"), generalTab())
+        add(L("Zkratky"), shortcutsTab())
+        add(L("Tlačítková lišta"), buttonsTab(start: false))
+        add(L("Start menu"), buttonsTab(start: true))
+        add(L("Uživatelské příkazy"), commandsTab())
+        add(L("Přidružení souborů"), associationsTab())
+        add(L("Sloupce"), columnsTab())
+        add(L("Barvy"), colorsTab())
+        add(L("Pluginy"), pluginsTab())
     }
 
     private func add(_ title: String, _ content: NSView) {
@@ -196,16 +196,20 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     // MARK: Přidružení
 
     private func associationsTab() -> NSView {
-        let table = StringTable(columns: [.init(title: "Přípony (čárkou)", width: 220), .init(title: "Program / aplikace / příkaz", width: 380), .init(title: "Parametry (výchozí %F)", width: 200)],
-                                rows: model.associations.map { [$0.extensions.joined(separator: ", "), $0.command, $0.parameters] },
-                                newRow: { ["txt", "/Applications/", ""] })
+        let table = StringTable(columns: [.init(title: "Přípony (čárkou)", width: 150), .init(title: "Enter: program / aplikace / příkaz", width: 230),
+                                          .init(title: "Parametry", width: 90), .init(title: "F3 Zobrazit (prázdné = podle typu)", width: 190), .init(title: "F4 Editovat (prázdné = podle typu)", width: 190)],
+                                rows: model.associations.map { [$0.extensions.joined(separator: ", "), $0.command, $0.parameters, $0.viewCommand, $0.editCommand] },
+                                newRow: { ["png, jpg", "", "", "/System/Applications/Preview.app", ""] })
         table.onChange = { [weak self] r in
             self?.model.associations = r.map {
-                FileAssociation(extensions: $0[0].split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }, command: $0[1], parameters: $0[2])
+                FileAssociation(extensions: $0[0].split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty },
+                                command: $0[1], parameters: $0[2], viewCommand: $0[3], editCommand: $0[4])
             }
         }
         keepAlive.append(table)
-        return table.view
+        let hint = NSTextField(wrappingLabelWithString: "Bez přidružení platí pravidla podle typu: F3 zobrazí text, obrázky, PDF a média v Listeru, dokumenty (Word, Pages, Excel…) přes Quick Look; F4 otevře textové soubory ve zvoleném editoru a ostatní typy v jejich výchozí aplikaci. Příkaz může být aplikace (.app) nebo shellový příkaz s %F.")
+        hint.textColor = .secondaryLabelColor; hint.font = .systemFont(ofSize: 11)
+        return stackWithFooter(table.view, [hint])
     }
 
     // MARK: Sloupce (vlastní pohledy)

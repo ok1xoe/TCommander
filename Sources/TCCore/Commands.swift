@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 /// Klávesová zkratka v textovém tvaru, např. "F5", "ctrl+shift+c", "alt+F7", "delete".
 public struct Shortcut: Hashable, Codable, Sendable, CustomStringConvertible {
@@ -10,19 +11,22 @@ public struct Shortcut: Hashable, Codable, Sendable, CustomStringConvertible {
     public init(key: String, modifiers: Set<Modifier> = []) { self.key = key.lowercased(); self.modifiers = modifiers }
 
     public init?(_ text: String) {
-        let parts = text.lowercased().split(separator: "+", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
-        guard let k = parts.last, !k.isEmpty else {
-            // znak "+" jako klávesa ("ctrl++")
-            if text.hasSuffix("++") { self.init(key: "+", modifiers: Set(text.dropLast(2).split(separator: "+").compactMap { Modifier(rawValue: $0.lowercased()) })); return }
-            return nil
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        // klávesa je nejdelší známý název (nebo jediný znak) na konci, před ním je začátek nebo "+"
+        var key: String?
+        for k in (Shortcut.knownKeys.sorted { $0.count > $1.count }) + ["+"] where t.hasSuffix(k) {
+            let rest = t.dropLast(k.count)
+            if rest.isEmpty || rest.hasSuffix("+") { key = k; break }
         }
+        if key == nil, let last = t.last, t.count == 1 || t.dropLast().hasSuffix("+") { key = String(last) }
+        guard let key else { return nil }
         var mods = Set<Modifier>()
-        for m in parts.dropLast() {
+        let prefix = t.dropLast(key.count)
+        for m in prefix.split(separator: "+").map(String.init) {
             guard let mod = Modifier(rawValue: m == "control" ? "ctrl" : (m == "option" ? "alt" : (m == "command" ? "cmd" : m))) else { return nil }
             mods.insert(mod)
         }
-        guard Shortcut.knownKeys.contains(k) || k.count == 1 else { return nil }
-        self.init(key: k, modifiers: mods)
+        self.init(key: key, modifiers: mods)
     }
 
     public var description: String {
@@ -191,10 +195,60 @@ public struct ButtonBarItem: Codable, Hashable, Identifiable, Sendable {
 public struct FileAssociation: Codable, Hashable, Identifiable, Sendable {
     public var id: UUID
     public var extensions: [String]    // bez tečky, malými písmeny
-    public var command: String         // program / aplikace (.app) / shellový příkaz
+    public var command: String         // Enter: program / aplikace (.app) / shellový příkaz
     public var parameters: String      // např. "%P%N"; prázdné = cesta k souboru
-    public init(id: UUID = UUID(), extensions: [String], command: String, parameters: String = "") {
+    /// F3: příkaz pro zobrazení (aplikace .app nebo shellový příkaz s %F); prázdné = výchozí pravidla.
+    public var viewCommand: String
+    /// F4: příkaz pro editaci; prázdné = výchozí pravidla.
+    public var editCommand: String
+    public init(id: UUID = UUID(), extensions: [String], command: String, parameters: String = "", viewCommand: String = "", editCommand: String = "") {
         self.id = id; self.extensions = extensions.map { $0.lowercased() }; self.command = command; self.parameters = parameters
+        self.viewCommand = viewCommand; self.editCommand = editCommand
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id); extensions = try c.decode([String].self, forKey: .extensions)
+        command = try c.decode(String.self, forKey: .command); parameters = try c.decodeIfPresent(String.self, forKey: .parameters) ?? ""
+        viewCommand = try c.decodeIfPresent(String.self, forKey: .viewCommand) ?? ""
+        editCommand = try c.decodeIfPresent(String.self, forKey: .editCommand) ?? ""
+    }
+}
+
+/// Co udělat s F3 (zobrazit) a F4 (editovat) podle typu souboru.
+public enum FileOpenPolicy {
+    public enum ViewAction: Equatable, Sendable { case command(String), lister, quickLook }
+    public enum EditAction: Equatable, Sendable { case command(String), editor, systemDefault }
+
+    private static func type(_ name: String) -> UTType? {
+        let ext = (name as NSString).pathExtension
+        return ext.isEmpty ? nil : UTType(filenameExtension: ext)
+    }
+
+    /// Text, zdrojový kód, JSON, XML, skripty apod.
+    public static func isTextLike(_ t: UTType) -> Bool {
+        t.conforms(to: .text) || t.conforms(to: .sourceCode) || t.conforms(to: .json) || t.conforms(to: .xml) || t.conforms(to: .script)
+            || t.conforms(to: .propertyList) || t.conforms(to: .yaml)
+    }
+
+    /// `sample` = začátek souboru; použije se u neznámých přípon a souborů bez přípony.
+    public static func viewAction(fileName: String, sample: Data = Data(), associations: [FileAssociation]) -> ViewAction {
+        if let a = Associations.match(fileName, in: associations), !a.viewCommand.isEmpty { return .command(a.viewCommand) }
+        guard let t = type(fileName) else { return .lister }
+        // typy, které Lister zobrazí sám (text, obrázky, PDF, média, HTML)
+        if isTextLike(t) || t.conforms(to: .image) || t.conforms(to: .pdf) || t.conforms(to: .audiovisualContent) || t.conforms(to: .html) { return .lister }
+        // dokumenty (Word, Pages, Excel, prezentace…) zobrazí Quick Look
+        if t.conforms(to: .content) || t.conforms(to: .spreadsheet) || t.conforms(to: .presentation) || t.conforms(to: .compositeContent) { return .quickLook }
+        return .lister
+    }
+
+    public static func editAction(fileName: String, sample: Data = Data(), associations: [FileAssociation]) -> EditAction {
+        if let a = Associations.match(fileName, in: associations), !a.editCommand.isEmpty { return .command(a.editCommand) }
+        guard let t = type(fileName) else { return ListerSupport.looksBinary(sample) ? .systemDefault : .editor }
+        if isTextLike(t) { return .editor }
+        // neznámá přípona: podle obsahu
+        if t.isDynamic || t.identifier.hasPrefix("dyn.") { return ListerSupport.looksBinary(sample) ? .systemDefault : .editor }
+        return .systemDefault
     }
 }
 

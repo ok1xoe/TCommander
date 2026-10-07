@@ -38,7 +38,7 @@ struct CommandLineBar: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(model.source.path.path + " ›").font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
-            TextField("příkaz (Enter spustí, „cd cesta“ změní adresář)", text: $model.commandLine)
+            TextField(L("příkaz (Enter spustí, „cd cesta“ změní adresář)"), text: $model.commandLine)
                 .textFieldStyle(.plain).font(.system(size: 12, design: .monospaced))
                 .onSubmit { model.runCommandLine() }
                 .onKeyPress(.upArrow) { model.historyPrevious(); return .handled }
@@ -55,15 +55,15 @@ struct FKeyBar: View {
 
     var body: some View {
         HStack(spacing: 1) {
-            btn("F2 Přejmenovat") { model.rename() }
-            btn("⌃M Hromadně") { model.multiRename() }
-            btn("F3 Zobrazit") { model.view() }
-            btn("F4 Editovat") { model.edit() }
-            btn("F5 Kopírovat") { model.transfer(.copy) }
-            btn("F6 Přesunout") { model.transfer(.move) }
-            btn("F7 Nový adresář") { model.makeDirectory() }
-            btn("⌥F7 Hledat") { model.search() }
-            btn("F8 Smazat") { model.delete(permanent: false) }
+            btn(L("F2 Přejmenovat")) { model.rename() }
+            btn(L("⌃M Hromadně")) { model.multiRename() }
+            btn(L("F3 Zobrazit")) { model.view() }
+            btn(L("F4 Editovat")) { model.edit() }
+            btn(L("F5 Kopírovat")) { model.transfer(.copy) }
+            btn(L("F6 Přesunout")) { model.transfer(.move) }
+            btn(L("F7 Nový adresář")) { model.makeDirectory() }
+            btn(L("⌥F7 Hledat")) { model.search() }
+            btn(L("F8 Smazat")) { model.delete(permanent: false) }
         }
         .padding(2)
     }
@@ -107,9 +107,9 @@ struct ButtonBarView: View {
         HStack(spacing: 6) {
             Menu {
                 ForEach(model.startMenu) { item in
-                    Button { model.run(command: item.command, parameters: item.parameters) } label: { Label(item.title, systemImage: item.icon) }
+                    Button { model.run(command: item.command, parameters: item.parameters) } label: { Label(L(item.title), systemImage: item.icon) }
                 }
-            } label: { Label("Start", systemImage: "play.circle") }
+            } label: { Label(L("Start"), systemImage: "play.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
             Divider().frame(height: 22)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -118,7 +118,7 @@ struct ButtonBarView: View {
                         Button { model.run(command: b.command, parameters: b.parameters) } label: {
                             VStack(spacing: 1) {
                                 Image(systemName: b.icon).font(.system(size: 14))
-                                Text(b.title).font(.system(size: 9)).lineLimit(1)
+                                Text(L(b.title)).font(.system(size: 9)).lineLimit(1)
                             }
                             .frame(minWidth: 52)
                         }

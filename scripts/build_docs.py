@@ -12,7 +12,7 @@ for raw in open(os.path.join(root, "docs/features.txt"), encoding="utf-8"):
     if parts[0] == "@phase":
         phases.append(dict(n=parts[1], name=parts[2], state=parts[3], tokens=parts[4]))
     else:
-        cats.setdefault(parts[0], []).append(dict(name=parts[1], st=parts[2], phase=parts[3], note=parts[4] if len(parts) > 4 else ""))
+        cats.setdefault(parts[0], []).append(dict(name=parts[1], st=parts[2], phase=parts[3], note=parts[4] if len(parts) > 4 else "", miss=parts[5] if len(parts) > 5 else ""))
 
 LABEL = {"D": "Hotovo", "P": "Částečně", "T": "Plánováno", "X": "Nepřenáší se"}
 allf = [f for fs in cats.values() for f in fs]
@@ -24,6 +24,14 @@ try:
     commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=root, text=True).strip()
 except Exception:
     commit = "?"
+
+def detail(f):
+    if f["st"] == "P" and (f["note"] or f["miss"]):
+        out = ""
+        if f["note"]: out += '<div class="note ok"><b>✔ Hotovo:</b> ' + inline(f["note"]) + "</div>"
+        if f["miss"]: out += '<div class="note miss"><b>✘ Chybí:</b> ' + inline(f["miss"]) + "</div>"
+        return out
+    return "<div class=note>" + inline(f["note"]) + "</div>" if f["note"] else ""
 
 def inline(s):
     out, tick = "", False
@@ -44,7 +52,7 @@ for cat, fs in cats.items():
     d = sum(1 for f in fs if f["st"] == "D")
     rows = "".join(
         f'<tr data-st="{f["st"]}"><td>{inline(f["name"])}'
-        f'{"<div class=note>" + inline(f["note"]) + "</div>" if f["note"] else ""}</td>'
+        f'{detail(f)}</td>'
         f'<td><span class="tag {f["st"]}">{LABEL[f["st"]]}</span></td><td class="num">{esc(f["phase"])}</td></tr>' for f in fs)
     sections += f'<section><h2>{esc(cat)} <small>{d}/{len(fs)}</small></h2><table>{rows}</table></section>'
 
@@ -66,7 +74,7 @@ h1{{font-size:28px;margin:0 0 4px}}h2{{font-size:17px;margin:0 0 8px}}h2 small{{
 table{{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}}
 td,th{{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}}tr:last-child td{{border-bottom:0}}
 th{{font-size:12px;color:var(--mut);font-weight:600}}.num{{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}}
-.note{{color:var(--mut);font-size:12.5px}}code{{background:var(--line);padding:1px 5px;border-radius:4px;font-size:12.5px}}
+.note{{color:var(--mut);font-size:12.5px}}.note.ok b{{color:var(--d)}}.note.miss b{{color:var(--p)}}code{{background:var(--line);padding:1px 5px;border-radius:4px;font-size:12.5px}}
 .tag,.pill{{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}}
 .tag.D,.pill.hotovo{{color:var(--d)}}.tag.P,.pill.probíhá{{color:var(--p)}}.tag.T,.pill.plán{{color:var(--t)}}.tag.X{{color:var(--x);text-decoration:line-through}}
 section{{margin:26px 0}}.filters{{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 0}}

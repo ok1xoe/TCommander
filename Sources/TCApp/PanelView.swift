@@ -14,7 +14,7 @@ struct PanelView: View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
                 VolumeMenu { tab.navigateLocal($0); model.activeSide = side }
-                TextField("Cesta", text: Binding(
+                TextField(L("Cesta"), text: Binding(
                     get: { model.pathEdit[side.key] ?? tab.displayPath },
                     set: { model.pathEdit[side.key] = $0 }))
                     .textFieldStyle(.roundedBorder)
@@ -29,7 +29,7 @@ struct PanelView: View {
             if model.filterVisible[side.key] == true {
                 HStack(spacing: 6) {
                     Image(systemName: "line.3.horizontal.decrease.circle").foregroundStyle(.secondary)
-                    TextField("Rychlý filtr (Esc zruší)", text: Binding(get: { tab.quickFilter }, set: { tab.quickFilter = $0 }))
+                    TextField(L("Rychlý filtr (Esc zruší)"), text: Binding(get: { tab.quickFilter }, set: { tab.quickFilter = $0 }))
                         .textFieldStyle(.roundedBorder)
                         .focused($filterFocus)
                 }
@@ -142,11 +142,11 @@ struct VolumeMenu: View {
     var body: some View {
         Menu {
             let home = FileManager.default.homeDirectoryForCurrentUser
-            Button("Domů") { go(home) }
+            Button(L("Domů")) { go(home) }
             ForEach(["Desktop", "Documents", "Downloads"], id: \.self) { n in
                 Button(n) { go(home.appendingPathComponent(n)) }
             }
-            Button("Aplikace") { go(URL(fileURLWithPath: "/Applications")) }
+            Button(L("Aplikace")) { go(URL(fileURLWithPath: "/Applications")) }
             Button("/") { go(URL(fileURLWithPath: "/")) }
             Divider()
             let vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []

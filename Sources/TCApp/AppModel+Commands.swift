@@ -199,6 +199,92 @@ extension AppModel {
         }
     }
 
+    // MARK: F3 a F4 podle typu souboru
+
+    func view() { performFileAction(edit: false) }
+    func edit() { performFileAction(edit: true) }
+
+    private func performFileAction(edit: Bool) {
+        guard let e = source.targets.first, !e.isDirectory else { return }
+        withLocalFile(e) { [weak self] url in self?.dispatchFileAction(url, edit: edit) }
+    }
+
+    /// Soubor z archivu nebo serveru se nejdřív zpřístupní lokálně (dočasná kopie).
+    func withLocalFile(_ e: FileEntry, _ then: @escaping (URL) -> Void) {
+        if source.insideArchive { if let tmp = extractToTemp(e.url) { then(tmp) }; return }
+        if source.remote != nil { withRemoteFile(e, then); return }
+        then(e.url)
+    }
+
+    private func dispatchFileAction(_ url: URL, edit: Bool) {
+        let sample = (try? FileHandle(forReadingFrom: url)).flatMap { h in defer { try? h.close() }; return try? h.read(upToCount: 8192) } ?? Data()
+        let name = url.lastPathComponent
+        if edit {
+            switch FileOpenPolicy.editAction(fileName: name, sample: sample, associations: associations) {
+            case .command(let c): runOnFile(c, url)
+            case .editor: openInEditor(url)
+            case .systemDefault: NSWorkspace.shared.open(url)
+            }
+        } else {
+            switch FileOpenPolicy.viewAction(fileName: name, sample: sample, associations: associations) {
+            case .command(let c): runOnFile(c, url)
+            case .lister: ListerWindow.show(url)
+            case .quickLook: quickLook(url)
+            }
+        }
+    }
+
+    /// Spustí příkaz z přidružení pro konkrétní soubor (aplikace .app, nebo shellový příkaz s placeholdery; bez %F se cesta připojí).
+    func runOnFile(_ command: String, _ file: URL) {
+        let ctx = PlaceholderContext(sourcePath: file.deletingLastPathComponent().path, targetPath: target.persistentPath.path,
+                                     cursorName: file.lastPathComponent, selectedNames: [file.lastPathComponent])
+        let q = PlaceholderExpander.shellQuote
+        let full = command.hasSuffix(".app")
+            ? "open -a \(q(command)) \(q(file.path))"
+            : PlaceholderExpander.expand(command, ctx) + (command.contains("%") ? "" : " " + q(file.path))
+        let dir = file.deletingLastPathComponent()
+        Task {
+            let r = await Task.detached { Shell.run(full, in: dir) }.value
+            if r.status != 0 { Dialogs.error("Spuštění selhalo", r.output.isEmpty ? "Návratový kód \(r.status)" : r.output) }
+        }
+    }
+
+    func quickLook(_ url: URL) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/qlmanage")
+        p.arguments = ["-p", url.path]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        try? p.run()
+    }
+
+    // MARK: Import z Total Commanderu
+
+    /// Načte wincmd.ini (a usercmd.ini ze stejné složky) a po potvrzení přidá tlačítka, příkazy, zkratky a oblíbené adresáře.
+    func importFromTotalCommander() {
+        let panel = NSOpenPanel()
+        panel.title = "Vyberte soubor wincmd.ini z Total Commanderu"
+        panel.message = "Soubor usercmd.ini ve stejné složce se načte také."
+        panel.allowedContentTypes = [.init(filenameExtension: "ini") ?? .data]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let r: WincmdImport
+        do { r = try WincmdImporter.load(from: url) } catch { Dialogs.error("Import selhal", error.localizedDescription); return }
+        guard !r.isEmpty else { Dialogs.error("Import", "V souboru nebylo nalezeno nic, co by šlo převést.\(r.skipped.isEmpty ? "" : "\n\n" + r.skipped.prefix(10).joined(separator: "\n"))"); return }
+        let summary = "Tlačítek: \(r.buttonBar.count), uživatelských příkazů: \(r.userCommands.count), příkazů se zkratkami: \(r.shortcuts.count), oblíbených adresářů: \(r.hotlist.count)"
+        let skipped = r.skipped.isEmpty ? "" : "\n\nNepřevedeno (\(r.skipped.count)):\n" + r.skipped.prefix(12).joined(separator: "\n") + (r.skipped.count > 12 ? "\n…" : "")
+        guard Dialogs.confirm(title: "Importovat nastavení z Total Commanderu?", message: summary + skipped, ok: "Importovat") else { return }
+        // tlačítka a příkazy se přidají za stávající, stejné názvy příkazů se nahradí
+        buttonBar += r.buttonBar.filter { new in !buttonBar.contains { $0.title == new.title && $0.command == new.command } }
+        for u in r.userCommands { if let i = userCommands.firstIndex(where: { $0.name == u.name }) { userCommands[i] = u } else { userCommands.append(u) } }
+        for (id, list) in r.shortcuts {
+            var merged = keymap.shortcuts(for: id)
+            for sc in list where !merged.contains(sc) { merged.append(sc) }
+            keymap.set(merged, for: id)
+        }
+        for h in r.hotlist { hotlist.add(URL(fileURLWithPath: h.path), name: h.name) }
+        status = "Importováno z Total Commanderu: \(summary)"
+    }
+
     // MARK: Sady oblíbených karet
 
     func saveFavoriteTabs() {
