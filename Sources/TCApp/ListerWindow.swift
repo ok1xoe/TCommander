@@ -239,6 +239,9 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         let decoded = forcedEncoding == "Automaticky" ? TextDecoding.decode(chunk) : (TextDecoding.decode(chunk, forced: forcedEncoding), forcedEncoding + " (ručně)")
         encodingName = decoded.1 + (pages > 1 ? " · část \(textPage + 1) z \(pages)" : "")
         textArea?.string = decoded.0
+        if let lang = SyntaxHighlighter.language(forFileName: url.lastPathComponent), let storage = textArea?.textStorage {
+            SyntaxStyle.apply(to: storage, language: lang, baseFont: textArea?.font ?? .monospacedSystemFont(ofSize: 12, weight: .regular))
+        }
         textArea?.scrollToBeginningOfDocument(nil)
         pageLabel.stringValue = pages > 1 ? "Část \(textPage + 1) z \(pages) (bajty \(r.lowerBound)–\(r.upperBound))" : ""
         info.stringValue = [ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file), encodingName].joined(separator: " · ")
