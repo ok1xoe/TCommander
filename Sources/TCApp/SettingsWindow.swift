@@ -22,6 +22,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     private var keepAlive: [AnyObject] = []
 
     // obecné
+    private let plantUML = NSTextField()
     private let editor = NSTextField(), terminal = NSTextField(), proxyNote = NSTextField(labelWithString: "")
     private let trash = NSButton(checkboxWithTitle: "Mazat do koše (jinak trvale)", target: nil, action: nil)
     private let verify = NSButton(checkboxWithTitle: "Ověřovat kopie (SHA-256)", target: nil, action: nil)
@@ -78,13 +79,14 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     private func generalTab() -> NSView {
         let s = model.settings
-        editor.stringValue = s.editorApp; terminal.stringValue = s.terminalApp
+        editor.stringValue = s.editorApp; terminal.stringValue = s.terminalApp; plantUML.stringValue = s.plantUMLPath
+        plantUML.placeholderString = "prázdné = automaticky (Homebrew, Application Support)"
         trash.state = s.deleteToTrash ? .on : .off; verify.state = s.verifyCopies ? .on : .off
         hidden.state = s.showHidden ? .on : .off; stacked.state = s.panelsStacked ? .on : .off; builtinEditor.state = s.useBuiltinEditor ? .on : .off
         fontSize.stringValue = String(format: "%g", s.fontSize); rowHeight.stringValue = String(format: "%g", s.rowHeight)
         language.addItems(withTitles: ["Čeština", "English"]); language.selectItem(at: s.language == "en" ? 1 : 0)
         for c in [trash, verify, hidden, stacked, builtinEditor] { c.target = self; c.action = #selector(generalChanged) }
-        for f in [editor, terminal, fontSize, rowHeight] { f.target = self; f.action = #selector(generalChanged) }
+        for f in [editor, terminal, plantUML, fontSize, rowHeight] { f.target = self; f.action = #selector(generalChanged) }
         language.target = self; language.action = #selector(generalChanged)
 
         func row(_ label: String, _ v: [NSView]) -> NSStackView {
@@ -94,6 +96,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         }
         editor.widthAnchor.constraint(greaterThanOrEqualToConstant: 380).isActive = true
         terminal.widthAnchor.constraint(greaterThanOrEqualToConstant: 380).isActive = true
+        plantUML.widthAnchor.constraint(greaterThanOrEqualToConstant: 380).isActive = true
+        let choosePlantUML = NSButton(title: "Vybrat…", target: self, action: #selector(pickPlantUML))
         let chooseEditor = NSButton(title: "Vybrat…", target: self, action: #selector(pickEditor))
         let chooseTerminal = NSButton(title: "Vybrat…", target: self, action: #selector(pickTerminal))
         for f in [fontSize, rowHeight] { f.widthAnchor.constraint(equalToConstant: 60).isActive = true }
@@ -101,7 +105,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         note.textColor = .secondaryLabelColor; note.font = .systemFont(ofSize: 11)
         let stack = NSStackView(views: [
             row("Editor (F4):", [editor, chooseEditor]), row("", [builtinEditor]), row("Terminál:", [terminal, chooseTerminal]),
-            row("", [trash]), row("", [verify]), row("", [hidden]), row("", [stacked]),
+            row("PlantUML (příkaz nebo .jar):", [plantUML, choosePlantUML]), row("", [trash]), row("", [verify]), row("", [hidden]), row("", [stacked]),
             row("Velikost písma:", [fontSize]), row("Výška řádku:", [rowHeight]), row("Jazyk:", [language]), note,
         ])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 10
@@ -112,13 +116,19 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     @objc private func generalChanged() {
         var s = model.settings
-        s.editorApp = editor.stringValue; s.terminalApp = terminal.stringValue
+        s.editorApp = editor.stringValue; s.terminalApp = terminal.stringValue; s.plantUMLPath = plantUML.stringValue.trimmingCharacters(in: .whitespaces)
         s.deleteToTrash = trash.state == .on; s.verifyCopies = verify.state == .on
         s.showHidden = hidden.state == .on; s.panelsStacked = stacked.state == .on; s.useBuiltinEditor = builtinEditor.state == .on
         s.fontSize = min(24, max(9, Double(fontSize.stringValue.replacingOccurrences(of: ",", with: ".")) ?? s.fontSize))
         s.rowHeight = min(40, max(14, Double(rowHeight.stringValue.replacingOccurrences(of: ",", with: ".")) ?? s.rowHeight))
         s.language = language.indexOfSelectedItem == 1 ? "en" : "cs"
         model.settings = s
+    }
+
+    @objc private func pickPlantUML() {
+        let p = NSOpenPanel()
+        p.allowsMultipleSelection = false; p.canChooseDirectories = false
+        if p.runModal() == .OK, let u = p.url { plantUML.stringValue = u.path; generalChanged() }
     }
 
     @objc private func pickEditor() { pickApp(editor) }

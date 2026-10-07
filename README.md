@@ -18,7 +18,7 @@ Požadavky: macOS 14+, Swift 6 (stačí Command Line Tools). Aplikace není v Ap
 Dva panely s kartami, režimy Plný / Stručný / Náhledy / Strom, vlastní sloupce, barvy souborů, lišta disků, fronta operací s průběhem a pauzou,
 kopírování s ověřením, Lister (text, hex, obrázky, PDF, média, HTML), hledání (i uvnitř archivů a podle obsahu), Multi-Rename,
 porovnání a synchronizace adresářů (i s archivy), kontrolní součty, rozdělení a spojení souborů, archivy jako adresáře (zip, tar.*, 7z, rar, …),
-FTP/FTPS, SFTP, SMB a WebDAV, terminál (včetně vim, top a dalších celoobrazovkových programů), vestavěný editor a Lister se zvýrazňováním syntaxe, porovnání souborů s úpravami přímo v okně, příkazy, konfigurovatelné zkratky a hlavní menu, tlačítková lišta, pluginy, import z Total Commanderu, čeština a angličtina.
+FTP/FTPS, SFTP, SMB a WebDAV, terminál (včetně vim, top a dalších celoobrazovkových programů), vestavěný editor a Lister se zvýrazňováním syntaxe (včetně SQL, YAML, ADIF a PlantUML) a vykreslováním diagramů PlantUML, porovnání souborů s úpravami přímo v okně, příkazy, konfigurovatelné zkratky a hlavní menu, tlačítková lišta, pluginy, import z Total Commanderu, čeština a angličtina.
 
 **Přesný soupis všech funkcí TC a stav implementace (včetně toho, co je u částečných funkcí hotové a co chybí):** [docs/index.html](docs/index.html)
 (generuje se příkazem `python3 scripts/build_docs.py` ze souboru [docs/features.txt](docs/features.txt)).
@@ -36,6 +36,8 @@ FTP/FTPS, SFTP, SMB a WebDAV, terminál (včetně vim, top a dalších celoobraz
 - `CArchive`, `CCurl` – tenké vazby na systémové knihovny libarchive a libcurl.
 
 ## Známá omezení
+
+Diagramy PlantUML (F3 na `.puml`) vykresluje skutečný PlantUML: nainstalujte `brew install plantuml` (potřebuje Javu), nebo uložte `plantuml.jar` do `~/Library/Application Support/macTC/`, případně zadejte cestu v Nastavení › Obecné.
 
 Nastavení uložené v `~/Library/Application Support/macTC/`. SMB (ověřil uživatel), WebDAV (lokální server wsgidav) i proxy SOCKS5 a HTTP CONNECT (lokální proxy) jsou ověřené. TLS u FTP a přihlášení heslem u SFTP jsou implementované, ale nebyly ověřeny proti skutečné službě.
 Většina oken a dialogů je ověřená spuštěním a snímky, nikoli automatizovanými UI testy; automaticky testovaná je logika.
