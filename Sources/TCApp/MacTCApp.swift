@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let i = CommandLine.arguments.firstIndex(of: "--lister"), i + 1 < CommandLine.arguments.count {
             ListerWindow.show(URL(fileURLWithPath: CommandLine.arguments[i + 1]))
         }
+        if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
@@ -39,6 +40,7 @@ struct TCCommands: Commands {
         }
         CommandMenu("Soubor") {
             Button("Otevřít") { model.open() }.keyboardShortcut("o")
+            Button("Hledat soubory…") { model.search() }.keyboardShortcut("f", modifiers: [.command, .shift])
             Button("Přejmenovat…") { model.rename() }
             Button("Nový adresář…") { model.makeDirectory() }.keyboardShortcut("n", modifiers: [.command, .shift])
             Button("Nový soubor…") { model.newFile() }

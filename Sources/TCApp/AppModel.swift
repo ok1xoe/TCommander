@@ -90,7 +90,7 @@ final class AppModel {
         case 118: if m == .shift { newFile() } else { edit() }; return true // F4
         case 96: transfer(.copy); return true                            // F5
         case 97: if m == .shift { rename() } else { transfer(.move) }; return true // F6
-        case 98: if m == .option { Dialogs.error("Hledání", "Hledání souborů přijde ve fázi 2.") } else { makeDirectory() }; return true // F7
+        case 98: if m == .option { search() } else { makeDirectory() }; return true // F7
         case 100: delete(permanent: m == .shift); return true            // F8
         default: break
         }
@@ -226,6 +226,14 @@ final class AppModel {
         guard let name = Dialogs.prompt(title: "Nový soubor", message: "Název:", initial: "", ok: "Vytvořit") else { return }
         do { let new = try ops.makeFile(named: name, in: source.path); reloadAll(); source.reload(select: new); openInEditor(new) }
         catch { Dialogs.error("Vytvoření souboru selhalo", error.localizedDescription) }
+    }
+
+    func search() {
+        SearchWindow.show(root: source.path) { [weak self] url in
+            guard let self else { return }
+            self.source.navigate(to: url.deletingLastPathComponent(), select: url)
+            NSApp.windows.first { $0.isVisible && $0.title == "macTC" }?.makeKeyAndOrderFront(nil)
+        }
     }
 
     // MARK: Prohlížení a editace
