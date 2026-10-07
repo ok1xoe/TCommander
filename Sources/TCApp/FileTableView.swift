@@ -93,6 +93,7 @@ struct FileTableView: NSViewRepresentable {
     let onKey: (NSEvent) -> Bool
     let onOpen: () -> Void
     var onDrop: ([URL], URL, Bool) -> Void = { _, _, _ in }
+    var onRename: (FileEntry, String) -> Void = { _, _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -132,7 +133,7 @@ struct FileTableView: NSViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
         var parent: FileTableView
         weak var table: KeyTableView?
         private var lastRevision = -1
@@ -141,7 +142,51 @@ struct FileTableView: NSViewRepresentable {
         private var lastStyle = PanelStyle()
         private var installedColumns: [PanelColumn] = []
 
-        init(_ p: FileTableView) { parent = p }
+        private var renamingRow: Int?
+
+        init(_ p: FileTableView) {
+            parent = p
+            super.init()
+            NotificationCenter.default.addObserver(forName: .macTCBeginRename, object: nil, queue: .main) { [weak self] n in
+                MainActor.assumeIsolated {
+                    guard let self, n.object as AnyObject === self.parent.tab else { return }
+                    self.beginRename()
+                }
+            }
+        }
+
+        deinit { NotificationCenter.default.removeObserver(self) }
+
+        /// Přejmenování přímo v seznamu: buňka s názvem se stane editovatelnou (vybere se název bez přípony).
+        func beginRename() {
+            guard let table, let col = table.tableColumns.firstIndex(where: { $0.identifier.rawValue == "name" }) else { return }
+            let row = parent.tab.cursor
+            guard parent.tab.entries.indices.contains(row), !parent.tab.entries[row].isParentLink,
+                  let cell = table.view(atColumn: col, row: row, makeIfNecessary: true) as? FileCell else { return }
+            renamingRow = row
+            cell.label.isEditable = true
+            cell.label.delegate = self
+            table.window?.makeFirstResponder(cell.label)
+            let e = parent.tab.entries[row]
+            let showsExt = parent.tab.columns.contains(.ext)
+            let len = showsExt ? cell.label.stringValue.utf16.count : (e.isDirectory ? e.name.utf16.count : e.baseName.utf16.count)
+            (cell.label.currentEditor() as? NSTextView)?.setSelectedRange(NSRange(location: 0, length: len))
+        }
+
+        func controlTextDidEndEditing(_ obj: Notification) {
+            guard let field = obj.object as? NSTextField, let row = renamingRow else { return }
+            renamingRow = nil
+            field.isEditable = false
+            let tab = parent.tab
+            guard tab.entries.indices.contains(row) else { return }
+            let e = tab.entries[row]
+            let cancelled = (obj.userInfo?["NSTextMovement"] as? Int) == NSTextMovement.cancel.rawValue
+            let typed = field.stringValue
+            let showsExt = tab.columns.contains(.ext)
+            let full = showsExt && !e.ext.isEmpty && !e.isDirectory ? typed + "." + e.ext : typed
+            if cancelled || full == e.name { table?.reloadData(); return }
+            parent.onRename(e, full)
+        }
 
         func sync() {
             guard let table else { return }
@@ -223,7 +268,7 @@ struct FileTableView: NSViewRepresentable {
             let isMarked = tab.marked.contains(e.url)
             let text: String
             switch id.rawValue {
-            case "name": text = e.isParentLink ? ".." : e.baseName; cell.icon.image = IconCache.icon(for: e)
+            case "name": text = e.isParentLink ? ".." : (tab.columns.contains(.ext) ? e.baseName : e.name); cell.icon.image = IconCache.icon(for: e)
             case "ext": text = e.ext
             case "size": text = Fmt.size(of: e, dirSize: tab.dirSizes[e.url])
             case "date": text = e.isParentLink ? "" : Fmt.date(e.modified)

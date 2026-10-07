@@ -25,7 +25,7 @@ Panely a zobrazení | Rychlý filtr (Ctrl+S, ⌘F) | D | 2 | pole nad seznamem, 
 Panely a zobrazení | Skryté soubory (⇧⌘.) | D | 1 |
 Panely a zobrazení | Quick View panel (Ctrl+Q) | D | 2 | druhý panel ukazuje náhled souboru pod kurzorem; ověřeno jen překladem
 Panely a zobrazení | Barvy podle typu souboru | D | 6 | pravidla podle masek v Nastavení › Barvy
-Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků a oblíbených složek (Domů, Desktop, Dokumenty, Stažené, Aplikace, připojené svazky) | Lišta s tlačítky disků (jedno kliknutí na disk jako v TC) a rychlé přepínání oblíbených složek čísly.
+Panely a zobrazení | Výběr svazků a oblíbených složek | D | 1 | lišta tlačítek (Domů, Desktop, Downloads, Aplikace a všechny připojené svazky) nad panelem a menu svazků; ověřeno vizuálně
 Panely a zobrazení | Historie adresářů (zpět / vpřed) | D | 1 | ⌘[ ⌘]
 Panely a zobrazení | Seznam historie a Directory hotlist (⌘D) | D | 2 | menu Oblíbené a Historie; hotlist uložen v Application Support
 Panely a zobrazení | Branch view (Ctrl+B, všechny soubory podadresářů) | D | 2 |
@@ -43,7 +43,7 @@ Označování | Spočítat velikosti všech adresářů | D | 1 |
 
 Souborové operace | Kopírovat (F5) | D | 1 | i pod novým názvem
 Souborové operace | Přesunout (F6) | D | 1 |
-Souborové operace | Přejmenovat (F2 / ⇧F6) | P | 1 | přejmenování dialogem s původním názvem, kontrola existence a neplatných znaků | Přejmenování přímo v seznamu (úprava názvu na místě); dnes se otevře dialog.
+Souborové operace | Přejmenovat (F2 / ⇧F6) | D | 1 | přímo v seznamu (vybere se název bez přípony, Esc ruší), u archivů a serverů dialogem; ověřeno vizuálně
 Souborové operace | Nový adresář (F7), i vnořený a/b/c | D | 1 |
 Souborové operace | Nový soubor (⇧F4) | D | 1 |
 Souborové operace | Smazat (F8) do koše nebo trvale (⇧F8) | D | 1 |
@@ -82,7 +82,7 @@ Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8,
 Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementované režimy obrázek, PDF, HTML a přehrávač médií; vizuálně ověřen zatím jen textový režim | Vizuální ověření režimů obrázek, PDF, HTML a média; přiblížení a otočení obrázků, listování dalším a předchozím souborem klávesami.
 Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém režimu přes ⌘F (lišta hledání macOS) | Hledání v hex režimu (bajty i text), hledání dalšího výskytu klávesou F3 jako v TC.
 Prohlížení a editace | Editace (F4) podle typu souboru | D | 1 | text a zdrojové soubory ve zvoleném editoru, ostatní typy v jejich výchozí aplikaci, vlastní příkaz podle přípony v Nastavení › Přidružení
-Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | P | 6 | externí editor pro F4 lze zvolit v Nastavení; podle typu souboru se otevře i jiná aplikace (přidružení) | Vestavěný textový editor (dnes se používá externí aplikace).
+Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | D | 6 | volba externího editoru i vestavěný editor (zachová kódování, hlídá neuložené změny, u souborů z archivu a serveru ukládá zpět); okno editoru ověřeno jen překladem
 
 Archivy | Prohlížení archivu jako adresáře (ZIP, TAR, GZ, 7z, RAR…) | D | 4 | Enter na archivu, „..“ vystoupí; čtení přes systémovou libarchive (zip, tar.*, 7z, rar, cab, iso …); otestováno na zip a tar.gz
 Archivy | Balení (Alt+F5) do zip, tar.gz, tar.bz2, tar.xz, 7z, na pozadí | D | 4 | menu Nástroje, průběh ve frontě
@@ -105,7 +105,7 @@ Příkazová řádka | Příkaz `cd` | D | 1 |
 Příkazová řádka | Vložit název souboru do příkazové řádky (Ctrl+Enter) | D | 1 |
 Příkazová řádka | Otevření souboru přidruženým programem (Enter) | D | 1 |
 Příkazová řádka | Historie příkazů | D | 2 | šipky nahoru/dolů v příkazové řádce
-Příkazová řádka | Vestavěný terminál | T | 6 |
+Příkazová řádka | Vestavěný terminál | P | 6 | okno se shellem na pseudoterminálu (Ctrl+C, vkládání, historie šipkami); ověřeno v reálné aplikaci | Celoobrazovkové programy (vim, top), barvy, více karet terminálu a změna velikosti okna se promítne do terminálu.
 Příkazová řádka | Vlastní přidružení souborů k programům | D | 6 | Nastavení › Přidružení; Enter na souboru spustí přidružený program
 
 Přizpůsobení | Konfigurovatelné klávesové zkratky | D | 6 | Nastavení › Zkratky, kontrola konfliktů; platí pro klávesy v panelech, zkratky v hlavním menu jsou pevné
@@ -117,6 +117,6 @@ Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 
 Přizpůsobení | Import nastavení z `wincmd.ini` | D | 6 | tlačítka, uživatelské příkazy (usercmd.ini), zkratky a oblíbené adresáře; Windows programy a cesty se přeskočí a vypíšou; menu Nástroje; dialog ručně neověřen
 Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | D | 6 | složka s plugin.json a spustitelným souborem, JSON přes standardní vstup/výstup (viz docs/plugins.md); sloupce, prohlížeče, archivy (jen čtení přes rozbalení), souborové systémy; ověřeno testy s ukázkovými pluginy
 Přizpůsobení | Vestavěné obsahové sloupce (rozměry obrázku, délka audia/videa, strany PDF, řádky textu) | D | 6 | sada sloupců Média; rozměry ověřeny vizuálně
-Přizpůsobení | Konfigurovatelné hlavní menu (přidávání vlastních položek) | T | 6 | zatím jen Start menu a tlačítková lišta
+Přizpůsobení | Konfigurovatelné hlavní menu (přidávání vlastních položek) | P | 6 | vlastní položky v menu Start (programy a uživatelské příkazy) a tlačítková lišta | Úpravy samotného hlavního menu (přidání, přeřazení, skrytí položek).
 Přizpůsobení | Windows pluginy (.wcx, .wfx, .wlx, .wdx) | X | - | binárně nekompatibilní s macOS
 Přizpůsobení | Windows UAC a integrace s Průzkumníkem | X | - | nahrazeno oprávněními macOS a Finderem

@@ -39,6 +39,22 @@ public enum TextDecoding {
     }
 }
 
+public extension TextDecoding {
+    /// Zakóduje text zpět do kódování, ve kterém byl načten (název z `decode`); nil, pokud některé znaky nelze v kódování vyjádřit.
+    static func encode(_ text: String, as encoding: String) -> Data? {
+        switch encoding {
+        case "UTF-8", "UTF-8 (s chybami)": return Data(text.utf8)
+        case "UTF-8 (BOM)": return Data([0xEF, 0xBB, 0xBF]) + Data(text.utf8)
+        case "UTF-16 LE": return text.data(using: .utf16LittleEndian).map { Data([0xFF, 0xFE]) + $0 }
+        case "UTF-16 BE": return text.data(using: .utf16BigEndian).map { Data([0xFE, 0xFF]) + $0 }
+        case "Windows-1250":
+            let cp1250 = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.windowsLatin2.rawValue)))
+            return text.data(using: cp1250, allowLossyConversion: false)
+        default: return Data(text.utf8)
+        }
+    }
+}
+
 public enum HexDump {
     public static let width = 16
 

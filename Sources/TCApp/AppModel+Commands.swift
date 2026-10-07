@@ -177,6 +177,7 @@ extension AppModel {
         case "cm_locktab": source.locked.toggle()
         case "cm_savetabs": saveFavoriteTabs()
         case "cm_layout": settings.panelsStacked.toggle()
+        case "cm_terminal": TerminalWindow.show(directory: source.persistentPath)
         default: return false
         }
         return true
@@ -206,7 +207,26 @@ extension AppModel {
 
     private func performFileAction(edit: Bool) {
         guard let e = source.targets.first, !e.isDirectory else { return }
-        withLocalFile(e) { [weak self] url in self?.dispatchFileAction(url, edit: edit) }
+        // změny souboru z archivu nebo serveru se po uložení v editoru vrátí zpět
+        var saveBack: ((URL) -> Void)?
+        if let fs = source.archiveFS, fs.isWritable {
+            let dir = ArchiveSupport.normalize((e.url.deletingLastPathComponent().path))
+            saveBack = { [weak self] local in
+                var c = ArchiveFileSystem.Changes(); c.add = [.init(local: local, innerDirectory: dir)]
+                self?.modifyArchive(fs, title: "Uložit do archivu: \(local.lastPathComponent)", changes: c, success: "Uloženo do archivu")
+            }
+        } else if let r = source.remote {
+            let remotePath = e.url.path
+            saveBack = { [weak self] local in
+                self?.jobs.enqueue(title: "Nahrát na server: \(local.lastPathComponent)", work: { _, _ in
+                    var rep = OperationReport()
+                    do { try r.uploadFile(local: local, remotePath: remotePath, progress: nil); rep.succeeded = 1 }
+                    catch { rep.failures.append(.init(url: local, message: error.localizedDescription)) }
+                    return rep
+                }, onFinish: { [weak self] rep in self?.finish(rep, success: "Nahráno na server") })
+            }
+        }
+        withLocalFile(e) { [weak self] url in self?.dispatchFileAction(url, edit: edit, saveBack: saveBack) }
     }
 
     /// Soubor z archivu nebo serveru se nejdřív zpřístupní lokálně (dočasná kopie).
@@ -216,13 +236,13 @@ extension AppModel {
         then(e.url)
     }
 
-    private func dispatchFileAction(_ url: URL, edit: Bool) {
+    private func dispatchFileAction(_ url: URL, edit: Bool, saveBack: ((URL) -> Void)? = nil) {
         let sample = (try? FileHandle(forReadingFrom: url)).flatMap { h in defer { try? h.close() }; return try? h.read(upToCount: 8192) } ?? Data()
         let name = url.lastPathComponent
         if edit {
             switch FileOpenPolicy.editAction(fileName: name, sample: sample, associations: associations) {
             case .command(let c): runOnFile(c, url)
-            case .editor: openInEditor(url)
+            case .editor: if settings.useBuiltinEditor { EditorWindow.show(url, saveBack: saveBack) } else { openInEditor(url) }
             case .systemDefault: NSWorkspace.shared.open(url)
             }
         } else {
