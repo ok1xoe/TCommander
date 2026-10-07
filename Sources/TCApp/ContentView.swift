@@ -48,6 +48,7 @@ struct FKeyBar: View {
     var body: some View {
         HStack(spacing: 1) {
             btn("F2 Přejmenovat") { model.rename() }
+            btn("⌃M Hromadně") { model.multiRename() }
             btn("F3 Zobrazit") { model.view() }
             btn("F4 Editovat") { model.edit() }
             btn("F5 Kopírovat") { model.transfer(.copy) }
