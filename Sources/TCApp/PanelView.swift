@@ -5,6 +5,7 @@ import TCCore
 struct PanelView: View {
     @Bindable var model: AppModel
     let side: Side
+    @FocusState private var filterFocus: Bool
 
     var body: some View {
         let group = model.group(side)
@@ -25,6 +26,16 @@ struct PanelView: View {
             .buttonStyle(.borderless)
             .padding(6)
             TabBar(group: group, onSelect: { group.select($0); model.activeSide = side })
+            if model.filterVisible[side.key] == true {
+                HStack(spacing: 6) {
+                    Image(systemName: "line.3.horizontal.decrease.circle").foregroundStyle(.secondary)
+                    TextField("Rychlý filtr (Esc zruší)", text: Binding(get: { tab.quickFilter }, set: { tab.quickFilter = $0 }))
+                        .textFieldStyle(.roundedBorder)
+                        .focused($filterFocus)
+                }
+                .padding(.horizontal, 6).padding(.bottom, 4)
+                .onAppear { filterFocus = true }
+            }
             FileTableView(
                 tab: tab, revision: tab.revision, isActive: isActive,
                 onFocus: { if model.activeSide != side { model.activeSide = side } },
@@ -79,6 +90,8 @@ struct StatusBar: View {
         HStack {
             if let message {
                 Text(message).foregroundStyle(.red).lineLimit(1)
+            } else if tab.isBranch && s.markedCount == 0 {
+                Text("Branch view · \(s.fileCount) souborů · \(Fmt.human(s.totalBytes))").foregroundStyle(.orange)
             } else if s.markedCount > 0 {
                 Text("Označeno \(s.markedCount) z \(s.fileCount + s.dirCount) · \(Fmt.human(s.markedBytes))").foregroundStyle(.red)
             } else {

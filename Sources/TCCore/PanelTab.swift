@@ -17,6 +17,13 @@ public final class PanelTab: Identifiable {
     /// Zvyšuje se při každé změně viditelného stavu; UI podle něj překresluje tabulku.
     public private(set) var revision = 0
     public var cursor = 0
+    /// Naposledy navštívené adresáře (nejnovější první).
+    public private(set) var recent: [URL] = []
+    /// Branch view: všechny soubory z podadresářů v jednom seznamu.
+    public private(set) var isBranch = false
+    @ObservationIgnored private var savedSelection: Set<URL> = []
+    @ObservationIgnored private var watcher: DirectoryWatcher?
+    public var autoRefresh = true { didSet { updateWatcher() } }
     public var sort = SortDescriptor() { didSet { if sort != oldValue { applyView(keeping: cursorURL) } } }
     public var showHidden = false { didSet { if showHidden != oldValue { reload() } } }
     public var quickFilter = "" { didSet { if quickFilter != oldValue { applyView(keeping: cursorURL) } } }
@@ -67,7 +74,12 @@ public final class PanelTab: Identifiable {
             if target != path && !keepMarks { marked.removeAll(); quickFilter = "" }
             path = target
             all = items
+            isBranch = false
             error = nil
+            recent.removeAll { $0 == target }
+            recent.insert(target, at: 0)
+            if recent.count > 30 { recent.removeLast() }
+            updateWatcher()
             applyView(keeping: select)
             return true
         } catch {
@@ -96,6 +108,7 @@ public final class PanelTab: Identifiable {
 
     /// Znovu načte adresář; když zmizel, vyleze na nejbližší existující nadřazený.
     public func reload(select: URL? = nil) {
+        if isBranch { enterBranchView(); return }
         var dir = path
         let keep = select ?? cursorURL
         while !navigate(to: dir, select: keep, recordHistory: false, keepMarks: true) {
@@ -149,6 +162,54 @@ public final class PanelTab: Identifiable {
     public func moveCursor(to index: Int) {
         guard !entries.isEmpty else { return }
         cursor = max(0, min(index, entries.count - 1)); revision &+= 1
+    }
+
+    /// Označí všechny soubory se stejnou příponou jako soubor pod kurzorem.
+    public func markSameExtension() {
+        guard let e = cursorEntry, !e.isParentLink, !e.isDirectory else { return }
+        let ext = e.ext.lowercased()
+        for x in entries where !x.isParentLink && !x.isDirectory && x.ext.lowercased() == ext { marked.insert(x.url) }
+        revision &+= 1
+    }
+
+    public func saveSelection() { savedSelection = marked }
+
+    public func restoreSelection() {
+        marked = savedSelection.intersection(Set(entries.map(\.url))); revision &+= 1
+    }
+
+    // MARK: Branch view
+
+    /// Ctrl+B: zobrazí všechny soubory ze všech podadresářů (názvy jsou relativní cesty).
+    public func enterBranchView(limit: Int = 200_000) {
+        var flat: [FileEntry] = []
+        var stack = [path]
+        while let dir = stack.popLast(), flat.count < limit {
+            for e in (try? fs.list(dir, includeHidden: showHidden)) ?? [] {
+                if e.isDirectory { if !e.isSymlink { stack.append(e.url) }; continue }
+                let rel = String(e.url.path.dropFirst(path.path.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                flat.append(FileEntry(url: e.url, name: rel, isDirectory: false, isSymlink: e.isSymlink, isHidden: e.isHidden,
+                                      size: e.size, modified: e.modified, permissions: e.permissions))
+            }
+        }
+        all = flat
+        isBranch = true
+        error = nil
+        marked.formIntersection(Set(flat.map(\.url)))
+        applyView(keeping: cursorURL)
+    }
+
+    public func exitBranchView() { if isBranch { navigate(to: path, select: cursorURL, recordHistory: false, keepMarks: true) } }
+
+    private func updateWatcher() {
+        watcher?.stop(); watcher = nil
+        guard autoRefresh else { return }
+        watcher = DirectoryWatcher(url: path) { [weak self] in
+            Task { @MainActor in
+                guard let self, !self.isBranch else { return }
+                self.reload()
+            }
+        }
     }
 
     // MARK: Velikosti adresářů

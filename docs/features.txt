@@ -21,24 +21,24 @@ Panely a zobrazení | Náhledy obrázků (Thumbnails) | T | 2 |
 Panely a zobrazení | Vlastní sloupce a pohledy | T | 6 |
 Panely a zobrazení | Řazení podle názvu / přípony / velikosti / data (klik na hlavičku) | D | 1 |
 Panely a zobrazení | Rychlé hledání psaním (type-ahead) | D | 1 | vestavěné v tabulce
-Panely a zobrazení | Rychlý filtr (Ctrl+S) | P | 2 | model hotový a otestovaný, chybí vstupní pole v UI
+Panely a zobrazení | Rychlý filtr (Ctrl+S, ⌘F) | D | 2 | pole nad seznamem, Esc zruší
 Panely a zobrazení | Skryté soubory (⇧⌘.) | D | 1 |
 Panely a zobrazení | Quick View panel (Ctrl+Q) | T | 2 |
 Panely a zobrazení | Barvy podle typu souboru | T | 6 |
 Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků; tlačítková lišta disků ve fázi 6
 Panely a zobrazení | Historie adresářů (zpět / vpřed) | D | 1 | ⌘[ ⌘]
-Panely a zobrazení | Seznam historie a Directory hotlist (Ctrl+D) | T | 2 |
-Panely a zobrazení | Branch view (Ctrl+B, všechny soubory podadresářů) | T | 2 |
+Panely a zobrazení | Seznam historie a Directory hotlist (⌘D) | D | 2 | menu Oblíbené a Historie; hotlist uložen v Application Support
+Panely a zobrazení | Branch view (Ctrl+B, všechny soubory podadresářů) | D | 2 |
 Panely a zobrazení | Cíl = zdroj, prohození panelů | D | 1 | ⌘=  ⌘U
 Panely a zobrazení | Stavový řádek (označeno, počty, volné místo) | D | 1 |
 Panely a zobrazení | Obnovení karet a nastavení po spuštění | D | 1 |
 Panely a zobrazení | Drag & drop mezi panely a Finderem | T | 2 |
-Panely a zobrazení | Automatická aktualizace při změně na disku | P | 2 | nyní při aktivaci aplikace a po operacích; FSEvents ve fázi 2
+Panely a zobrazení | Automatická aktualizace při změně na disku | D | 2 | sledování adresáře + obnovení při aktivaci aplikace; změny obsahu uvnitř souboru (velikost) zatím ne
 
 Označování | Označit mezerníkem / Insert | D | 1 | mezerník u adresáře spočte jeho velikost
 Označování | Označit vše, zrušit, invertovat | D | 1 |
 Označování | Označit / odznačit podle masky (Num+ / Num−) | D | 1 | masky `*.txt;*.doc`
-Označování | Označit stejnou příponu, uložit / obnovit výběr | T | 2 |
+Označování | Označit stejnou příponu, uložit / obnovit výběr | D | 2 | menu Označit
 Označování | Spočítat velikosti všech adresářů | D | 1 |
 
 Souborové operace | Kopírovat (F5) | D | 1 | i pod novým názvem

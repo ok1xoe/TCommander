@@ -72,12 +72,36 @@ struct TCCommands: Commands {
             Button("Invertovat označení") { model.source.invertMarks() }
             Button("Označit podle masky…") { model.markByMask(on: true) }
             Button("Odznačit podle masky…") { model.markByMask(on: false) }
+            Button("Označit stejnou příponu") { model.source.markSameExtension() }.keyboardShortcut("e", modifiers: [.command, .shift])
+            Button("Uložit výběr") { model.source.saveSelection() }
+            Button("Obnovit výběr") { model.source.restoreSelection() }
+            Divider()
             Button("Spočítat velikosti adresářů") { model.source.computeAllDirSizes() }
+        }
+        CommandMenu("Oblíbené") {
+            Button("Přidat aktuální adresář") { model.hotlist.add(model.source.path) }.keyboardShortcut("d")
+            Divider()
+            ForEach(model.hotlist.entries) { e in
+                Button(e.name) { model.goTo(URL(fileURLWithPath: e.path)) }
+            }
+            if !model.hotlist.entries.isEmpty {
+                Divider()
+                Menu("Odebrat") {
+                    ForEach(model.hotlist.entries) { e in Button(e.name) { model.hotlist.remove(e) } }
+                }
+            }
+        }
+        CommandMenu("Historie") {
+            ForEach(Array(model.source.recent.prefix(25)), id: \.self) { url in
+                Button(url.path) { model.goTo(url) }
+            }
         }
         CommandMenu("Zobrazení") {
             Toggle("Skryté soubory", isOn: Binding(get: { model.showHidden }, set: { model.showHidden = $0 }))
                 .keyboardShortcut(".", modifiers: [.command, .shift])
             Button("Obnovit") { model.reloadAll() }.keyboardShortcut("r")
+            Button("Branch view (všechny podadresáře)") { model.toggleBranchView() }.keyboardShortcut("b")
+            Button("Rychlý filtr") { model.toggleFilter() }.keyboardShortcut("f")
             Divider()
             Button("Nadřazený adresář") { model.source.goUp() }.keyboardShortcut(.upArrow, modifiers: .command)
             Button("Zpět") { model.source.goBack() }.keyboardShortcut("[")
