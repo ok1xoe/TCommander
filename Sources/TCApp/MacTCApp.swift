@@ -4,6 +4,8 @@ import TCCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ContentColumnRegistry.shared.register(BuiltinContentColumns())
+        PluginHost.shared.reload()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Ladicí přepínač: macTC --lister <soubor> otevře rovnou Lister.
@@ -49,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         if let i = CommandLine.arguments.firstIndex(of: "--mode"), i + 1 < CommandLine.arguments.count {      // ladění: režim zobrazení
-            let parts = CommandLine.arguments[i + 1].split(separator: ":").map(String.init)
+            let parts = CommandLine.arguments[i + 1].split(separator: "|").map(String.init)
             AppModel.shared.source.viewMode = ViewMode(rawValue: parts[0]) ?? .full
             if parts.count > 1 { AppModel.shared.source.columns = ColumnSet.parse(parts[1].replacingOccurrences(of: "+", with: ",")) }
             if parts.count > 2 { AppModel.shared.source.navigate(to: URL(fileURLWithPath: parts[2])) }

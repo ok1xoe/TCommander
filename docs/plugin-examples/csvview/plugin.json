@@ -1,0 +1,1 @@
+{"name": "csvview", "executable": "plugin.py", "interpreter": "/usr/bin/python3", "capabilities": {"viewer": {"extensions": ["csv"]}}}

@@ -9,4 +9,4 @@ swift run macTC      # spuštění
 scripts/bundle.sh    # složí dist/macTC.app
 ```
 
-Návrh a fáze: [docs/spec.md](docs/spec.md). Evidence spotřeby tokenů: [docs/token-ledger.md](docs/token-ledger.md).
+Návrh a fáze: [docs/spec.md](docs/spec.md). Pluginy: [docs/plugins.md](docs/plugins.md). Evidence spotřeby tokenů: [docs/token-ledger.md](docs/token-ledger.md).

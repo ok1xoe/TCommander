@@ -31,11 +31,12 @@ public struct ColumnSet: Codable, Hashable, Identifiable, Sendable {
         ColumnSet(name: "Plný", columns: PanelColumn.standard),
         ColumnSet(name: "Rozšířený", columns: [.name, .ext, .size, .date, .created, .kind, .owner, .attr]),
         ColumnSet(name: "Kompaktní", columns: [.name, .size, .date]),
+        ColumnSet(name: "Média", columns: [.name, .size, PanelColumn(rawValue: "plugin:builtin:dimensions"), PanelColumn(rawValue: "plugin:builtin:duration"), PanelColumn(rawValue: "plugin:builtin:pages")]),
     ]
 
     /// Z textu "name, size, date" (neznámé názvy se přeskočí; název je vždy první).
     public static func parse(_ text: String) -> [PanelColumn] {
-        var cols = text.split(separator: ",").compactMap { PanelColumn(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) }
+        var cols = text.split(separator: ",").compactMap { PanelColumn(parsing: String($0)) }
         cols.removeAll { $0 == .name }
         var seen = Set<PanelColumn>()
         return [.name] + cols.filter { seen.insert($0).inserted }

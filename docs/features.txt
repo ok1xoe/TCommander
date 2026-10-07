@@ -115,7 +115,8 @@ Přizpůsobení | Interní příkazy (cm_*) a jejich registr | D | 6 | 60 přík
 Přizpůsobení | Nastavení (dialog), barvy, fonty | D | 6 | editor, terminál, písmo, výška řádku, barvy
 Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 6 | UI je nyní jen česky
 Přizpůsobení | Import nastavení z `wincmd.ini` | T | 6 |
-Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | T | 6 |
+Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | D | 6 | složka s plugin.json a spustitelným souborem, JSON přes standardní vstup/výstup (viz docs/plugins.md); sloupce, prohlížeče, archivy (jen čtení přes rozbalení), souborové systémy; ověřeno testy s ukázkovými pluginy
+Přizpůsobení | Vestavěné obsahové sloupce (rozměry obrázku, délka audia/videa, strany PDF, řádky textu) | D | 6 | sada sloupců Média; rozměry ověřeny vizuálně
 Přizpůsobení | Konfigurovatelné hlavní menu (přidávání vlastních položek) | T | 6 | zatím jen Start menu a tlačítková lišta
 Přizpůsobení | Windows pluginy (.wcx, .wfx, .wlx, .wdx) | X | - | binárně nekompatibilní s macOS
 Přizpůsobení | Windows UAC a integrace s Průzkumníkem | X | - | nahrazeno oprávněními macOS a Finderem

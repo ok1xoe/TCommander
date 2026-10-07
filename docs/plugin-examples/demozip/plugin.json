@@ -1,0 +1,1 @@
+{"name": "demozip", "executable": "plugin.py", "interpreter": "/usr/bin/python3", "capabilities": {"archive": {"extensions": ["dz"]}}}

@@ -92,3 +92,18 @@ import Foundation
         #expect(bar.load(default: []).first?.command == "cm_copy")
     }
 }
+
+@Suite struct SettingsCompatibilityTests {
+    @Test func olderSettingsFileKeepsUserValuesAndGetsNewDefaults() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let store = JSONStore<AppSettings>(name: "settings", directory: d)
+        // soubor vytvořený starší verzí: bez columnSets, panelsStacked a colorRules
+        try #"{"editorApp": "/Applications/Typora.app", "fontSize": 15, "deleteToTrash": false, "showHidden": true}"#.write(to: store.file, atomically: true, encoding: .utf8)
+        let s = store.load(default: AppSettings())
+        #expect(s.editorApp == "/Applications/Typora.app" && s.fontSize == 15 && !s.deleteToTrash && s.showHidden)
+        #expect(s.columnSets == ColumnSet.defaults && s.colorRules == ColorRule.defaults && !s.panelsStacked && s.language == "cs")
+        #expect(s.columnSets.contains { $0.name == "Média" })
+        store.save(s)
+        #expect(store.load(default: AppSettings()) == s)          // zápis a čtení nových dat zůstává konzistentní
+    }
+}

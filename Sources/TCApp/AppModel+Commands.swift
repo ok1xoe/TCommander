@@ -182,6 +182,23 @@ extension AppModel {
         return true
     }
 
+    /// Archiv, který umí jen plugin: rozbalí se do dočasné složky a panel do ní vstoupí (jen pro čtení, změny se do archivu nevrací).
+    func openWithArchivePlugin(_ archive: URL, _ plugin: LoadedPlugin) {
+        let dest = ArchiveFileSystem.temporaryRoot.appendingPathComponent("plugin-\(UUID().uuidString)").appendingPathComponent(archive.lastPathComponent)
+        busy = "Rozbaluji pluginem „\(plugin.id)“…"
+        let tab = source
+        Task {
+            let r = await Task.detached { Result { try PluginHost.shared.unpack(archive, with: plugin, into: dest) } }.value
+            self.busy = nil
+            switch r {
+            case .success:
+                tab.navigateLocal(dest)
+                self.status = "Archiv rozbalen pluginem „\(plugin.id)“ (jen pro čtení, dočasná složka)"
+            case .failure(let e): Dialogs.error("Plugin archiv nerozbalil", e.localizedDescription)
+            }
+        }
+    }
+
     // MARK: Sady oblíbených karet
 
     func saveFavoriteTabs() {

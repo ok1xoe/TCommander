@@ -143,7 +143,8 @@ final class AppModel {
         if source.insideArchive, let tmp = extractToTemp(url) { NSWorkspace.shared.open(tmp) }
         else if source.remote != nil, let e = source.entries.first(where: { $0.url == url }) { withRemoteFile(e) { NSWorkspace.shared.open($0) } }
         else if !source.isVirtual {
-            if let a = Associations.match(url.lastPathComponent, in: associations) { runAssociation(a) } else { NSWorkspace.shared.open(url) }
+            if let plugin = PluginHost.shared.archivePlugin(for: url.lastPathComponent) { openWithArchivePlugin(url, plugin) }
+            else if let a = Associations.match(url.lastPathComponent, in: associations) { runAssociation(a) } else { NSWorkspace.shared.open(url) }
         }
     }
 

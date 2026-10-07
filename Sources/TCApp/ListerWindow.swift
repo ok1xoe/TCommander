@@ -13,7 +13,8 @@ private final class ListerPanel: NSWindow {
 final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
     private static var open: [ListerWindow] = []
 
-    static func show(_ url: URL) {
+    static func show(_ url: URL, skipPlugins: Bool = false) {
+        if !skipPlugins, PluginViewWindow.tryShow(url) { return }
         if let w = open.first(where: { $0.url == url }) { w.window.makeKeyAndOrderFront(nil); return }
         guard let w = ListerWindow(url: url) else { return }
         open.append(w)
