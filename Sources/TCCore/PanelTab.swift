@@ -36,6 +36,10 @@ public final class PanelTab: Identifiable {
     @ObservationIgnored private var forwardStack: [URL] = []
     @ObservationIgnored private var fs: any VirtualFileSystem
     @ObservationIgnored private var saved: SavedLocation?
+    /// Server (FTP), do kterého panel právě vstoupil.
+    public private(set) var remote: RemoteFileSystem?
+    public private(set) var isLoading = false
+    @ObservationIgnored private var loadGeneration = 0
     /// Archiv, do kterého panel právě vstoupil (cesty uvnitř jsou cesty v archivu).
     public private(set) var archiveFile: URL?
     @ObservationIgnored public private(set) var archiveFS: ArchiveFileSystem?
@@ -50,12 +54,17 @@ public final class PanelTab: Identifiable {
     }
 
     public var insideArchive: Bool { archiveFile != nil }
+    /// Panel nepracuje s lokálním diskem (archiv nebo server).
+    public var isVirtual: Bool { archiveFile != nil || remote != nil }
 
     /// Cesta na disku, kterou lze uložit nebo přidat do oblíbených (u archivu adresář s archivem).
-    public var persistentPath: URL { archiveFile?.deletingLastPathComponent() ?? path }
+    public var persistentPath: URL { archiveFile?.deletingLastPathComponent() ?? (remote != nil ? saved?.path : nil) ?? path }
 
     /// Cesta pro zobrazení v adresním řádku.
-    public var displayPath: String { archiveFile.map { $0.path + " ▸ " + path.path } ?? path.path }
+    public var displayPath: String {
+        if let r = remote { return r.connection.displayName + path.path }
+        return archiveFile.map { $0.path + " ▸ " + path.path } ?? path.path
+    }
 
     public var canGoBack: Bool { !backStack.isEmpty }
     public var canGoForward: Bool { !forwardStack.isEmpty }
@@ -85,21 +94,13 @@ public final class PanelTab: Identifiable {
     @discardableResult
     public func navigate(to url: URL, select: URL? = nil, recordHistory: Bool = true, keepMarks: Bool = false) -> Bool {
         let target = url.standardizedFileURL
+        if remote != nil {       // síť: načtení na pozadí, okno nezamrzne
+            loadRemote(target, select: select, recordHistory: recordHistory, keepMarks: keepMarks, climb: false)
+            return true
+        }
         do {
             let items = try fs.list(target, includeHidden: showHidden)
-            if recordHistory && target != path { backStack.append(path); forwardStack.removeAll() }
-            if target != path && !keepMarks { marked.removeAll(); quickFilter = "" }
-            path = target
-            all = items
-            isBranch = false
-            error = nil
-            if archiveFile == nil {
-                recent.removeAll { $0 == target }
-                recent.insert(target, at: 0)
-                if recent.count > 30 { recent.removeLast() }
-            }
-            updateWatcher()
-            applyView(keeping: select)
+            apply(target, items, select: select, recordHistory: recordHistory, keepMarks: keepMarks)
             return true
         } catch {
             self.error = "\(target.path): \(error.localizedDescription)"
@@ -108,8 +109,48 @@ public final class PanelTab: Identifiable {
         }
     }
 
+    private func apply(_ target: URL, _ items: [FileEntry], select: URL?, recordHistory: Bool, keepMarks: Bool) {
+        if recordHistory && target != path { backStack.append(path); forwardStack.removeAll() }
+        if target != path && !keepMarks { marked.removeAll(); quickFilter = "" }
+        path = target
+        all = items
+        isBranch = false
+        error = nil
+        if !isVirtual {
+            recent.removeAll { $0 == target }
+            recent.insert(target, at: 0)
+            if recent.count > 30 { recent.removeLast() }
+        }
+        updateWatcher()
+        applyView(keeping: select)
+    }
+
+    private func loadRemote(_ target: URL, select: URL?, recordHistory: Bool, keepMarks: Bool, climb: Bool) {
+        guard let rfs = remote else { return }
+        loadGeneration += 1
+        let gen = loadGeneration
+        isLoading = true
+        let hidden = showHidden
+        Task {
+            let result = await Task.detached { Result { try rfs.list(target, includeHidden: hidden) } }.value
+            guard gen == self.loadGeneration, self.remote === rfs else { return }
+            self.isLoading = false
+            switch result {
+            case .success(let items):
+                self.apply(target, items, select: select, recordHistory: recordHistory, keepMarks: keepMarks)
+            case .failure(let e):
+                if climb && target.path != "/" {
+                    self.loadRemote(target.deletingLastPathComponent(), select: select, recordHistory: false, keepMarks: true, climb: true)
+                } else {
+                    self.error = "\(target.path): \(e.localizedDescription)"
+                    self.revision &+= 1
+                }
+            }
+        }
+    }
+
     public func goUp() {
-        if archiveFile != nil && path.path == "/" { leaveArchive(); return }
+        if isVirtual && path.path == "/" { leaveVirtual(); return }
         guard path.path != "/" else { return }
         navigate(to: path.deletingLastPathComponent(), select: path)
     }
@@ -130,6 +171,7 @@ public final class PanelTab: Identifiable {
     public func reload(select: URL? = nil) {
         if isBranch { enterBranchView(); return }
         if let a = archiveFile, !FileManager.default.fileExists(atPath: a.path) { leaveArchive(); return }
+        if remote != nil { loadRemote(path, select: select ?? cursorURL, recordHistory: false, keepMarks: true, climb: true); return }
         var dir = path
         let keep = select ?? cursorURL
         while !navigate(to: dir, select: keep, recordHistory: false, keepMarks: true) {
@@ -145,7 +187,7 @@ public final class PanelTab: Identifiable {
         guard let e = cursorEntry else { return nil }
         if e.isParentLink { goUp(); return nil }
         if e.isDirectory { navigate(to: e.url); return nil }
-        if archiveFile == nil && ArchiveSupport.isArchive(e.name), enterArchive(e.url) { return nil }
+        if !isVirtual && ArchiveSupport.isArchive(e.name), enterArchive(e.url) { return nil }
         return e.url
     }
 
@@ -176,7 +218,7 @@ public final class PanelTab: Identifiable {
     /// Přejde na adresář na disku; pokud je panel v archivu, nejdřív z něj vystoupí.
     @discardableResult
     public func navigateLocal(_ url: URL, select: URL? = nil) -> Bool {
-        if archiveFile != nil { leaveArchive() }
+        if isVirtual { leaveVirtual() }
         return navigate(to: url, select: select)
     }
 
@@ -191,6 +233,32 @@ public final class PanelTab: Identifiable {
             self.error = "\(url.lastPathComponent): \(error.localizedDescription)"
             revision &+= 1
         }
+    }
+
+    /// Vstoupí na server; první výpis (`items`) zajistil volající (ověření přihlášení před přepnutím panelu).
+    public func attachRemote(_ rfs: RemoteFileSystem, path remotePath: String, items: [FileEntry]) {
+        if isVirtual { leaveVirtual() }
+        saved = SavedLocation(fs: fs, path: path, back: backStack, forward: forwardStack)
+        fs = rfs; remote = rfs
+        watcher?.stop(); watcher = nil
+        backStack = []; forwardStack = []; marked.removeAll(); quickFilter = ""
+        path = URL(fileURLWithPath: remotePath)
+        all = items; isBranch = false; error = nil
+        applyView(keeping: nil)
+        cursor = 0
+    }
+
+    public func leaveRemote() {
+        guard remote != nil, let s = saved else { return }
+        loadGeneration += 1; isLoading = false
+        fs = s.fs; remote = nil; saved = nil
+        backStack = s.back; forwardStack = s.forward; marked.removeAll(); quickFilter = ""
+        navigate(to: s.path, recordHistory: false)
+    }
+
+    /// Opustí archiv nebo server a vrátí se na místní adresář.
+    public func leaveVirtual() {
+        if archiveFile != nil { leaveArchive() } else if remote != nil { leaveRemote() }
     }
 
     public func leaveArchive() {
@@ -258,7 +326,7 @@ public final class PanelTab: Identifiable {
 
     /// Ctrl+B: zobrazí všechny soubory ze všech podadresářů (názvy jsou relativní cesty).
     public func enterBranchView(limit: Int = 200_000) {
-        guard archiveFile == nil else { return }
+        guard !isVirtual else { return }
         var flat: [FileEntry] = []
         var stack = [path]
         while let dir = stack.popLast(), flat.count < limit {
@@ -280,7 +348,7 @@ public final class PanelTab: Identifiable {
 
     private func updateWatcher() {
         watcher?.stop(); watcher = nil
-        guard autoRefresh, archiveFile == nil else { return }
+        guard autoRefresh, !isVirtual else { return }
         watcher = DirectoryWatcher(url: path) { [weak self] in
             Task { @MainActor in
                 guard let self, !self.isBranch else { return }
@@ -294,8 +362,12 @@ public final class PanelTab: Identifiable {
     public func computeDirSize(_ entry: FileEntry) {
         guard entry.isDirectory, !entry.isParentLink else { return }
         let url = entry.url
+        if let afs = archiveFS {
+            dirSizes[url] = afs.expand([url.path]).reduce(0) { $0 + $1.size }; revision &+= 1; return
+        }
+        let rfs = remote
         Task {
-            let size = await Task.detached { DirectorySize.compute(url) }.value
+            let size = await Task.detached { rfs.map { $0.scan(url.path).bytes } ?? DirectorySize.compute(url) }.value
             self.dirSizes[url] = size
             self.revision &+= 1
         }
@@ -310,7 +382,7 @@ public final class PanelTab: Identifiable {
         var visible = all
         if !q.isEmpty { visible = visible.filter { $0.name.lowercased().contains(q) } }
         var result = sortEntries(visible, by: sort)
-        if path.path != "/" || archiveFile != nil { result.insert(FileEntry.parent(of: path), at: 0) }
+        if path.path != "/" || isVirtual { result.insert(FileEntry.parent(of: path), at: 0) }
         entries = result
         if let url, let i = entries.firstIndex(where: { $0.url == url && !$0.isParentLink }) { cursor = i }
         else { cursor = min(cursor, max(0, entries.count - 1)) }

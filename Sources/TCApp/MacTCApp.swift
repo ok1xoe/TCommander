@@ -26,6 +26,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppModel.shared.source.navigate(to: a.deletingLastPathComponent(), select: a)
             AppModel.shared.source.enterArchive(a)
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--ftp-selftest"), i + 2 < CommandLine.arguments.count {   // ladění: připojení k testovacímu FTP
+            let port = Int(CommandLine.arguments[i + 1]) ?? 21, out = CommandLine.arguments[i + 2]
+            let m = AppModel.shared
+            m.connectFTP(SavedConnection(name: "selftest", kind: .ftp, host: "127.0.0.1", port: port, user: "tester"), "secret")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                let t = m.source
+                let text = "remote=\(t.remote != nil)\npath=\(t.path.path)\ndisplay=\(t.displayPath)\nentries=\(t.entries.map(\.name).joined(separator: ","))\nerror=\(t.error ?? "-")\n"
+                try? text.write(toFile: out, atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            }
+        }
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
             for n in 1...2 {
@@ -121,6 +132,18 @@ struct TCCommands: Commands {
             Button("Obnovit výběr") { model.source.restoreSelection() }
             Divider()
             Button("Spočítat velikosti adresářů") { model.source.computeAllDirSizes() }
+        }
+        CommandMenu("Síť") {
+            Button("Připojit k serveru…") { model.connectToServer() }.keyboardShortcut("k")
+            Button("Odpojit panel od serveru") { model.disconnect() }.keyboardShortcut("k", modifiers: [.command, .shift])
+            if !model.connections.items.isEmpty {
+                Divider()
+                ForEach(model.connections.items) { c in Button("\(c.name)  (\(c.kind.rawValue))") { model.connect(saved: c) } }
+                Divider()
+                Menu("Zapomenout připojení") {
+                    ForEach(model.connections.items) { c in Button(c.name) { model.forget(c) } }
+                }
+            }
         }
         CommandMenu("Oblíbené") {
             Button("Přidat aktuální adresář") { model.hotlist.add(model.source.persistentPath) }.keyboardShortcut("d")

@@ -170,3 +170,88 @@ import Foundation
         #expect(FileManager.default.fileExists(atPath: srv.root.appendingPathComponent("dir/sub/a.txt").path))
     }
 }
+
+@MainActor @Suite(.serialized) struct RemotePanelTests {
+    func waitUntil(_ cond: () -> Bool) async throws {
+        for _ in 0..<100 { if cond() { return }; try await Task.sleep(nanoseconds: 50_000_000) }
+    }
+
+    func setup() throws -> (d: URL, srv: MockFTP, fs: RemoteFileSystem, tab: PanelTab, local: URL) {
+        let d = try makeTempDir()
+        let root = d.appendingPathComponent("server"); try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try write(root, "a.txt", "AAA"); try write(root, "dir/b.txt", "BB"); try write(root, "dir/sub/c.txt", "C")
+        let local = d.appendingPathComponent("local"); try FileManager.default.createDirectory(at: local, withIntermediateDirectories: true)
+        let srv = try MockFTP(root: root)
+        let fs = RemoteFileSystem(connection: srv.connection())
+        let tab = PanelTab(path: local)
+        tab.attachRemote(fs, path: "/", items: try fs.list(URL(fileURLWithPath: "/"), includeHidden: false))
+        return (d, srv, fs, tab, local)
+    }
+
+    @Test func attachNavigateAsyncAndLeave() async throws {
+        let (d, srv, _, tab, local) = try setup(); defer { srv.stop(); try? FileManager.default.removeItem(at: d) }
+        #expect(tab.remote != nil && tab.isVirtual && !tab.insideArchive)
+        #expect(tab.entries.map(\.name) == ["..", "dir", "a.txt"])
+        #expect(tab.displayPath == "ftp://tester@127.0.0.1:\(srv.port)/" && tab.persistentPath == local.standardizedFileURL)
+        tab.moveCursor(to: 1)
+        #expect(tab.activateCursor() == nil)                              // vstup do adresáře probíhá na pozadí
+        try await waitUntil { tab.path.path == "/dir" && !tab.isLoading }
+        #expect(tab.entries.map(\.name) == ["..", "sub", "b.txt"])
+        tab.goUp()
+        try await waitUntil { tab.path.path == "/" && tab.entries.count == 3 }
+        #expect(tab.cursorEntry?.name == "dir")
+        tab.moveCursor(to: 2)                                             // soubor na serveru se vrací k otevření
+        #expect(tab.activateCursor()?.lastPathComponent == "a.txt")
+        tab.moveCursor(to: 0); #expect(tab.activateCursor() == nil)       // ".." v kořeni = odpojení
+        try await waitUntil { tab.remote == nil && tab.path == local.standardizedFileURL }
+        #expect(!tab.isVirtual && tab.remote == nil && tab.entries.contains { $0.name == ".." })
+    }
+
+    @Test func failedLoadKeepsPanelAndShowsError() async throws {
+        let (d, srv, _, tab, _) = try setup(); defer { srv.stop(); try? FileManager.default.removeItem(at: d) }
+        tab.navigate(to: URL(fileURLWithPath: "/missing"))
+        try await waitUntil { tab.error != nil }
+        #expect(tab.error?.contains("/missing") == true && tab.path.path == "/" && tab.remote != nil)
+    }
+
+    @Test func reloadClimbsWhenDirectoryDisappears() async throws {
+        let (d, srv, _, tab, _) = try setup(); defer { srv.stop(); try? FileManager.default.removeItem(at: d) }
+        tab.navigate(to: URL(fileURLWithPath: "/dir/sub"))
+        try await waitUntil { tab.path.path == "/dir/sub" }
+        try FileManager.default.removeItem(at: srv.root.appendingPathComponent("dir/sub"))
+        tab.reload()
+        try await waitUntil { tab.path.path == "/dir" && tab.error == nil }
+        #expect(tab.path.path == "/dir" && tab.entries.map(\.name) == ["..", "b.txt"])
+    }
+
+    @Test func remoteDirectorySizeAndNavigateLocal() async throws {
+        let (d, srv, _, tab, local) = try setup(); defer { srv.stop(); try? FileManager.default.removeItem(at: d) }
+        let dir = tab.entries.first { $0.name == "dir" }!
+        tab.computeDirSize(dir)
+        try await waitUntil { tab.dirSizes[dir.url] != nil }
+        #expect(tab.dirSizes[dir.url] == 3)
+        tab.navigateLocal(local)
+        #expect(tab.remote == nil && tab.path == local.standardizedFileURL)
+    }
+}
+
+@MainActor @Suite struct SavedConnectionsTests {
+    @Test func persistsAndBuildsConnections() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let file = d.appendingPathComponent("c.json")
+        let store = SavedConnections(file: file)
+        let ftp = SavedConnection(name: "Server", kind: .ftpExplicitTLS, host: "ftp.example.com", port: 2121, user: "me", path: "/pub")
+        store.upsert(ftp)
+        store.upsert(SavedConnection(id: ftp.id, name: "Přejmenováno", kind: .ftpExplicitTLS, host: "ftp.example.com", user: "me"))
+        store.upsert(SavedConnection(name: "Sdílená", kind: .smb, host: "nas.local", user: "tom", path: "/data"))
+        #expect(store.items.count == 2 && store.items[0].name == "Přejmenováno")
+        #expect(SavedConnections(file: file).items == store.items)
+        let c = store.items[0].ftpConnection(password: "pw")
+        #expect(c.security == .explicitTLS && c.user == "me" && c.password == "pw" && c.host == "ftp.example.com")
+        #expect(SavedConnection(name: "a", kind: .ftp, host: "h").ftpConnection(password: "x").user == "anonymous")
+        #expect(store.items[1].mountURL()?.absoluteString == "smb://tom@nas.local/data")
+        #expect(SavedConnection(name: "w", kind: .webdavs, host: "dav.example.com", port: 8443, path: "/remote.php/dav").mountURL()?.absoluteString == "https://dav.example.com:8443/remote.php/dav")
+        #expect(SavedConnection(name: "w", kind: .ftp, host: "h").mountURL() == nil)
+        store.remove(store.items[0]); #expect(SavedConnections(file: file).items.count == 1)
+    }
+}

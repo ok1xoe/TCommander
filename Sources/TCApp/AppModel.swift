@@ -23,6 +23,7 @@ final class AppModel {
     private(set) var commandHistory: [String] = UserDefaults.standard.stringArray(forKey: "commandHistory") ?? []
     @ObservationIgnored private var historyIndex: Int?
     let hotlist = Hotlist(file: Hotlist.defaultFile())
+    let connections = SavedConnections(file: SavedConnections.defaultFile())
     /// Zobrazený rychlý filtr v panelech (klíč: levý = true).
     var filterVisible: [Bool: Bool] = [:]
     var verifyCopies = false { didSet { defaults.set(verifyCopies, forKey: "verifyCopies") } }
@@ -30,7 +31,7 @@ final class AppModel {
     var deleteToTrash = true
     var showHidden = false { didSet { for t in left.tabs + right.tabs { t.showHidden = showHidden } } }
 
-    @ObservationIgnored private let ops = FileOperations()
+    @ObservationIgnored let ops = FileOperations()
     @ObservationIgnored private let defaults = UserDefaults.standard
 
     init() {
@@ -119,11 +120,12 @@ final class AppModel {
     func open() {
         guard let url = source.activateCursor() else { return }
         if source.insideArchive, let tmp = extractToTemp(url) { NSWorkspace.shared.open(tmp) }
-        else if !source.insideArchive { NSWorkspace.shared.open(url) }
+        else if source.remote != nil, let e = source.entries.first(where: { $0.url == url }) { withRemoteFile(e) { NSWorkspace.shared.open($0) } }
+        else if !source.isVirtual { NSWorkspace.shared.open(url) }
     }
 
     /// Soubor z archivu se rozbalí do dočasného adresáře (ten se maže při startu a ukončení).
-    private func extractToTemp(_ inner: URL) -> URL? {
+    func extractToTemp(_ inner: URL) -> URL? {
         guard let fs = source.archiveFS else { return nil }
         do { return try fs.extractToTemporary(inner.path) }
         catch { Dialogs.error("Soubor z archivu nelze rozbalit", error.localizedDescription); return nil }
@@ -167,20 +169,19 @@ final class AppModel {
 
     // MARK: Souborové operace
 
-    private func requireLocal() -> Bool {
-        if source.insideArchive { Dialogs.error("Archiv", "Tato operace uvnitř archivu není k dispozici."); return false }
+    func requireLocal() -> Bool {
+        if source.isVirtual { Dialogs.error(source.insideArchive ? "Archiv" : "Server", "Tato operace \(source.insideArchive ? "uvnitř archivu" : "na serveru") není k dispozici."); return false }
         return true
     }
 
-    private func requireLocalTarget() -> Bool {
-        if target.insideArchive { Dialogs.error("Archiv", "Cílový panel je uvnitř archivu; tato operace do archivu zapisovat neumí."); return false }
+    func requireLocalTarget() -> Bool {
+        if target.isVirtual { Dialogs.error("Cíl", "Cílový panel je uvnitř archivu nebo na serveru; tato operace sem zapisovat neumí."); return false }
         return true
     }
 
 
     func transfer(_ kind: TransferKind) {
-        if target.insideArchive { copyIntoArchive(kind); return }
-        if source.insideArchive { extractFromArchive(kind); return }
+        if target.isVirtual || source.isVirtual { virtualTransfer(kind); return }
         let src = source, sources = src.targets.map(\.url)
         guard !sources.isEmpty else { return }
         let verb = kind == .copy ? "Kopírovat" : "Přesunout"
@@ -191,7 +192,7 @@ final class AppModel {
         enqueueTransfer(kind, items, what: what)
     }
 
-    private func extractFromArchive(_ kind: TransferKind) {
+    func extractFromArchive(_ kind: TransferKind) {
         guard kind == .copy else { Dialogs.error("Archiv", "Z archivu lze položky jen kopírovat (rozbalit), ne přesouvat."); return }
         guard let fs = source.archiveFS else { return }
         let entries = source.targets
@@ -213,7 +214,7 @@ final class AppModel {
     }
 
     /// Cílový adresář z textu dialogu; chybějící se vytvoří.
-    private func resolveDirectory(_ text: String, base: URL) -> URL? {
+    func resolveDirectory(_ text: String, base: URL) -> URL? {
         var path = (text.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath
         guard !path.isEmpty else { return nil }
         if !path.hasPrefix("/") { path = base.appendingPathComponent(path).path }
@@ -230,7 +231,7 @@ final class AppModel {
     // MARK: Zápis do archivů
 
     /// Archiv, který se bude upravovat (musí být zapisovatelného formátu).
-    private func writableArchive(_ tab: PanelTab) -> ArchiveFileSystem? {
+    func writableArchive(_ tab: PanelTab) -> ArchiveFileSystem? {
         guard let fs = tab.archiveFS else { return nil }
         guard fs.isWritable else {
             Dialogs.error("Archiv je jen pro čtení", "Formát „\(tab.archiveFile?.pathExtension ?? "")“ nelze upravovat. Upravovat lze zip, tar.gz/bz2/xz a 7z.")
@@ -254,7 +255,7 @@ final class AppModel {
         })
     }
 
-    private func innerName(_ tab: PanelTab, _ name: String) -> String {
+    func innerName(_ tab: PanelTab, _ name: String) -> String {
         ArchiveSupport.normalize(tab.path.path == "/" ? name : tab.path.path + "/" + name)
     }
 
@@ -291,7 +292,7 @@ final class AppModel {
     }
 
     /// F5/F6 do panelu uvnitř archivu: ze souborů na disku, nebo z jiného archivu (přes dočasné rozbalení).
-    private func copyIntoArchive(_ kind: TransferKind) {
+    func copyIntoArchive(_ kind: TransferKind) {
         guard let dst = writableArchive(target) else { return }
         let entries = source.targets
         guard !entries.isEmpty else { return }
@@ -304,27 +305,18 @@ final class AppModel {
         }
         guard Dialogs.confirm(title: (kind == .copy ? "Zkopírovat " : "Přesunout ") + what + " do archivu?",
                               message: "\(target.archiveFile?.lastPathComponent ?? "") ▸ \(target.path.path)", ok: kind == .copy ? "Kopírovat" : "Přesunout") else { return }
-        let srcArchive = source.archiveFS
-        let paths = entries.map(\.url)
+        guard let staged = stagedSource() else { return }
         let move = kind == .move
-        if srcArchive != nil && move { Dialogs.error("Archiv", "Z archivu lze jen kopírovat."); return }
+        if case .archive = staged, move { Dialogs.error("Archiv", "Z archivu lze jen kopírovat."); return }
         let url = dst.archiveURL
         jobs.enqueue(title: "\(move ? "Přesunout" : "Kopírovat") \(what) do archivu", work: { control, progress in
-            var locals = paths
-            var tmp: URL?
-            if let srcArchive {
-                let t = ArchiveFileSystem.temporaryRoot.appendingPathComponent(UUID().uuidString)
-                try? FileManager.default.createDirectory(at: t, withIntermediateDirectories: true)
-                tmp = t
-                let r = srcArchive.extract(paths.map(\.path), to: t, control: control)
-                if !r.failures.isEmpty || r.cancelled { try? FileManager.default.removeItem(at: t); return r }
-                locals = paths.map { t.appendingPathComponent($0.lastPathComponent) }
-            }
-            defer { if let tmp { try? FileManager.default.removeItem(at: tmp) } }
+            let (locals, temp, early) = staged.stage(control: control, progress: progress)
+            if let early { return early }
+            defer { if let temp { try? FileManager.default.removeItem(at: temp) } }
             var c = ArchiveFileSystem.Changes()
             c.add = locals.map { .init(local: $0, innerDirectory: innerDir) }
             let report = dst.apply(c, control: control, progress: progress)
-            if move && report.failures.isEmpty && !report.cancelled { _ = FileOperations().delete(paths, toTrash: false) }
+            if move && report.failures.isEmpty && !report.cancelled { staged.deleteSources() }
             return report
         }, onFinish: { [weak self] report in
             guard let self else { return }
@@ -480,6 +472,7 @@ final class AppModel {
 
     func delete(permanent: Bool) {
         if source.insideArchive { deleteFromArchive(); return }
+        if source.remote != nil { deleteFromRemote(); return }
         let targets = source.targets.map(\.url)
         guard !targets.isEmpty else { return }
         let toTrash = deleteToTrash && !permanent
@@ -494,7 +487,7 @@ final class AppModel {
         })
     }
 
-    private func finish(_ report: OperationReport, success: String) {
+    func finish(_ report: OperationReport, success: String) {
         source.unmarkAll()
         reloadAll()
         var parts = [report.cancelled ? "Zrušeno" : success, "\(report.succeeded)"]
@@ -510,6 +503,7 @@ final class AppModel {
 
     func rename() {
         if source.insideArchive { renameInArchive(); return }
+        if source.remote != nil { renameOnRemote(); return }
         guard let e = source.targets.first, source.targets.count == 1 else { return }
         guard let name = Dialogs.prompt(title: "Přejmenovat", message: "Nový název:", initial: e.name, ok: "Přejmenovat") else { return }
         do { let new = try ops.rename(e.url, to: name); source.unmarkAll(); reloadAll(); source.reload(select: new) }
@@ -518,6 +512,7 @@ final class AppModel {
 
     func makeDirectory() {
         if source.insideArchive { makeDirectoryInArchive(); return }
+        if source.remote != nil { makeDirectoryOnRemote(); return }
         guard let name = Dialogs.prompt(title: "Nový adresář", message: "Název (lze i vnořený a/b/c):", initial: "", ok: "Vytvořit") else { return }
         do { let new = try ops.makeDirectory(name, in: source.path); reloadAll(); source.reload(select: new) }
         catch { Dialogs.error("Vytvoření adresáře selhalo", error.localizedDescription) }
@@ -553,16 +548,18 @@ final class AppModel {
     func view() {
         guard let e = source.targets.first, !e.isDirectory else { return }
         if source.insideArchive { if let tmp = extractToTemp(e.url) { ListerWindow.show(tmp) }; return }
+        if source.remote != nil { withRemoteFile(e) { ListerWindow.show($0) }; return }
         ListerWindow.show(e.url)
     }
 
     func edit() {
         guard let e = source.targets.first, !e.isDirectory else { return }
         if source.insideArchive { if let tmp = extractToTemp(e.url) { openInEditor(tmp) }; return }
+        if source.remote != nil { withRemoteFile(e) { [weak self] in self?.openInEditor($0) }; return }
         openInEditor(e.url)
     }
 
-    private func openInEditor(_ url: URL) {
+    func openInEditor(_ url: URL) {
         let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
         NSWorkspace.shared.open([url], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
     }

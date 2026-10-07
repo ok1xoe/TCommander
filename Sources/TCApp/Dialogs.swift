@@ -3,13 +3,13 @@ import TCCore
 
 @MainActor
 enum Dialogs {
-    static func prompt(title: String, message: String, initial: String, ok: String = "OK") -> String? {
+    static func prompt(title: String, message: String, initial: String, ok: String = "OK", secure: Bool = false) -> String? {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: ok)
         alert.addButton(withTitle: "Zrušit")
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 420, height: 24))
+        let field: NSTextField = secure ? NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 420, height: 24)) : NSTextField(frame: NSRect(x: 0, y: 0, width: 420, height: 24))
         field.stringValue = initial
         alert.accessoryView = field
         alert.window.initialFirstResponder = field

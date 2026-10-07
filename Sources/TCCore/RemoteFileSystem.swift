@@ -139,7 +139,7 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
 
     func normalize(_ url: URL) -> String { Self.normalize(url.path) }
 
-    static func normalize(_ p: String) -> String {
+    public static func normalize(_ p: String) -> String {
         let parts = p.split(separator: "/").map(String.init).filter { !$0.isEmpty && $0 != "." }
         return "/" + parts.joined(separator: "/")
     }
@@ -273,7 +273,7 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
         return Unmanaged<ProgressBox>.fromOpaque(ctx).takeUnretainedValue().handler(now, total) ? 0 : 1
     }
 
-    func downloadFile(remotePath: String, local: URL, resumeFrom: Int64, progress: ((Int64, Int64) -> Bool)?) throws {
+    public func downloadFile(remotePath: String, local: URL, resumeFrom: Int64 = 0, progress: ((Int64, Int64) -> Bool)? = nil) throws {
         var err = [CChar](repeating: 0, count: 256)
         let box = ProgressBox(progress ?? { _, _ in true })
         let rc: Int32 = urlString(remotePath, directory: false).withCString { url in
@@ -284,7 +284,7 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
         if rc != 0 { throw RemoteError(code: rc, message: rc == Int32(MC_ABORTED) ? "Přerušeno" : (errorString(err).isEmpty ? "Chyba FTP (\(rc))" : errorString(err))) }
     }
 
-    func uploadFile(local: URL, remotePath: String, progress: ((Int64, Int64) -> Bool)?) throws {
+    public func uploadFile(local: URL, remotePath: String, progress: ((Int64, Int64) -> Bool)? = nil) throws {
         var err = [CChar](repeating: 0, count: 256)
         let box = ProgressBox(progress ?? { _, _ in true })
         let rc: Int32 = urlString(remotePath, directory: false).withCString { url in
