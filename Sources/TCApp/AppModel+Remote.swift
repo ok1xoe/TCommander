@@ -5,7 +5,7 @@ import TCCore
 enum StagedSource: @unchecked Sendable {
     case local([URL])
     case archive(ArchiveFileSystem, [String])
-    case remote(RemoteFileSystem, [String])
+    case remote(any RemoteFileSystemProtocol, [String])
 
     /// Připraví místní kopie (u archivu rozbalí, u serveru stáhne do dočasného adresáře).
     /// Vrací URL k dalšímu zpracování, dočasný adresář k úklidu a případně hotovou zprávu při chybě/zrušení.
@@ -63,7 +63,7 @@ extension AppModel {
         if case .archive = staged, move { Dialogs.error("Archiv", "Z archivu lze jen kopírovat."); return }
         let what = entries.count == 1 ? "„\(entries[0].name)“" : "\(entries.count) položek"
         guard Dialogs.confirm(title: (move ? "Přesunout " : "Nahrát ") + what + " na server?",
-                              message: dst.connection.displayName + target.path.path, ok: move ? "Přesunout" : "Nahrát") else { return }
+                              message: dst.displayName + target.path.path, ok: move ? "Přesunout" : "Nahrát") else { return }
         let existing = entries.filter { e in target.entries.contains { $0.name == e.name && !$0.isParentLink } }
         var policy = ConflictPolicy.overwrite
         if !existing.isEmpty {
@@ -168,7 +168,7 @@ extension AppModel {
                     let dir = ArchiveFileSystem.temporaryRoot.appendingPathComponent(UUID().uuidString)
                     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                     let local = dir.appendingPathComponent(name)
-                    try fs.downloadFile(remotePath: remote, local: local)
+                    try fs.downloadFile(remotePath: remote, local: local, resumeFrom: 0, progress: nil)
                     return local
                 }
             }.value
@@ -204,32 +204,49 @@ extension AppModel {
     private func open(connection c: SavedConnection, password: String) {
         switch c.kind {
         case .ftp, .ftpExplicitTLS, .ftpsImplicit: connectFTP(c, password)
-        case .sftp: Dialogs.error("SFTP", "SFTP přijde v další části.")
+        case .sftp: connectSFTP(c, password)
         case .smb, .webdav, .webdavs: mountVolume(c, password)
         }
     }
 
     func connectFTP(_ c: SavedConnection, _ password: String) {
         let conn = c.ftpConnection(password: password)
-        let fs = RemoteFileSystem(connection: conn)
+        connectRemote(RemoteFileSystem(connection: conn), label: conn.displayName, host: c.host) { fs, hidden in
+            let initial = RemoteFileSystem.normalize(conn.initialPath)
+            do { return (initial, try fs.list(URL(fileURLWithPath: initial), includeHidden: hidden)) }
+            catch {
+                if initial != "/", let items = try? fs.list(URL(fileURLWithPath: "/"), includeHidden: hidden) { return ("/", items) }
+                throw error
+            }
+        }
+    }
+
+    func connectSFTP(_ c: SavedConnection, _ password: String) {
+        let conn = c.sftpConnection(password: password)
+        let sftp = SFTPFileSystem(connection: conn)
+        connectRemote(sftp, label: conn.displayName, host: c.host) { fs, hidden in
+            let wanted = c.path.trimmingCharacters(in: .whitespaces)
+            let initial = (wanted.isEmpty || wanted == "~") ? try sftp.homeDirectory() : RemoteFileSystem.normalize(wanted)
+            return (initial, try fs.list(URL(fileURLWithPath: initial), includeHidden: hidden))
+        }
+    }
+
+    /// Ověří spojení a první výpis na pozadí a teprve potom přepne panel na server.
+    private func connectRemote(_ fs: any RemoteFileSystemProtocol, label: String, host: String,
+                               first: @escaping @Sendable (any RemoteFileSystemProtocol, Bool) throws -> (String, [FileEntry])) {
         let hidden = showHidden
         let tab = source
-        busy = "Připojuji k \(c.host)…"
+        busy = "Připojuji k \(host)…"
+        nonisolated(unsafe) let fsBox = fs
         Task {
-            let result = await Task.detached { () -> Result<(String, [FileEntry]), Error> in
-                let initial = RemoteFileSystem.normalize(conn.initialPath)
-                do { return .success((initial, try fs.list(URL(fileURLWithPath: initial), includeHidden: hidden))) }
-                catch {
-                    if initial != "/", let items = try? fs.list(URL(fileURLWithPath: "/"), includeHidden: hidden) { return .success(("/", items)) }
-                    return .failure(error)
-                }
-            }.value
+            let result = await Task.detached { Result { try first(fsBox, hidden) } }.value
             self.busy = nil
             switch result {
             case .success(let (path, items)):
                 tab.attachRemote(fs, path: path, items: items)
-                self.status = "Připojeno: \(conn.displayName)"
+                self.status = "Připojeno: \(label)"
             case .failure(let e):
+                Task.detached { fsBox.close() }
                 Dialogs.error("Připojení k serveru selhalo", e.localizedDescription)
             }
         }

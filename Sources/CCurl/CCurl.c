@@ -44,6 +44,7 @@ static CURL *setup(const mc_opts *o, const char *url, char *err) {
         curl_easy_setopt(c, CURLOPT_LOW_SPEED_LIMIT, 1L);
         curl_easy_setopt(c, CURLOPT_LOW_SPEED_TIME, o->low_speed_timeout);
     }
+    if (o->proxy && o->proxy[0]) curl_easy_setopt(c, CURLOPT_PROXY, o->proxy);
     if (o->tls) curl_easy_setopt(c, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
     if (o->insecure) {
         curl_easy_setopt(c, CURLOPT_SSL_VERIFYPEER, 0L);

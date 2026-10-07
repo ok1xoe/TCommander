@@ -255,3 +255,25 @@ import Foundation
         store.remove(store.items[0]); #expect(SavedConnections(file: file).items.count == 1)
     }
 }
+
+@Suite struct SFTPListParsingTests {
+    @Test func parsesOpenSSHLongListingWithQuestionMarkLinkCountAndFullPaths() {
+        let text = """
+        sftp> ls -la /srv/data
+        drwxr-xr-x    ? hyman    wheel          96 Oct  7 13:23 /srv/data/.
+        drwxr-xr-x    ? hyman    wheel         384 Oct  7 13:23 /srv/data/..
+        -rw-r--r--    ? hyman    wheel           6 Oct  7 13:23 /srv/data/a b.txt
+        drwx------    ? root     admin         128 Jan  5  2024 /srv/data/sub dir
+        lrwxr-xr-x    ? hyman    wheel           5 Oct  7 13:23 /srv/data/ln -> /etc/hosts
+        """
+        let e = FTPListParser.parse(text.split(separator: "\n").filter { !$0.hasPrefix("sftp>") }.joined(separator: "\n"), mlsd: false)
+        #expect(e.map(\.name) == ["a b.txt", "sub dir", "ln"])
+        #expect(e[0].size == 6 && !e[0].isDirectory && e[1].isDirectory && e[1].permissions == 0o700 && e[2].isSymlink)
+    }
+
+    @Test func honorsTimeZone() {
+        let tz = TimeZone(identifier: "Asia/Tokyo")!
+        let d = FTPListParser.unixDate(month: "Jan", day: "15", yearOrTime: "2024", now: Date(), timeZone: tz)!
+        #expect(d.timeIntervalSince1970 == 1_705_244_400)      // 2024-01-15 00:00 v Tokiu = 2024-01-14 15:00 UTC
+    }
+}

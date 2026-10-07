@@ -12,6 +12,7 @@ typedef struct {
     int insecure;            // 1 = nekontrolovat certifikát (self-signed)
     long connect_timeout;    // sekundy
     long low_speed_timeout;  // sekundy bez přenosu = chyba (0 = vypnuto)
+    const char *proxy;       // např. socks5h://host:1080 (NULL/prázdné = bez proxy)
 } mc_opts;
 
 // Vrací nenulovou hodnotu pro přerušení přenosu.

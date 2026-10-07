@@ -23,18 +23,39 @@ public struct SavedConnection: Codable, Hashable, Identifiable, Sendable {
     public var user: String
     public var path: String
     public var allowSelfSigned: Bool
+    /// Soubor soukromého klíče pro SFTP (prázdné = výchozí klíče a ssh-agent).
+    public var identityFile: String
+    /// Proxy pro FTP, např. socks5h://127.0.0.1:1080.
+    public var proxy: String
 
     public init(id: UUID = UUID(), name: String, kind: Kind, host: String, port: Int? = nil, user: String = "",
-                path: String = "/", allowSelfSigned: Bool = false) {
+                path: String = "/", allowSelfSigned: Bool = false, identityFile: String = "", proxy: String = "") {
         self.id = id; self.name = name; self.kind = kind; self.host = host; self.port = port
         self.user = user; self.path = path; self.allowSelfSigned = allowSelfSigned
+        self.identityFile = identityFile; self.proxy = proxy
+    }
+
+    // starší uložené soubory nová pole neobsahují
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id); name = try c.decode(String.self, forKey: .name)
+        kind = try c.decode(Kind.self, forKey: .kind); host = try c.decode(String.self, forKey: .host)
+        port = try c.decodeIfPresent(Int.self, forKey: .port); user = try c.decode(String.self, forKey: .user)
+        path = try c.decode(String.self, forKey: .path); allowSelfSigned = try c.decode(Bool.self, forKey: .allowSelfSigned)
+        identityFile = try c.decodeIfPresent(String.self, forKey: .identityFile) ?? ""
+        proxy = try c.decodeIfPresent(String.self, forKey: .proxy) ?? ""
     }
 
     public func ftpConnection(password: String) -> RemoteConnection {
         RemoteConnection(host: host, port: port, user: user.isEmpty ? "anonymous" : user,
                          password: user.isEmpty ? "anonymous@" : password,
                          security: kind == .ftpsImplicit ? .implicitTLS : (kind == .ftpExplicitTLS ? .explicitTLS : .none),
-                         allowSelfSigned: allowSelfSigned, initialPath: path.isEmpty ? "/" : path)
+                         allowSelfSigned: allowSelfSigned, initialPath: path.isEmpty ? "/" : path, proxy: proxy)
+    }
+
+    public func sftpConnection(password: String) -> SFTPConnection {
+        SFTPConnection(host: host, port: port, user: user.isEmpty ? NSUserName() : user, password: password,
+                       identityFile: (identityFile as NSString).expandingTildeInPath, initialPath: path)
     }
 
     /// URL pro připojení svazku (SMB, WebDAV); heslo se nikdy nevkládá do URL.

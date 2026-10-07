@@ -9,6 +9,7 @@ final class ConnectForm: NSObject {
     private let kind = NSPopUpButton(frame: .zero, pullsDown: false)
     private let host = NSTextField(), port = NSTextField(), user = NSTextField()
     private let password = NSSecureTextField(), path = NSTextField(), name = NSTextField()
+    private let identity = NSTextField(), proxy = NSTextField()
     private let selfSigned = NSButton(checkboxWithTitle: "Povolit self-signed certifikát", target: nil, action: nil)
     private let save = NSButton(checkboxWithTitle: "Uložit připojení (heslo do Klíčenky)", target: nil, action: nil)
     private let picker = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -25,6 +26,8 @@ final class ConnectForm: NSObject {
         host.placeholderString = "ftp.example.com"; port.placeholderString = "výchozí"
         user.placeholderString = "prázdné = anonymní"; path.stringValue = "/"
         name.placeholderString = "název pro uložení"
+        identity.placeholderString = "SFTP: soubor klíče, např. ~/.ssh/id_ed25519 (volitelné)"
+        proxy.placeholderString = "FTP: např. socks5h://127.0.0.1:1080 (volitelné)"
         func row(_ l: String, _ v: NSView) -> NSStackView {
             let t = NSTextField(labelWithString: l); t.alignment = .right
             t.widthAnchor.constraint(equalToConstant: 110).isActive = true
@@ -33,10 +36,10 @@ final class ConnectForm: NSObject {
         }
         let stack = NSStackView(views: [
             row("Uložená:", picker), row("Typ:", kind), row("Server:", host), row("Port:", port), row("Uživatel:", user),
-            row("Heslo:", password), row("Cesta / sdílená složka:", path), row("", selfSigned), row("Název:", name), row("", save),
+            row("Heslo:", password), row("Cesta / sdílená složka:", path), row("Klíč (SFTP):", identity), row("Proxy (FTP):", proxy), row("", selfSigned), row("Název:", name), row("", save),
         ])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 6
-        stack.frame = NSRect(x: 0, y: 0, width: 440, height: 330)
+        stack.frame = NSRect(x: 0, y: 0, width: 460, height: 390)
 
         let alert = NSAlert()
         alert.messageText = "Připojit k serveru"
@@ -52,13 +55,16 @@ final class ConnectForm: NSObject {
         let n = name.stringValue.trimmingCharacters(in: .whitespaces)
         let c = SavedConnection(id: currentID, name: n.isEmpty ? h : n, kind: k, host: h, port: Int(port.stringValue),
                                 user: user.stringValue.trimmingCharacters(in: .whitespaces),
-                                path: path.stringValue.isEmpty ? "/" : path.stringValue, allowSelfSigned: selfSigned.state == .on)
+                                path: path.stringValue.isEmpty ? "/" : path.stringValue, allowSelfSigned: selfSigned.state == .on,
+                                identityFile: identity.stringValue.trimmingCharacters(in: .whitespaces), proxy: proxy.stringValue.trimmingCharacters(in: .whitespaces))
         return Result(connection: c, password: password.stringValue, save: save.state == .on)
     }
 
     @objc private func kindChanged() {
         let k = SavedConnection.Kind.allCases[max(0, kind.indexOfSelectedItem)]
         port.placeholderString = k.defaultPort.map(String.init) ?? "výchozí"
+        if k == .sftp && path.stringValue == "/" { path.stringValue = ""; path.placeholderString = "prázdné = domovský adresář" }
+        if k != .sftp && path.stringValue.isEmpty { path.stringValue = "/" }
     }
 
     @objc private func pickSaved() {
@@ -70,6 +76,7 @@ final class ConnectForm: NSObject {
         host.stringValue = c.host; port.stringValue = c.port.map(String.init) ?? ""; user.stringValue = c.user
         path.stringValue = c.path; name.stringValue = c.name
         selfSigned.state = c.allowSelfSigned ? .on : .off
+        identity.stringValue = c.identityFile; proxy.stringValue = c.proxy
         password.stringValue = Keychain.password(for: c.id) ?? ""
         save.state = .on
         kindChanged()
