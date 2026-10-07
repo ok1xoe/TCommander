@@ -228,15 +228,11 @@ final class AppModel {
         catch { Dialogs.error("Vytvoření souboru selhalo", error.localizedDescription) }
     }
 
-    // MARK: Prohlížení a editace (Lister přijde ve fázi 2)
+    // MARK: Prohlížení a editace
 
     func view() {
         guard let e = source.targets.first, !e.isDirectory else { return }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/qlmanage")
-        p.arguments = ["-p", e.url.path]
-        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
-        try? p.run()
+        ListerWindow.show(e.url)
     }
 
     func edit() {

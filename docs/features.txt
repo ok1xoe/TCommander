@@ -75,11 +75,11 @@ Porovnání a synchronizace | Porovnání adresářů | T | 3 |
 Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | T | 3 |
 Porovnání a synchronizace | Synchronizace s ZIP | T | 4 |
 
-Prohlížení a editace | Zobrazit (F3) | P | 2 | zatím Quick Look; vlastní Lister ve fázi 2
-Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | T | 2 |
-Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | T | 2 |
-Prohlížení a editace | Lister: obrázky, HTML / Markdown, multimédia | T | 2 |
-Prohlížení a editace | Lister: hledání v obsahu | T | 2 |
+Prohlížení a editace | Zobrazit (F3) otevře Lister | D | 2 |
+Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | P | 2 | hex přes mmap pro libovolnou velikost; text zobrazí prvních 16 MB
+Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8, UTF-16, Windows-1250 (automaticky)
+Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementováno; vizuálně ověřen zatím jen textový režim
+Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém režimu (⌘F); v hex režimu chybí
 Prohlížení a editace | Editace (F4) v externím editoru | D | 1 | TextEdit
 Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | T | 6 |
 
