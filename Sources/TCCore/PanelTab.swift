@@ -34,7 +34,13 @@ public final class PanelTab: Identifiable {
     @ObservationIgnored private var all: [FileEntry] = []
     @ObservationIgnored private var backStack: [URL] = []
     @ObservationIgnored private var forwardStack: [URL] = []
-    @ObservationIgnored private let fs: any VirtualFileSystem
+    @ObservationIgnored private var fs: any VirtualFileSystem
+    @ObservationIgnored private var saved: SavedLocation?
+    /// Archiv, do kterého panel právě vstoupil (cesty uvnitř jsou cesty v archivu).
+    public private(set) var archiveFile: URL?
+    @ObservationIgnored public private(set) var archiveFS: ArchiveFileSystem?
+
+    private struct SavedLocation { let fs: any VirtualFileSystem; let path: URL; let back: [URL]; let forward: [URL] }
 
     public init(path: URL, fs: any VirtualFileSystem = LocalFileSystem(), showHidden: Bool = false) {
         self.fs = fs
@@ -42,6 +48,14 @@ public final class PanelTab: Identifiable {
         self.showHidden = showHidden
         reload()
     }
+
+    public var insideArchive: Bool { archiveFile != nil }
+
+    /// Cesta na disku, kterou lze uložit nebo přidat do oblíbených (u archivu adresář s archivem).
+    public var persistentPath: URL { archiveFile?.deletingLastPathComponent() ?? path }
+
+    /// Cesta pro zobrazení v adresním řádku.
+    public var displayPath: String { archiveFile.map { $0.path + " ▸ " + path.path } ?? path.path }
 
     public var canGoBack: Bool { !backStack.isEmpty }
     public var canGoForward: Bool { !forwardStack.isEmpty }
@@ -79,9 +93,11 @@ public final class PanelTab: Identifiable {
             all = items
             isBranch = false
             error = nil
-            recent.removeAll { $0 == target }
-            recent.insert(target, at: 0)
-            if recent.count > 30 { recent.removeLast() }
+            if archiveFile == nil {
+                recent.removeAll { $0 == target }
+                recent.insert(target, at: 0)
+                if recent.count > 30 { recent.removeLast() }
+            }
             updateWatcher()
             applyView(keeping: select)
             return true
@@ -93,6 +109,7 @@ public final class PanelTab: Identifiable {
     }
 
     public func goUp() {
+        if archiveFile != nil && path.path == "/" { leaveArchive(); return }
         guard path.path != "/" else { return }
         navigate(to: path.deletingLastPathComponent(), select: path)
     }
@@ -112,6 +129,7 @@ public final class PanelTab: Identifiable {
     /// Znovu načte adresář; když zmizel, vyleze na nejbližší existující nadřazený.
     public func reload(select: URL? = nil) {
         if isBranch { enterBranchView(); return }
+        if let a = archiveFile, !FileManager.default.fileExists(atPath: a.path) { leaveArchive(); return }
         var dir = path
         let keep = select ?? cursorURL
         while !navigate(to: dir, select: keep, recordHistory: false, keepMarks: true) {
@@ -127,7 +145,46 @@ public final class PanelTab: Identifiable {
         guard let e = cursorEntry else { return nil }
         if e.isParentLink { goUp(); return nil }
         if e.isDirectory { navigate(to: e.url); return nil }
+        if archiveFile == nil && ArchiveSupport.isArchive(e.name), enterArchive(e.url) { return nil }
         return e.url
+    }
+
+    // MARK: Archivy
+
+    /// Vstoupí do archivu (jako do adresáře); při chybě nastaví `error` a vrátí false.
+    @discardableResult
+    public func enterArchive(_ url: URL) -> Bool {
+        do {
+            let afs = try ArchiveFileSystem(archiveURL: url)
+            saved = SavedLocation(fs: fs, path: path, back: backStack, forward: forwardStack)
+            fs = afs; archiveFS = afs; archiveFile = url
+            watcher?.stop(); watcher = nil
+            backStack = []; forwardStack = []; marked.removeAll(); quickFilter = ""
+            path = URL(fileURLWithPath: "/")
+            all = try afs.list(path, includeHidden: showHidden)
+            error = nil
+            applyView(keeping: nil)
+            cursor = 0
+            return true
+        } catch {
+            self.error = "\(url.lastPathComponent): \(error.localizedDescription)"
+            revision &+= 1
+            return false
+        }
+    }
+
+    /// Přejde na adresář na disku; pokud je panel v archivu, nejdřív z něj vystoupí.
+    @discardableResult
+    public func navigateLocal(_ url: URL, select: URL? = nil) -> Bool {
+        if archiveFile != nil { leaveArchive() }
+        return navigate(to: url, select: select)
+    }
+
+    public func leaveArchive() {
+        guard let archive = archiveFile, let s = saved else { return }
+        fs = s.fs; archiveFS = nil; archiveFile = nil; saved = nil
+        backStack = s.back; forwardStack = s.forward; marked.removeAll(); quickFilter = ""
+        navigate(to: s.path, select: archive, recordHistory: false)
     }
 
     // MARK: Označování
@@ -188,6 +245,7 @@ public final class PanelTab: Identifiable {
 
     /// Ctrl+B: zobrazí všechny soubory ze všech podadresářů (názvy jsou relativní cesty).
     public func enterBranchView(limit: Int = 200_000) {
+        guard archiveFile == nil else { return }
         var flat: [FileEntry] = []
         var stack = [path]
         while let dir = stack.popLast(), flat.count < limit {
@@ -209,7 +267,7 @@ public final class PanelTab: Identifiable {
 
     private func updateWatcher() {
         watcher?.stop(); watcher = nil
-        guard autoRefresh else { return }
+        guard autoRefresh, archiveFile == nil else { return }
         watcher = DirectoryWatcher(url: path) { [weak self] in
             Task { @MainActor in
                 guard let self, !self.isBranch else { return }
@@ -239,7 +297,7 @@ public final class PanelTab: Identifiable {
         var visible = all
         if !q.isEmpty { visible = visible.filter { $0.name.lowercased().contains(q) } }
         var result = sortEntries(visible, by: sort)
-        if path.path != "/" { result.insert(FileEntry.parent(of: path), at: 0) }
+        if path.path != "/" || archiveFile != nil { result.insert(FileEntry.parent(of: path), at: 0) }
         entries = result
         if let url, let i = entries.firstIndex(where: { $0.url == url && !$0.isParentLink }) { cursor = i }
         else { cursor = min(cursor, max(0, entries.count - 1)) }

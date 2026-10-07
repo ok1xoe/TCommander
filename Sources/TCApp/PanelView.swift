@@ -13,9 +13,9 @@ struct PanelView: View {
         let isActive = model.activeSide == side
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                VolumeMenu { tab.navigate(to: $0); model.activeSide = side }
+                VolumeMenu { tab.navigateLocal($0); model.activeSide = side }
                 TextField("Cesta", text: Binding(
-                    get: { model.pathEdit[side.key] ?? tab.path.path },
+                    get: { model.pathEdit[side.key] ?? tab.displayPath },
                     set: { model.pathEdit[side.key] = $0 }))
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { navigateToText(tab) }
@@ -62,9 +62,10 @@ struct PanelView: View {
     }
 
     private func navigateToText(_ tab: PanelTab) {
-        let p = ((model.pathEdit[side.key] ?? tab.path.path) as NSString).expandingTildeInPath
-        tab.navigate(to: URL(fileURLWithPath: p))
+        let typed = model.pathEdit[side.key]
         model.pathEdit[side.key] = nil
+        guard let typed, !tab.insideArchive else { return }
+        tab.navigate(to: URL(fileURLWithPath: (typed as NSString).expandingTildeInPath))
     }
 }
 
@@ -76,7 +77,7 @@ struct TabBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 2) {
                 ForEach(Array(group.tabs.enumerated()), id: \.element.id) { i, t in
-                    let title = t.path.path == "/" ? "/" : t.path.lastPathComponent
+                    let title = t.archiveFile?.lastPathComponent ?? (t.path.path == "/" ? "/" : t.path.lastPathComponent)
                     Text(title)
                         .lineLimit(1)
                         .font(.system(size: 11, weight: i == group.activeIndex ? .semibold : .regular))

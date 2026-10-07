@@ -229,7 +229,7 @@ struct FileTableView: NSViewRepresentable {
 
         func tableView(_ tableView: NSTableView, writeRowsWith rowIndexes: IndexSet, to pboard: NSPasteboard) -> Bool {
             let tab = parent.tab
-            guard let row = rowIndexes.first, tab.entries.indices.contains(row), !tab.entries[row].isParentLink else { return false }
+            guard !tab.insideArchive, let row = rowIndexes.first, tab.entries.indices.contains(row), !tab.entries[row].isParentLink else { return false }
             let dragged = tab.entries[row]
             let urls = tab.marked.contains(dragged.url) ? tab.entries.filter { tab.marked.contains($0.url) }.map(\.url) : [dragged.url]
             pboard.clearContents()
@@ -245,6 +245,7 @@ struct FileTableView: NSViewRepresentable {
         func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int,
                        proposedDropOperation op: NSTableView.DropOperation) -> NSDragOperation {
             let tab = parent.tab
+            if tab.insideArchive { return [] }
             if op == .on, tab.entries.indices.contains(row), tab.entries[row].isDirectory, !tab.entries[row].isParentLink {
                 // zůstává na řádku adresáře
             } else {
