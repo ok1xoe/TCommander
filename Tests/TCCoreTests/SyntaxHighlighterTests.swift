@@ -46,6 +46,28 @@ import Foundation
         #expect(has(r, "<!-- c -->", .comment) && has(r, "<a", .tag) && has(r, "href", .attribute) && has(r, "\"x\"", .string) && has(r, "</a", .tag))
     }
 
+    @Test func markdownHighlighting() {
+        for e in ["md", "markdown", "MD", "mkd"] { #expect(SyntaxHighlighter.language(forFileName: "README.\(e)") == "markdown") }
+        let text = "# Nadpis\n\n- položka s **tučným**, *kurzívou* a `kódem`\n1. [odkaz](https://x.cz) ~~pryč~~\n> citace\n\n```swift\nlet a = 1\n```\n\n| a | b |\n|---|---|\n\n---"
+        let r = kinds(text, "markdown")
+        #expect(has(r, "# Nadpis", .keyword) && has(r, "-", .preprocessor) && has(r, "1.", .preprocessor) && r.contains { $0.1 == .comment && $0.0.hasPrefix(">") })
+        #expect(has(r, "**tučným**", .keyword) && has(r, "*kurzívou*", .type) && has(r, "`kódem`", .string) && has(r, "~~pryč~~", .comment))
+        #expect(has(r, "[odkaz]", .tag) && has(r, "(https://x.cz)", .string))
+        #expect(has(r, "```swift", .preprocessor) && has(r, "let", .keyword) && has(r, "1", .number) && has(r, "```", .preprocessor))   // kód v ohraničení se zvýrazní podle jazyka
+        #expect(has(r, "|---|---|", .comment) && has(r, "---", .comment))
+        let tokens = SyntaxHighlighter.tokens(in: text, language: "markdown")
+        let len = (text as NSString).length
+        var last = 0
+        for t in tokens { #expect(t.range.location >= last && NSMaxRange(t.range) <= len, "\(t)"); last = NSMaxRange(t.range) }
+    }
+
+    @Test func markdownEdgeCases() {
+        for t in ["", "```", "```swift", "``` x ```", "*", "**", "[", "![](", "|", "# ", ">", "- ", "~~", "```\n```", "a\r\nb\r\n```\r\nx\r\n```"] { _ = SyntaxHighlighter.tokens(in: t, language: "markdown") }
+        let unclosed = kinds("```python\nx = 1\n", "markdown")
+        #expect(has(unclosed, "x", .keyword) == false && has(unclosed, "1", .number))
+        #expect(SyntaxHighlighter.languages.contains("markdown"))
+    }
+
     @Test func sqlDialectsExtensionsTypesAndComments() {
         for ext in ["sql", "pgsql", "mysql", "tsql", "plsql", "ddl", "hql", "SQL"] { #expect(SyntaxHighlighter.language(forFileName: "x.\(ext)") == "sql", "\(ext)") }
         let r = kinds("CREATE TABLE `t` (id INT PRIMARY KEY, name varchar(20) DEFAULT 'a') -- c\n# mysql\nselect * from t where x ilike '%a%' /* b */", "sql")

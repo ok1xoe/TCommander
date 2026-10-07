@@ -242,7 +242,9 @@ extension AppModel {
         if edit {
             switch FileOpenPolicy.editAction(fileName: name, sample: sample, associations: associations) {
             case .command(let c): runOnFile(c, url)
-            case .editor: if settings.useBuiltinEditor { EditorWindow.show(url, saveBack: saveBack) } else { openInEditor(url) }
+            case .editor:
+                let highlighted = settings.builtinEditorForHighlighted && SyntaxHighlighter.language(forFileName: name) != nil
+                if settings.useBuiltinEditor || highlighted { EditorWindow.show(url, saveBack: saveBack) } else { openInEditor(url) }
             case .systemDefault: NSWorkspace.shared.open(url)
             }
         } else {

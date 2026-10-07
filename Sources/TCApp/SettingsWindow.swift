@@ -29,6 +29,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     private let hidden = NSButton(checkboxWithTitle: "Zobrazovat skryté soubory", target: nil, action: nil)
     private let stacked = NSButton(checkboxWithTitle: "Panely nad sebou (místo vedle sebe)", target: nil, action: nil)
     private let builtinEditor = NSButton(checkboxWithTitle: "Textové soubory (F4) otevírat ve vestavěném editoru", target: nil, action: nil)
+    private let highlightedEditor = NSButton(checkboxWithTitle: "Soubory se zvýrazněním syntaxe (F4) vždy ve vestavěném editoru", target: nil, action: nil)
     private let fontSize = NSTextField(), rowHeight = NSTextField()
     private let language = NSPopUpButton(frame: .zero, pullsDown: false)
 
@@ -82,10 +83,10 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         editor.stringValue = s.editorApp; terminal.stringValue = s.terminalApp; plantUML.stringValue = s.plantUMLPath
         plantUML.placeholderString = "prázdné = automaticky (Homebrew, Application Support)"
         trash.state = s.deleteToTrash ? .on : .off; verify.state = s.verifyCopies ? .on : .off
-        hidden.state = s.showHidden ? .on : .off; stacked.state = s.panelsStacked ? .on : .off; builtinEditor.state = s.useBuiltinEditor ? .on : .off
+        hidden.state = s.showHidden ? .on : .off; stacked.state = s.panelsStacked ? .on : .off; builtinEditor.state = s.useBuiltinEditor ? .on : .off; highlightedEditor.state = s.builtinEditorForHighlighted ? .on : .off
         fontSize.stringValue = String(format: "%g", s.fontSize); rowHeight.stringValue = String(format: "%g", s.rowHeight)
         language.addItems(withTitles: ["Čeština", "English"]); language.selectItem(at: s.language == "en" ? 1 : 0)
-        for c in [trash, verify, hidden, stacked, builtinEditor] { c.target = self; c.action = #selector(generalChanged) }
+        for c in [trash, verify, hidden, stacked, builtinEditor, highlightedEditor] { c.target = self; c.action = #selector(generalChanged) }
         for f in [editor, terminal, plantUML, fontSize, rowHeight] { f.target = self; f.action = #selector(generalChanged) }
         language.target = self; language.action = #selector(generalChanged)
 
@@ -104,7 +105,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         let note = NSTextField(wrappingLabelWithString: "Změna jazyka se projeví po restartu aplikace. Úpravy zkratek platí okamžitě; zkratky v hlavním menu jsou pevné.")
         note.textColor = .secondaryLabelColor; note.font = .systemFont(ofSize: 11)
         let stack = NSStackView(views: [
-            row("Editor (F4):", [editor, chooseEditor]), row("", [builtinEditor]), row("Terminál:", [terminal, chooseTerminal]),
+            row("Editor (F4):", [editor, chooseEditor]), row("", [builtinEditor]), row("", [highlightedEditor]), row("Terminál:", [terminal, chooseTerminal]),
             row("PlantUML (příkaz nebo .jar):", [plantUML, choosePlantUML]), row("", [trash]), row("", [verify]), row("", [hidden]), row("", [stacked]),
             row("Velikost písma:", [fontSize]), row("Výška řádku:", [rowHeight]), row("Jazyk:", [language]), note,
         ])
@@ -118,7 +119,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         var s = model.settings
         s.editorApp = editor.stringValue; s.terminalApp = terminal.stringValue; s.plantUMLPath = plantUML.stringValue.trimmingCharacters(in: .whitespaces)
         s.deleteToTrash = trash.state == .on; s.verifyCopies = verify.state == .on
-        s.showHidden = hidden.state == .on; s.panelsStacked = stacked.state == .on; s.useBuiltinEditor = builtinEditor.state == .on
+        s.showHidden = hidden.state == .on; s.panelsStacked = stacked.state == .on; s.useBuiltinEditor = builtinEditor.state == .on; s.builtinEditorForHighlighted = highlightedEditor.state == .on
         s.fontSize = min(24, max(9, Double(fontSize.stringValue.replacingOccurrences(of: ",", with: ".")) ?? s.fontSize))
         s.rowHeight = min(40, max(14, Double(rowHeight.stringValue.replacingOccurrences(of: ",", with: ".")) ?? s.rowHeight))
         s.language = language.indexOfSelectedItem == 1 ? "en" : "cs"

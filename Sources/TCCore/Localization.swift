@@ -67,6 +67,8 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Soubory se zvýrazněním syntaxe (F4) vždy ve vestavěném editoru": "Files with syntax highlighting (F4) always in the built-in editor",
+        "Markdown": "Markdown",
         "Otevřít adresář jako záložku?": "Open folder as a tab?",
         "Otevřít záložku": "Open Tab",
         "PlantUML (příkaz nebo .jar):": "PlantUML (command or .jar):",
