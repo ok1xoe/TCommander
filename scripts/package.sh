@@ -18,9 +18,16 @@ APP="dist/macTC.app"
 ZIP="dist/macTC-$VERSION.zip"
 DMG="dist/macTC-$VERSION.dmg"
 
-echo "==> Sestavení (release, arm64 + x86_64)"
-swift build -c release --arch arm64 --arch x86_64
-BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/macTC"
+echo "==> Sestavení (release, arm64 a x86_64 zvlášť; společné sestavení obou architektur selhává na některých Xcode)"
+BIN_DIR="$(mktemp -d)"
+for arch in arm64 x86_64; do
+  swift build -c release --triple "$arch-apple-macosx14.0"
+  # výstupní složka se podle nástrojů může u obou architektur shodovat, proto binárku hned zkopírujeme
+  cp "$(swift build -c release --triple "$arch-apple-macosx14.0" --show-bin-path)/macTC" "$BIN_DIR/macTC-$arch"
+  lipo -archs "$BIN_DIR/macTC-$arch"
+done
+lipo -create -output "$BIN_DIR/macTC" "$BIN_DIR/macTC-arm64" "$BIN_DIR/macTC-x86_64"
+BIN="$BIN_DIR/macTC"
 lipo -info "$BIN"
 
 echo "==> Složení $APP"
