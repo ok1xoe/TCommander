@@ -20,6 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--compare"), i + 2 < args.count {           // ladění: porovnání dvou souborů
             FileCompareWindow.show(URL(fileURLWithPath: args[i + 1]), URL(fileURLWithPath: args[i + 2]))
+            if let e = args.firstIndex(of: "--compare-edit"), e + 1 < args.count {      // ladění: 0 = psaní, 1 = přepočet
+                let phase = Int(args[e + 1]) ?? 0
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { FileCompareWindow.latest?.debugEditDemo(0) }
+                if phase > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { FileCompareWindow.latest?.debugEditDemo(1) } }
+            }
         }
         if let i = args.firstIndex(of: "--sync"), i + 2 < args.count {              // ladění: synchronizace dvou adresářů
             SyncWindow.show(left: URL(fileURLWithPath: args[i + 1]), right: URL(fileURLWithPath: args[i + 2]), jobs: AppModel.shared.jobs) {}

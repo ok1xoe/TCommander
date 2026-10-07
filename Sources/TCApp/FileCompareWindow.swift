@@ -7,6 +7,14 @@ import TCCore
 final class FileCompareWindow: NSObject, NSWindowDelegate {
     private static var open: [FileCompareWindow] = []
 
+    static var latest: FileCompareWindow? { open.last }
+
+    /// Ladění: přepne do úprav, na konec pravého textu připíše řádek a vrátí se zpět s přepočtem rozdílů.
+    func debugEditDemo(_ phase: Int) {
+        if phase == 0 { beginEditing(); rightView.insertText("// přidáno v okně\n", replacementRange: NSRange(location: 0, length: 0)) }
+        else { commitEditing() }
+    }
+
     static func show(_ left: URL, _ right: URL) {
         guard let leftData = try? Data(contentsOf: left, options: .alwaysMapped), let rightData = try? Data(contentsOf: right, options: .alwaysMapped) else {
             Dialogs.error("Porovnání", "Soubor nelze přečíst."); return
@@ -39,6 +47,11 @@ final class FileCompareWindow: NSObject, NSWindowDelegate {
     private let saveRight = NSButton(title: "Uložit pravý", target: nil, action: nil)
     private var cursorBlock = -1
     private var syncing = false
+    private var editing = false
+    private var editBaseline: (left: [String], right: [String])?
+    private let editButton = NSButton(title: "Upravit text", target: nil, action: nil)
+    private let prevButton = NSButton(title: "◀︎ Předchozí rozdíl", target: nil, action: nil)
+    private let nextButton = NSButton(title: "Další rozdíl ▶︎", target: nil, action: nil)
 
     private init(left: URL, right: URL, rows: [LineDiff.Row], leftEncoding: String, rightEncoding: String) {
         leftURL = left; rightURL = right; self.rows = rows
@@ -61,13 +74,16 @@ final class FileCompareWindow: NSObject, NSWindowDelegate {
         split.addArrangedSubview(leftScroll); split.addArrangedSubview(rightScroll)
         split.setHoldingPriority(.defaultLow, forSubviewAt: 0); split.setHoldingPriority(.defaultLow, forSubviewAt: 1)
 
-        let prev = NSButton(title: "◀︎ Předchozí rozdíl", target: self, action: #selector(previousDiff))
-        let next = NSButton(title: "Další rozdíl ▶︎", target: self, action: #selector(nextDiff))
+        let prev = prevButton, next = nextButton
+        prev.target = self; prev.action = #selector(previousDiff)
+        next.target = self; next.action = #selector(nextDiff)
+        editButton.target = self; editButton.action = #selector(toggleEditing)
+        editButton.toolTip = "Zapne psaní přímo do obou souborů; po dokončení se rozdíly přepočítají"
         toRightButton.target = self; toRightButton.action = #selector(copyToRight)
         toLeftButton.target = self; toLeftButton.action = #selector(copyToLeft)
         saveLeft.target = self; saveLeft.action = #selector(saveLeftAction)
         saveRight.target = self; saveRight.action = #selector(saveRightAction)
-        let bar = NSStackView(views: [status, NSView(), toLeftButton, toRightButton, prev, next, saveLeft, saveRight]); bar.spacing = 8
+        let bar = NSStackView(views: [status, NSView(), editButton, toLeftButton, toRightButton, prev, next, saveLeft, saveRight]); bar.spacing = 8
         let c = window.contentView!
         for v in [split, bar] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; c.addSubview(v) }
         NSLayoutConstraint.activate([
@@ -103,21 +119,70 @@ final class FileCompareWindow: NSObject, NSWindowDelegate {
         }
         let keep = leftScroll.contentView.bounds.origin
         leftView.textStorage?.setAttributedString(l); rightView.textStorage?.setAttributedString(r)
+        highlightSyntax()
         leftScroll.contentView.scroll(to: keep); rightScroll.contentView.scroll(to: keep)
         updateStatus()
     }
 
+    /// Zvýraznění syntaxe podle přípony každého ze souborů (barvy písma se kombinují s barvou pozadí rozdílů).
+    private func highlightSyntax() {
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        for (view, url) in [(leftView, leftURL), (rightView, rightURL)] {
+            if let lang = SyntaxHighlighter.language(forFileName: url.lastPathComponent), let st = view.textStorage { SyntaxStyle.apply(to: st, language: lang, baseFont: font) }
+        }
+    }
+
+    // MARK: Psaní přímo v oknech
+
+    @objc private func toggleEditing() { if editing { _ = commitEditing() } else { beginEditing() } }
+
+    private func beginEditing() {
+        let l = DiffMerge.lines(rows, right: false), r = DiffMerge.lines(rows, right: true)
+        editBaseline = (l, r)
+        editing = true
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        for (view, lines) in [(leftView, l), (rightView, r)] {
+            view.isEditable = true; view.isRichText = false; view.allowsUndo = true
+            view.isAutomaticQuoteSubstitutionEnabled = false; view.isAutomaticDashSubstitutionEnabled = false; view.isAutomaticTextReplacementEnabled = false
+            view.font = font
+            view.string = lines.joined(separator: "\n")
+            view.textColor = .labelColor
+        }
+        highlightSyntax()
+        leftView.window?.makeFirstResponder(leftView)
+        updateStatus()
+    }
+
+    /// Převezme upravené texty, přepočítá rozdíly a vrátí se do zobrazení rozdílů; při neúspěchu zůstane v úpravách.
+    @discardableResult
+    private func commitEditing() -> Bool {
+        guard editing, let base = editBaseline else { return true }
+        let l = leftView.string.components(separatedBy: "\n"), r = rightView.string.components(separatedBy: "\n")
+        guard let ops = LineDiff.diff(l, r) else {
+            Dialogs.error("Porovnání", "Soubory se příliš liší pro zobrazení rozdílů."); return false
+        }
+        if l != base.left { leftDirty = true }
+        if r != base.right { rightDirty = true }
+        rows = LineDiff.sideBySide(l, r, ops)
+        editing = false; editBaseline = nil; cursorBlock = -1
+        for v in [leftView, rightView] { v.isEditable = false; v.isRichText = true }
+        render()
+        return true
+    }
+
     private func updateStatus() {
         let n = DiffMerge.blocks(rows).count
-        status.stringValue = n == 0 ? "Soubory jsou shodné" : "Počet bloků rozdílů: \(n)"
-        toLeftButton.isEnabled = n > 0; toRightButton.isEnabled = n > 0
-        saveLeft.isEnabled = leftDirty; saveRight.isEnabled = rightDirty
+        status.stringValue = editing ? "Režim úprav – po stisku „Hotovo“ se rozdíly přepočítají" : n == 0 ? "Soubory jsou shodné" : "Počet bloků rozdílů: \(n)"
+        editButton.title = editing ? "Hotovo" : "Upravit text"
+        toLeftButton.isEnabled = n > 0 && !editing; toRightButton.isEnabled = n > 0 && !editing
+        prevButton.isEnabled = !editing; nextButton.isEnabled = !editing
+        saveLeft.isEnabled = leftDirty || editing; saveRight.isEnabled = rightDirty || editing
         window.title = "Porovnání: \(leftURL.lastPathComponent)\(leftDirty ? " •" : "") ↔ \(rightURL.lastPathComponent)\(rightDirty ? " •" : "")"
         window.isDocumentEdited = leftDirty || rightDirty
     }
 
     @objc private func scrolled(_ n: Notification) {
-        guard !syncing, let src = n.object as? NSClipView else { return }
+        guard !syncing, !editing, let src = n.object as? NSClipView else { return }
         let other = src === leftScroll.contentView ? rightScroll.contentView : leftScroll.contentView
         syncing = true
         other.scroll(to: src.bounds.origin)
@@ -173,6 +238,7 @@ final class FileCompareWindow: NSObject, NSWindowDelegate {
     @objc private func copyToLeft() { transfer(toRight: false) }
 
     private func save(right: Bool) -> Bool {
+        guard commitEditing() else { return false }
         let url = right ? rightURL : leftURL
         let enc = right ? rightEncoding : leftEncoding
         let text = DiffMerge.lines(rows, right: right).joined(separator: "\n")
@@ -191,6 +257,7 @@ final class FileCompareWindow: NSObject, NSWindowDelegate {
     @objc private func saveRightAction() { _ = save(right: true) }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard commitEditing() else { return false }
         guard leftDirty || rightDirty else { return true }
         let alert = NSAlert()
         alert.messageText = "Uložit změny?"
