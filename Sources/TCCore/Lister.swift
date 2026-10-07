@@ -2,13 +2,17 @@ import Foundation
 import UniformTypeIdentifiers
 
 public enum ListerMode: String, Sendable, CaseIterable {
-    case text, hex, image, pdf, media, web, diagram
+    case text, hex, image, pdf, media, web, diagram, markdown
 }
 
 public enum ListerSupport {
+    public static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd"]
+    public static func isMarkdown(_ url: URL) -> Bool { markdownExtensions.contains(url.pathExtension.lowercased()) }
+
     /// Režimy, které dává smysl pro soubor nabídnout; první je výchozí.
     public static func modes(for url: URL, sample: Data) -> [ListerMode] {
         if PlantUML.isDiagramFile(url) { return [.diagram, .text, .hex] }
+        if ListerSupport.isMarkdown(url) { return [.markdown, .text, .hex] }
         let type = UTType(filenameExtension: url.pathExtension)
         if let t = type {
             if t.conforms(to: .image), !t.conforms(to: .svg) { return [.image, .hex] }

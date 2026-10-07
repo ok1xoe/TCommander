@@ -30,7 +30,7 @@ private final class CenteringClipView: NSClipView {
 
 /// Okno Listeru (F3): text, hex, obrázek, PDF, média, HTML. Esc zavře, 1–3 přepínají režimy.
 @MainActor
-final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
+final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate, WKNavigationDelegate {
     private static var open: [ListerWindow] = []
 
     static func show(_ url: URL, skipPlugins: Bool = false, siblings: [URL] = []) {
@@ -139,7 +139,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
 
     private static func title(_ m: ListerMode) -> String {
         switch m {
-        case .text: "Text"; case .hex: "Hex"; case .image: "Obrázek"; case .pdf: "PDF"; case .media: "Přehrávač"; case .web: "HTML"; case .diagram: "Diagram"
+        case .text: "Text"; case .hex: "Hex"; case .image: "Obrázek"; case .pdf: "PDF"; case .media: "Přehrávač"; case .web: "HTML"; case .diagram: "Diagram"; case .markdown: "Markdown"
         }
     }
 
@@ -154,6 +154,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         case .hex: view = hexView()
         case .image: view = imageView()
         case .diagram: view = diagramView()
+        case .markdown: view = markdownView()
         case .pdf:
             let v = PDFView(); v.document = PDFDocument(url: url); v.autoScales = true; view = v
         case .media:
@@ -310,6 +311,40 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
 
     // MARK: Obrázky: přiblížení a otočení
 
+    // MARK: Čtečka Markdownu
+
+    private var markdownTemp: URL?
+    private static let markdownLimit = 4 * 1024 * 1024
+
+    /// Vykreslený Markdown: HTML se zapíše do dočasného souboru (aby šly načíst relativní obrázky), skripty jsou vypnuté;
+    /// odkazy na weby se otevřou v prohlížeči, odkazy na soubory v Listeru.
+    private func markdownView() -> NSView {
+        let text = TextDecoding.decode(data.prefix(Self.markdownLimit)).text
+        let html = MarkdownHTML.page(text, baseURL: url.deletingLastPathComponent(), title: url.lastPathComponent)
+        let tmp = markdownTemp ?? FileManager.default.temporaryDirectory.appendingPathComponent("tcommander-md-\(UUID().uuidString).html")
+        markdownTemp = tmp
+        try? html.write(to: tmp, atomically: true, encoding: .utf8)
+        let cfg = WKWebViewConfiguration()
+        cfg.defaultWebpagePreferences.allowsContentJavaScript = false
+        let v = WKWebView(frame: .zero, configuration: cfg)
+        v.navigationDelegate = self
+        v.loadFileURL(tmp, allowingReadAccessTo: URL(fileURLWithPath: "/"))
+        return v
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard navigationAction.navigationType == .linkActivated, let target = navigationAction.request.url else { decisionHandler(.allow); return }
+        if target.isFileURL {
+            if target.fragment != nil, target.deletingLastPathComponent() == markdownTemp?.deletingLastPathComponent(), target.lastPathComponent == markdownTemp?.lastPathComponent { decisionHandler(.allow); return }
+            decisionHandler(.cancel)
+            let file = URL(fileURLWithPath: target.path)
+            if FileManager.default.fileExists(atPath: file.path) { ListerWindow.show(file) }
+        } else {
+            decisionHandler(.cancel)
+            NSWorkspace.shared.open(target)
+        }
+    }
+
     // MARK: Diagram (PlantUML)
 
     private func messageView(_ text: String, hint: String? = nil) -> NSView {
@@ -458,6 +493,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     }
 
     func windowWillClose(_ notification: Notification) {
+        if let t = markdownTemp { try? FileManager.default.removeItem(at: t) }
         player?.pause()
         Self.open.removeAll { $0 === self }
     }

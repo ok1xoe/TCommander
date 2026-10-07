@@ -320,6 +320,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var useBuiltinEditor = false
     /// PlantUML: příkaz `plantuml` nebo soubor `plantuml.jar`; prázdné = automatické hledání.
     public var plantUMLPath = ""
+    /// F4 otevře soubory, které umíme zvýraznit (zdrojové kódy, Markdown, YAML, ADIF…), ve vestavěném editoru i bez volby `useBuiltinEditor`.
+    public var builtinEditorForHighlighted = true
     public var colorRules: [ColorRule] = ColorRule.defaults
     public var columnSets: [ColumnSet] = ColumnSet.defaults
     public init() {}
@@ -339,6 +341,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         panelsStacked = try c.decodeIfPresent(Bool.self, forKey: .panelsStacked) ?? panelsStacked
         useBuiltinEditor = try c.decodeIfPresent(Bool.self, forKey: .useBuiltinEditor) ?? useBuiltinEditor
         plantUMLPath = try c.decodeIfPresent(String.self, forKey: .plantUMLPath) ?? plantUMLPath
+        builtinEditorForHighlighted = try c.decodeIfPresent(Bool.self, forKey: .builtinEditorForHighlighted) ?? builtinEditorForHighlighted
         colorRules = try c.decodeIfPresent([ColorRule].self, forKey: .colorRules) ?? colorRules
         columnSets = try c.decodeIfPresent([ColumnSet].self, forKey: .columnSets) ?? columnSets
     }

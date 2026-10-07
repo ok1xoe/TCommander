@@ -57,7 +57,7 @@ public enum SyntaxHighlighter {
         "swift": "swift", "c": "c", "h": "c", "m": "c", "mm": "c", "cc": "c", "cpp": "c", "cxx": "c", "hpp": "c", "hh": "c", "cs": "java", "java": "java",
         "kt": "kotlin", "kts": "kotlin", "js": "js", "mjs": "js", "cjs": "js", "jsx": "js", "ts": "js", "tsx": "js", "py": "python", "rb": "ruby",
         "sh": "shell", "bash": "shell", "zsh": "shell", "command": "shell", "go": "go", "rs": "rust", "php": "php", "sql": "sql", "pls": "sql", "plsql": "sql", "psql": "sql", "pgsql": "sql", "mysql": "sql", "tsql": "sql", "ddl": "sql", "dml": "sql", "hql": "sql", "sqlite": "sql", "json": "json",
-        "yml": "yaml", "yaml": "yaml", "sls": "yaml", "puml": "plantuml", "plantuml": "plantuml", "pu": "plantuml", "wsd": "plantuml", "iuml": "plantuml", "adi": "adif", "adif": "adif", "toml": "toml", "ini": "toml", "css": "css", "scss": "css", "html": "markup", "htm": "markup", "xml": "markup",
+        "yml": "yaml", "yaml": "yaml", "sls": "yaml", "md": "markdown", "markdown": "markdown", "mdown": "markdown", "mkd": "markdown", "puml": "plantuml", "plantuml": "plantuml", "pu": "plantuml", "wsd": "plantuml", "iuml": "plantuml", "adi": "adif", "adif": "adif", "toml": "toml", "ini": "toml", "css": "css", "scss": "css", "html": "markup", "htm": "markup", "xml": "markup",
         "plist": "markup", "svg": "markup", "xhtml": "markup", "lua": "lua", "mk": "makefile",
     ]
 
@@ -68,6 +68,92 @@ public enum SyntaxHighlighter {
         if lower == "dockerfile" { return "shell" }
         guard let dot = lower.lastIndex(of: "."), dot != lower.startIndex else { return nil }
         return extensions[String(lower[lower.index(after: dot)...])]
+    }
+
+    /// Markdown: nadpisy, ohraničený kód (u známého jazyka obarvený jeho zvýrazněním), citace, položky seznamů, kód v řádku, zdůraznění, odkazy a tabulky.
+    static func markdownTokens(in text: String) -> [SyntaxToken] {
+        let ns = text as NSString
+        var out: [SyntaxToken] = []
+        func add(_ r: NSRange, _ k: SyntaxKind) { if r.length > 0 { out.append(SyntaxToken(range: r, kind: k)) } }
+        var fence: (char: unichar, count: Int, language: String?, contentStart: Int)?
+        func finishFence(upTo end: Int) {
+            guard let f = fence else { return }
+            if end > f.contentStart {
+                let range = NSRange(location: f.contentStart, length: end - f.contentStart)
+                if let lang = f.language, lang != "markdown" {
+                    for t in tokens(in: ns.substring(with: range), language: lang) {
+                        add(NSRange(location: t.range.location + range.location, length: t.range.length), t.kind)
+                    }
+                } else { add(range, .string) }
+            }
+            fence = nil
+        }
+        let inlinePatterns: [(NSRegularExpression, SyntaxKind, Int)] = [
+            (try! NSRegularExpression(pattern: #"(`+)(?:(?!\1).)+?\1"#), .string, 0),                                  // kód v řádku
+            (try! NSRegularExpression(pattern: #"!?\[([^\]]*)\]\(([^)\s]*)(?:\s+"[^"]*")?\)"#), .tag, 1),                // odkaz / obrázek: text
+            (try! NSRegularExpression(pattern: #"<(?:https?://|mailto:)[^>\s]+>"#), .string, 0),                      // <url>
+            (try! NSRegularExpression(pattern: #"\*\*\*[^*\s](?:[^*]*[^*\s])?\*\*\*|\*\*[^*\s](?:[^*]*[^*\s])?\*\*|(?<![\w_])__[^_\s](?:[^_]*[^_\s])?__(?![\w_])"#), .keyword, 0),   // tučné
+            (try! NSRegularExpression(pattern: #"(?<![\w*])\*[^*\s](?:[^*]*[^*\s])?\*(?![\w*])|(?<![\w_])_[^_\s](?:[^_]*[^_\s])?_(?![\w_])"#), .type, 0),   // kurzíva
+            (try! NSRegularExpression(pattern: #"~~[^~\s](?:[^~]*[^~\s])?~~"#), .comment, 0),                         // přeškrtnuté
+            (try! NSRegularExpression(pattern: #"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^>]*)?/?>"#), .tag, 0),                 // HTML značky
+        ]
+        let listRE = try! NSRegularExpression(pattern: #"^(\s*)([-*+]|\d{1,9}[.)])(\s+)"#)
+        let headingRE = try! NSRegularExpression(pattern: #"^ {0,3}#{1,6}(\s|$)"#)
+        let quoteRE = try! NSRegularExpression(pattern: #"^(\s*>\s?)+"#)
+        let tableSepRE = try! NSRegularExpression(pattern: #"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$"#)
+        var pos = 0
+        while pos < ns.length {
+            let lineRange = ns.lineRange(for: NSRange(location: pos, length: 0))
+            var content = lineRange
+            while content.length > 0, [10, 13].contains(ns.character(at: content.location + content.length - 1)) { content.length -= 1 }
+            let line = ns.substring(with: content)
+            defer { pos = NSMaxRange(lineRange) }
+
+            // ohraničený kód
+            let trimmed = line.drop { $0 == " " }
+            if line.count - trimmed.count < 4, let c = trimmed.first, c == "`" || c == "~" {
+                let n = trimmed.prefix { $0 == c }.count
+                let info = trimmed.dropFirst(n).trimmingCharacters(in: .whitespaces)
+                if let f = fence {
+                    if c.utf16.first == f.char, n >= f.count, info.isEmpty { finishFence(upTo: lineRange.location); add(content, .preprocessor); continue }
+                } else if n >= 3, !(c == "`" && info.contains("`")) {
+                    add(content, .preprocessor)
+                    fence = (c.utf16.first!, n, MarkdownHTML.language(forFence: info), NSMaxRange(lineRange)); continue
+                }
+            }
+            if fence != nil { continue }
+
+            if headingRE.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) != nil { add(content, .keyword); continue }
+            if MarkdownHTML.Parser.isHR(line) { add(content, .comment); continue }
+            let full = NSRange(location: 0, length: (line as NSString).length)
+            func shifted(_ r: NSRange) -> NSRange { NSRange(location: r.location + content.location, length: r.length) }
+            var claimed: [NSRange] = []
+            func claim(_ r: NSRange, _ k: SyntaxKind) {
+                if claimed.contains(where: { NSIntersectionRange($0, r).length > 0 }) { return }
+                claimed.append(r); add(shifted(r), k)
+            }
+            if let m = quoteRE.firstMatch(in: line, range: full) { claim(m.range, .comment) }
+            else if let m = listRE.firstMatch(in: line, range: full) { claim(m.range(at: 2), .preprocessor) }
+            if tableSepRE.firstMatch(in: line, range: full) != nil, line.contains("-"), line.contains("|") { claim(full, .comment); continue }
+            for (re, kind, group) in inlinePatterns {
+                for m in re.matches(in: line, range: full) {
+                    if group > 0, m.numberOfRanges > group, m.range(at: group).location != NSNotFound {                     // odkaz: text jako značka, adresa jako řetězec
+                        let whole = m.range
+                        let label = m.range(at: 1), url = m.range(at: 2)
+                        if claimed.contains(where: { NSIntersectionRange($0, whole).length > 0 }) { continue }
+                        claimed.append(whole)
+                        add(shifted(NSRange(location: whole.location, length: label.location + label.length + 1 - whole.location)), kind)
+                        add(shifted(NSRange(location: label.location + label.length + 1, length: whole.location + whole.length - (label.location + label.length + 1))), .string)
+                        _ = url
+                    } else { claim(m.range, kind) }
+                }
+            }
+            if line.contains("|") {
+                for (i, ch) in line.utf16.enumerated() where ch == 124 { claim(NSRange(location: i, length: 1), .comment) }
+            }
+        }
+        finishFence(upTo: ns.length)
+        return out.sorted { $0.range.location < $1.range.location }
     }
 
     /// ADIF/ADI (formát deníků v radioamatérském provozu): pole `<NÁZEV:délka[:typ]>hodnota`, `<EOH>` a `<EOR>`; volný text hlavičky před prvním polem je komentář.
@@ -112,11 +198,12 @@ public enum SyntaxHighlighter {
         return out
     }
 
-    public static var languages: [String] { (Array(configs.keys) + ["adif"]).sorted() }
+    public static var languages: [String] { (Array(configs.keys) + ["adif", "markdown"]).sorted() }
 
     /// Tokeny textu pro daný jazyk (viz `language(forFileName:)`); neznámý jazyk dává prázdný výsledek.
     public static func tokens(in text: String, language: String) -> [SyntaxToken] {
         if language == "adif" { return adifTokens(in: text) }
+        if language == "markdown" { return markdownTokens(in: text) }
         guard let cfg = configs[language] else { return [] }
         let u = Array(text.utf16)
         var out: [SyntaxToken] = []

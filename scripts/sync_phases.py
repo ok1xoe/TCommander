@@ -8,6 +8,7 @@ NAMES = {
     9: "Celoobrazovkový terminál, ověření WebDAV",
     10: "Konfigurovatelné hlavní menu",
     11: "PlantUML, další jazyky zvýrazňování (SQL, ADIF, YAML)",
+    12: "Čtečka Markdownu, editor F4 se zvýrazněním, záložka z adresáře, ukázkové pluginy",
 }
 total = {}
 for line in open(os.path.join(root, "docs/token-ledger.md"), encoding="utf-8"):
