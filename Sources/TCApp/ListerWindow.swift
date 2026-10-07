@@ -82,6 +82,9 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private var forcedEncoding = "Automaticky"
     private var wrap = true
     private var player: AVPlayer?
+    private enum DiagramState { case idle, rendering, done([NSImage]), failed(String) }
+    private var diagramState = DiagramState.idle
+    private var diagramIndex = 0
 
     private init?(url: URL, siblings: [URL] = []) {
         self.url = url
@@ -136,7 +139,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
 
     private static func title(_ m: ListerMode) -> String {
         switch m {
-        case .text: "Text"; case .hex: "Hex"; case .image: "Obrázek"; case .pdf: "PDF"; case .media: "Přehrávač"; case .web: "HTML"
+        case .text: "Text"; case .hex: "Hex"; case .image: "Obrázek"; case .pdf: "PDF"; case .media: "Přehrávač"; case .web: "HTML"; case .diagram: "Diagram"
         }
     }
 
@@ -150,6 +153,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         case .text: view = textView()
         case .hex: view = hexView()
         case .image: view = imageView()
+        case .diagram: view = diagramView()
         case .pdf:
             let v = PDFView(); v.document = PDFDocument(url: url); v.autoScales = true; view = v
         case .media:
@@ -169,7 +173,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             view.leadingAnchor.constraint(equalTo: container.leadingAnchor), view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
         ])
         let size = ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file)
-        info.stringValue = [size, mode == .text ? encodingName : "", mode == .image ? imageInfo : ""].filter { !$0.isEmpty }.joined(separator: " · ")
+        info.stringValue = [size, mode == .text ? encodingName : "", (mode == .image || mode == .diagram) ? imageInfo : ""].filter { !$0.isEmpty }.joined(separator: " · ")
         if let i = modes.firstIndex(of: mode) { segmented.selectedSegment = i }
     }
 
@@ -306,14 +310,79 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
 
     // MARK: Obrázky: přiblížení a otočení
 
-    private func imageView() -> NSView {
+    // MARK: Diagram (PlantUML)
+
+    private func messageView(_ text: String, hint: String? = nil) -> NSView {
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.alignment = .center; label.font = .systemFont(ofSize: 13); label.isSelectable = true
+        var views: [NSView] = [label]
+        if let hint {
+            let h = NSTextField(wrappingLabelWithString: hint); h.alignment = .center; h.textColor = .secondaryLabelColor; h.font = .systemFont(ofSize: 12); h.isSelectable = true
+            views.append(h)
+        }
+        let stack = NSStackView(views: views); stack.orientation = .vertical; stack.spacing = 10; stack.alignment = .centerX
+        let box = NSView()
+        stack.translatesAutoresizingMaskIntoConstraints = false; box.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: box.centerXAnchor), stack.centerYAnchor.constraint(equalTo: box.centerYAnchor),
+            stack.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor, constant: -60), stack.widthAnchor.constraint(lessThanOrEqualToConstant: 700),
+        ])
+        return box
+    }
+
+    private func diagramView() -> NSView {
+        switch diagramState {
+        case .idle:
+            startDiagramRender()
+            if case .failed = diagramState { return diagramView() }
+            return messageView("Vykresluji diagram…")
+        case .rendering: return messageView("Vykresluji diagram…")
+        case .failed(let message):
+            let notFound = message == Self.plantUMLMissing
+            return messageView(message, hint: notFound ? "Nainstalujte ho příkazem  brew install plantuml  (potřebuje Javu), nebo v Nastavení › Obecné zadejte cestu k plantuml.jar. Zdroj diagramu je v záložce Text." : "Zdroj diagramu je v záložce Text.")
+        case .done(let images):
+            diagramIndex = min(max(0, diagramIndex), images.count - 1)
+            return imageView(base: images[diagramIndex], pages: images.count)
+        }
+    }
+
+    private static let plantUMLMissing = "PlantUML nebyl nalezen."
+
+    private func startDiagramRender() {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("macTC").path
+        guard let launcher = PlantUML.locate(configured: AppModel.shared.settings.plantUMLPath, extraJarDirectories: [support]) else {
+            diagramState = .failed(Self.plantUMLMissing); return
+        }
+        diagramState = .rendering
+        let file = url
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("macTC-plantuml-\(UUID().uuidString)")
+        Task.detached {
+            let result = Result { try PlantUML.render(file: file, into: out, launcher: launcher) }
+            let images = (try? result.get())?.compactMap { (try? Data(contentsOf: $0)).flatMap { NSImage(data: $0) } } ?? []
+            try? FileManager.default.removeItem(at: out)
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                switch result {
+                case .success where !images.isEmpty: self.diagramState = .done(images)
+                case .success: self.diagramState = .failed("Obrázek diagramu se nepodařilo načíst.")
+                case .failure(let e): self.diagramState = .failed(e.localizedDescription)
+                }
+                if self.modes[self.segmented.selectedSegment] == .diagram { self.show(.diagram) }
+            }
+        }
+    }
+
+    @objc private func previousDiagram() { diagramIndex -= 1; show(.diagram) }
+    @objc private func nextDiagram() { diagramIndex += 1; show(.diagram) }
+
+    private func imageView(base: NSImage? = nil, pages: Int = 1) -> NSView {
         let scroll = NSScrollView()
         scroll.contentView = CenteringClipView()
         scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
         scroll.allowsMagnification = true
         scroll.minMagnification = 0.05; scroll.maxMagnification = 16
         imageScroll = scroll
-        imageBase = NSImage(contentsOf: url)
+        imageBase = base ?? NSImage(contentsOf: url)
         imageRotation = 0
         applyImage()
 
@@ -322,7 +391,8 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         }
         let bar = NSStackView(views: [button("−", #selector(zoomOut), "Oddálit"), button("+", #selector(zoomIn), "Přiblížit"),
                                       button("100 %", #selector(zoomActual), "Skutečná velikost"), button("Přizpůsobit", #selector(zoomFit), "Přizpůsobit oknu"),
-                                      button("⟲", #selector(rotateLeft), "Otočit doleva"), button("⟳", #selector(rotateRight), "Otočit doprava"), NSView()])
+                                      button("⟲", #selector(rotateLeft), "Otočit doleva"), button("⟳", #selector(rotateRight), "Otočit doprava")]
+                                     + (pages > 1 ? [button("◀︎ Diagram", #selector(previousDiagram), "Předchozí diagram"), button("Diagram ▶︎", #selector(nextDiagram), "Další diagram")] : []) + [NSView()])
         bar.spacing = 6; bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
         let box = NSStackView(views: [bar, scroll]); box.orientation = .vertical; box.spacing = 0; box.alignment = .leading
         scroll.translatesAutoresizingMaskIntoConstraints = false
@@ -340,7 +410,8 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         iv.frame = NSRect(origin: .zero, size: img.size)
         scroll.documentView = iv
         let rot = ((imageRotation % 4) + 4) % 4
-        imageInfo = "\(Int(base.size.width))×\(Int(base.size.height)) px" + (rot != 0 ? " · otočeno \(rot * 90)°" : "")
+        let page: String = { if case .done(let images) = diagramState, images.count > 1 { return "diagram \(diagramIndex + 1)/\(images.count) · " }; return "" }()
+        imageInfo = page + "\(Int(base.size.width))×\(Int(base.size.height)) px" + (rot != 0 ? " · otočeno \(rot * 90)°" : "")
         info.stringValue = ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file) + " · " + imageInfo
     }
 

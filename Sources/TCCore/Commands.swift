@@ -318,6 +318,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var panelsStacked = false
     /// F4 otevře textové soubory ve vestavěném editoru (jinak v aplikaci `editorApp`).
     public var useBuiltinEditor = false
+    /// PlantUML: příkaz `plantuml` nebo soubor `plantuml.jar`; prázdné = automatické hledání.
+    public var plantUMLPath = ""
     public var colorRules: [ColorRule] = ColorRule.defaults
     public var columnSets: [ColumnSet] = ColumnSet.defaults
     public init() {}
@@ -336,6 +338,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         language = try c.decodeIfPresent(String.self, forKey: .language) ?? language
         panelsStacked = try c.decodeIfPresent(Bool.self, forKey: .panelsStacked) ?? panelsStacked
         useBuiltinEditor = try c.decodeIfPresent(Bool.self, forKey: .useBuiltinEditor) ?? useBuiltinEditor
+        plantUMLPath = try c.decodeIfPresent(String.self, forKey: .plantUMLPath) ?? plantUMLPath
         colorRules = try c.decodeIfPresent([ColorRule].self, forKey: .colorRules) ?? colorRules
         columnSets = try c.decodeIfPresent([ColumnSet].self, forKey: .columnSets) ?? columnSets
     }

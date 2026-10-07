@@ -67,6 +67,18 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "PlantUML (příkaz nebo .jar):": "PlantUML (command or .jar):",
+        "prázdné = automaticky (Homebrew, Application Support)": "empty = automatic (Homebrew, Application Support)",
+        "Diagram": "Diagram",
+        "Vykresluji diagram…": "Rendering diagram…",
+        "PlantUML nebyl nalezen.": "PlantUML was not found.",
+        "Nainstalujte ho příkazem  brew install plantuml  (potřebuje Javu), nebo v Nastavení › Obecné zadejte cestu k plantuml.jar. Zdroj diagramu je v záložce Text.": "Install it with  brew install plantuml  (needs Java), or enter the path to plantuml.jar in Settings › General. The diagram source is on the Text tab.",
+        "Zdroj diagramu je v záložce Text.": "The diagram source is on the Text tab.",
+        "◀︎ Diagram": "◀︎ Diagram",
+        "Diagram ▶︎": "Diagram ▶︎",
+        "Předchozí diagram": "Previous diagram",
+        "Další diagram": "Next diagram",
+        "Obrázek diagramu se nepodařilo načíst.": "The diagram image could not be loaded.",
         "Název vlastního menu:": "Custom menu name:",
         "Název (Podmenu/Položka; „-“ = oddělovač)": "Name (Submenu/Item; “-” = separator)",
         "Zkratka": "Shortcut",
