@@ -46,6 +46,49 @@ import Foundation
         #expect(has(r, "<!-- c -->", .comment) && has(r, "<a", .tag) && has(r, "href", .attribute) && has(r, "\"x\"", .string) && has(r, "</a", .tag))
     }
 
+    @Test func sqlDialectsExtensionsTypesAndComments() {
+        for ext in ["sql", "pgsql", "mysql", "tsql", "plsql", "ddl", "hql", "SQL"] { #expect(SyntaxHighlighter.language(forFileName: "x.\(ext)") == "sql", "\(ext)") }
+        let r = kinds("CREATE TABLE `t` (id INT PRIMARY KEY, name varchar(20) DEFAULT 'a') -- c\n# mysql\nselect * from t where x ilike '%a%' /* b */", "sql")
+        for k in ["CREATE", "TABLE", "INT", "PRIMARY", "KEY", "varchar", "DEFAULT", "select", "from", "where", "ilike"] { #expect(has(r, k, .keyword), "\(k)") }
+        #expect(has(r, "`t`", .string) && has(r, "'a'", .string) && has(r, "-- c", .comment) && has(r, "# mysql", .comment) && has(r, "/* b */", .comment) && has(r, "20", .number))
+    }
+
+    @Test func adifFieldsLengthsAndRecordMarkers() {
+        #expect(SyntaxHighlighter.language(forFileName: "log.ADI") == "adif" && SyntaxHighlighter.language(forFileName: "x.adif") == "adif")
+        let text = "ADIF export by macTC\n<ADIF_VER:5>3.1.0\n<EOH>\n<CALL:5>OK1XO <BAND:3>20m <QSO_DATE:8:D>20261007 <EOR>\n<call:4>DL1A<eor>"
+        let r = kinds(text, "adif")
+        #expect(r.first?.1 == .comment && r.first?.0 == "ADIF export by macTC\n")                // komentář je jen volný text před prvním polem
+        #expect(has(r, "<ADIF_VER", .tag) && has(r, "3.1.0", .string))                           // pole v hlavičce se zvýrazní jako ostatní
+        #expect(has(r, "<EOH>", .keyword) && has(r, "<EOR>", .keyword) && has(r, "<eor>", .keyword))
+        #expect(has(r, "<CALL", .tag) && has(r, "OK1XO", .string) && has(r, "20m", .string) && has(r, "20261007", .string) && has(r, "D", .type) && has(r, "5", .number) && has(r, "<call", .tag) && has(r, "DL1A", .string))
+    }
+
+    @Test func adifLengthInBytesDoesNotSwallowTheNextField() {
+        // délka 8 je v bajtech (české „Příbram“ má 7 znaků, 9 bajtů); hodnota se ořízne na další značce
+        let r = kinds("<QTH:9>Příbram <CALL:5>OK1XO <EOR>", "adif")
+        #expect(has(r, "Příbram", .string) && has(r, "<CALL", .tag) && has(r, "OK1XO", .string))
+        for t in ["<", "<A", "<A:", "<A:99>x", "<:5>", "<A:5:", "", "<EOH", "text <EOH>", "<A:5>ab<EOR"] { _ = SyntaxHighlighter.tokens(in: t, language: "adif") }
+    }
+
+    @Test func plantUMLDirectivesCommentsKeywordsAndArrows() {
+        #expect(SyntaxHighlighter.language(forFileName: "a.puml") == "plantuml" && SyntaxHighlighter.language(forFileName: "a.wsd") == "plantuml")
+        let r = kinds("@startuml\n' komentář\nparticipant \"A B\" as A\nA -> B : ahoj ' neni komentar\nB --> A\nA <|-- C\nnote left of A : x\n/' blok '/\n!include x.puml\n@enduml", "plantuml")
+        #expect(has(r, "@startuml", .preprocessor) && has(r, "@enduml", .preprocessor) && has(r, "!include x.puml", .preprocessor))
+        #expect(has(r, "' komentář", .comment) && has(r, "/' blok '/", .comment) && !r.contains { $0.1 == .comment && $0.0.contains("neni") })
+        #expect(has(r, "participant", .keyword) && has(r, "as", .keyword) && has(r, "note", .keyword) && has(r, "\"A B\"", .string))
+        #expect(has(r, "->", .attribute) && has(r, "-->", .attribute) && has(r, "<|--", .attribute))
+    }
+
+    @Test func yamlKeysAnchorsTagsDocumentsAndComments() {
+        let y = "---\n# komentář\nname: macTC  # za mezerou\nurl: http://x.cz/#frag\nlist:\n  - a: 1\n  - \"k\": true\nbase: &b\n  x: *b\nt: !!str 5\n'q k': 'v'\nmsg: don't panic\n...\n"
+        let r = kinds(y, "yaml")
+        #expect(has(r, "---", .preprocessor) && has(r, "...", .preprocessor) && has(r, "# komentář", .comment) && has(r, "# za mezerou", .comment))
+        for k in ["name", "url", "list", "a", "\"k\"", "base", "x", "t", "'q k'", "msg"] { #expect(has(r, k, .attribute), "klíč \(k)") }
+        #expect(!r.contains { $0.1 == .comment && $0.0.contains("frag") })                  // # bez mezery před sebou není komentář
+        #expect(has(r, "&b", .type) && has(r, "*b", .type) && has(r, "!!str", .type) && has(r, "true", .keyword) && has(r, "1", .number) && has(r, "'v'", .string))
+        #expect(!r.contains { $0.1 == .string && $0.0.contains("t panic") })                // apostrof v prostém textu nezačíná řetězec
+    }
+
     @Test func sqlKeywordsAreCaseInsensitiveAndJsonLiterals() {
         #expect(has(kinds("SELECT a FROM t -- x", "sql"), "SELECT", .keyword))
         let j = kinds("{\"a\": [1, 2.5, true, null]}", "json")

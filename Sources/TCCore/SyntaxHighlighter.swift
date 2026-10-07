@@ -20,6 +20,11 @@ public enum SyntaxHighlighter {
         var markup = false                // HTML/XML
         var caseInsensitiveKeywords = false
         var backtickStrings = false
+        var yaml = false                  // klíče, kotvy, značky, oddělovače dokumentů
+        var arrows = false                // šipky ->, -->, ..>, <|-- (PlantUML)
+        var directivePrefixes: [UInt16] = []   // řádky začínající těmito znaky (např. @startuml, !include)
+        var commentNeedsBlankBefore = false    // komentář jen na začátku řádku nebo za mezerou (YAML)
+        var commentOnlyAtLineStart = false     // komentář jen jako první znak řádku (PlantUML)
     }
 
     private static func kw(_ s: String) -> Set<String> { Set(s.split(separator: " ").map(String.init)) }
@@ -37,9 +42,10 @@ public enum SyntaxHighlighter {
         "go": Config(lineComments: ["//"], blockComment: ("/*", "*/"), quotes: ["\"", "'"], keywords: kw("break case chan const continue default defer else fallthrough for func go goto if import interface map package range return select struct switch type var nil true false iota make new len cap append"), typesCapitalized: true, backtickStrings: true),
         "rust": Config(lineComments: ["//"], blockComment: ("/*", "*/"), keywords: kw("as async await break const continue crate dyn else enum extern false fn for if impl in let loop match mod move mut pub ref return self Self static struct super trait true type unsafe use where while macro_rules"), typesCapitalized: true),
         "php": Config(lineComments: ["//", "#"], blockComment: ("/*", "*/"), keywords: kw("abstract and array as break case catch class clone const continue declare default do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile extends final finally fn for foreach function global if implements include include_once instanceof interface isset list match namespace new null or print private protected public require require_once return static switch throw trait try unset use var while yield true false"), typesCapitalized: true),
-        "sql": Config(lineComments: ["--"], blockComment: ("/*", "*/"), quotes: ["'", "\""], keywords: kw("select from where and or not in is null like between join inner left right outer full cross on group by order having limit offset insert into values update set delete create table alter drop index view primary key foreign references unique default constraint distinct as union all exists case when then else end asc desc count sum avg min max begin commit rollback"), caseInsensitiveKeywords: true),
+        "sql": Config(lineComments: ["--", "#"], blockComment: ("/*", "*/"), quotes: ["'", "\""], keywords: kw("select from where and or not in is null like ilike between join inner left right outer full cross natural on using group by order having limit offset fetch first next rows only top insert into values update set delete truncate merge create table temporary temp alter add column drop rename to index unique view materialized schema database sequence trigger procedure function returns return language begin end declare if then else elsif elseif case when loop while for each execute exec call commit rollback savepoint transaction start primary key foreign references check default constraint cascade restrict distinct all any some exists union intersect except as asc desc nulls with recursive over partition window rank row_number count sum avg min max coalesce nullif cast convert grant revoke to explain analyze vacuum pragma show use describe replace returning conflict do nothing auto_increment identity serial engine charset collate if int integer bigint smallint tinyint decimal numeric float double real boolean bool bit char varchar nvarchar text clob blob date time timestamp datetime interval json jsonb uuid bytea true false"), caseInsensitiveKeywords: true, backtickStrings: true),
         "json": Config(quotes: ["\""], keywords: kw("true false null")),
-        "yaml": Config(lineComments: ["#"], keywords: kw("true false null yes no on off")),
+        "yaml": Config(lineComments: ["#"], keywords: kw("true false null True False Null TRUE FALSE NULL"), yaml: true, commentNeedsBlankBefore: true),
+        "plantuml": Config(lineComments: ["'"], blockComment: ("/'", "'/"), quotes: ["\""], keywords: kw("participant actor boundary control entity database collections queue class interface abstract enum annotation package namespace node cloud frame folder rectangle component usecase state object map note end of over left right top bottom as title legend header footer caption skinparam hide show remove restore if then else elseif endif while endwhile repeat fork again start stop detach partition group alt opt loop par break critical ref activate deactivate destroy create return autonumber newpage together box endbox is extends implements static split kill label goto switch case endswitch backward do not mainframe sprite scale rotate direction to"), caseInsensitiveKeywords: true, arrows: true, directivePrefixes: [64, 33], commentOnlyAtLineStart: true),
         "toml": Config(lineComments: ["#"], tripleQuotes: true, keywords: kw("true false")),
         "css": Config(blockComment: ("/*", "*/"), keywords: kw("important inherit initial none auto")),
         "markup": Config(blockComment: ("<!--", "-->"), markup: true),
@@ -50,8 +56,8 @@ public enum SyntaxHighlighter {
     private static let extensions: [String: String] = [
         "swift": "swift", "c": "c", "h": "c", "m": "c", "mm": "c", "cc": "c", "cpp": "c", "cxx": "c", "hpp": "c", "hh": "c", "cs": "java", "java": "java",
         "kt": "kotlin", "kts": "kotlin", "js": "js", "mjs": "js", "cjs": "js", "jsx": "js", "ts": "js", "tsx": "js", "py": "python", "rb": "ruby",
-        "sh": "shell", "bash": "shell", "zsh": "shell", "command": "shell", "go": "go", "rs": "rust", "php": "php", "sql": "sql", "json": "json",
-        "yml": "yaml", "yaml": "yaml", "toml": "toml", "ini": "toml", "css": "css", "scss": "css", "html": "markup", "htm": "markup", "xml": "markup",
+        "sh": "shell", "bash": "shell", "zsh": "shell", "command": "shell", "go": "go", "rs": "rust", "php": "php", "sql": "sql", "pls": "sql", "plsql": "sql", "psql": "sql", "pgsql": "sql", "mysql": "sql", "tsql": "sql", "ddl": "sql", "dml": "sql", "hql": "sql", "sqlite": "sql", "json": "json",
+        "yml": "yaml", "yaml": "yaml", "sls": "yaml", "puml": "plantuml", "plantuml": "plantuml", "pu": "plantuml", "wsd": "plantuml", "iuml": "plantuml", "adi": "adif", "adif": "adif", "toml": "toml", "ini": "toml", "css": "css", "scss": "css", "html": "markup", "htm": "markup", "xml": "markup",
         "plist": "markup", "svg": "markup", "xhtml": "markup", "lua": "lua", "mk": "makefile",
     ]
 
@@ -64,10 +70,53 @@ public enum SyntaxHighlighter {
         return extensions[String(lower[lower.index(after: dot)...])]
     }
 
-    public static var languages: [String] { configs.keys.sorted() }
+    /// ADIF/ADI (formát deníků v radioamatérském provozu): pole `<NÁZEV:délka[:typ]>hodnota`, `<EOH>` a `<EOR>`; volný text hlavičky před prvním polem je komentář.
+    static func adifTokens(in text: String) -> [SyntaxToken] {
+        let u = Array(text.utf16), n = u.count
+        var out: [SyntaxToken] = []
+        func add(_ s: Int, _ e: Int, _ k: SyntaxKind) { if e > s { out.append(SyntaxToken(range: NSRange(location: s, length: e - s), kind: k)) } }
+        func lower(_ c: UInt16) -> UInt16 { c >= 65 && c <= 90 ? c + 32 : c }
+        func matches(_ word: String, at p: Int) -> Bool {
+            var k = p; for c in word.utf16 { if k >= n || lower(u[k]) != c { return false }; k += 1 }; return true
+        }
+        func isNameChar(_ c: UInt16) -> Bool { (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95 }
+        func isTagStart(_ p: Int) -> Bool {                                // <NÁZEV: nebo <NÁZEV>
+            guard p < n, u[p] == 60 else { return false }
+            var k = p + 1; while k < n && isNameChar(u[k]) { k += 1 }
+            return k > p + 1 && k < n && (u[k] == 58 || u[k] == 62)
+        }
+        var i = 0
+        if let first = u.firstIndex(where: { $0 != 32 && $0 != 9 && $0 != 10 && $0 != 13 }), u[first] != 60,       // volný text hlavičky před prvním polem
+           let firstTag = (first..<n).first(where: { isTagStart($0) }) { add(0, firstTag, .comment); i = firstTag }
+        while i < n {
+            guard isTagStart(i) else { i += 1; continue }
+            var j = i + 1; while j < n && isNameChar(u[j]) { j += 1 }
+            let nameEnd = j
+            if matches("<eor>", at: i) || matches("<eoh>", at: i) { add(i, nameEnd + 1, .keyword); i = nameEnd + 1; continue }
+            add(i, nameEnd, .tag)
+            var length = 0, hasLength = false
+            if u[j] == 58 {                                                // :délka
+                j += 1; let s = j
+                while j < n && u[j] >= 48 && u[j] <= 57 { length = length * 10 + Int(u[j] - 48); hasLength = true; j += 1 }
+                add(s, j, .number)
+                if j < n, u[j] == 58 { j += 1; let t = j; while j < n && isNameChar(u[j]) { j += 1 }; add(t, j, .type) }       // :typ
+            }
+            guard j < n, u[j] == 62 else { i = nameEnd; continue }
+            add(j, j + 1, .tag)
+            var end = min(n, j + 1 + (hasLength ? length : 0))
+            if hasLength, let next = (j + 1..<max(j + 1, end)).first(where: { isTagStart($0) }) { end = next }       // délka v bajtech vs. znacích
+            while end > j + 1, u[end - 1] == 32 || u[end - 1] == 10 || u[end - 1] == 13 || u[end - 1] == 9 { end -= 1 }
+            add(j + 1, end, .string)
+            i = max(j + 1, end)
+        }
+        return out
+    }
+
+    public static var languages: [String] { (Array(configs.keys) + ["adif"]).sorted() }
 
     /// Tokeny textu pro daný jazyk (viz `language(forFileName:)`); neznámý jazyk dává prázdný výsledek.
     public static func tokens(in text: String, language: String) -> [SyntaxToken] {
+        if language == "adif" { return adifTokens(in: text) }
         guard let cfg = configs[language] else { return [] }
         let u = Array(text.utf16)
         var out: [SyntaxToken] = []
@@ -83,12 +132,16 @@ public enum SyntaxHighlighter {
         func isDigit(_ c: UInt16) -> Bool { c >= 48 && c <= 57 }
         func add(_ s: Int, _ e: Int, _ k: SyntaxKind) { out.append(SyntaxToken(range: NSRange(location: s, length: e - s), kind: k)) }
         var lineStart = true
+        var keyAllowed = true             // YAML: na začátku řádku nebo za „- “ může následovat klíč
+
+        func isBlank(_ c: UInt16) -> Bool { c == 32 || c == 9 || c == 10 || c == 13 }
 
         while i < n {
             let c = u[i]
-            if c == 10 { lineStart = true; i += 1; continue }
+            if c == 10 { lineStart = true; keyAllowed = true; i += 1; continue }
             if c == 32 || c == 9 || c == 13 { i += 1; continue }
             let atLineStart = lineStart; lineStart = false
+            let canKey = keyAllowed; keyAllowed = false
 
             // komentáře
             if let (b, e) = cfg.blockComment, has(b, at: i) {
@@ -96,11 +149,43 @@ public enum SyntaxHighlighter {
                 while j < n && !has(e, at: j) { j += 1 }
                 j = min(n, j + e.utf16.count); add(i, j, .comment); i = j; continue
             }
-            if cfg.lineComments.contains(where: { has($0, at: i) }) {
+            if cfg.lineComments.contains(where: { has($0, at: i) }),
+               !(cfg.commentNeedsBlankBefore && i > 0 && !isBlank(u[i - 1])), !(cfg.commentOnlyAtLineStart && !atLineStart) {
                 var j = i; while j < n && u[j] != 10 { j += 1 }; add(i, j, .comment); i = j; continue
             }
             if cfg.preprocessor && atLineStart && c == 35 {          // #include, #define …
                 var j = i; while j < n && u[j] != 10 { j += 1 }; add(i, j, .preprocessor); i = j; continue
+            }
+            if atLineStart, cfg.directivePrefixes.contains(c) {          // @startuml, !include …
+                var j = i; while j < n && u[j] != 10 { j += 1 }; add(i, j, .preprocessor); i = j; continue
+            }
+            if cfg.yaml {
+                if atLineStart, has("---", at: i) || has("...", at: i), i + 3 >= n || isBlank(u[i + 3]) { add(i, i + 3, .preprocessor); i += 3; continue }
+                if c == 45, i + 1 < n, isBlank(u[i + 1]), canKey { i += 1; keyAllowed = true; continue }       // položka seznamu „- “
+                if canKey, !"[{#&*!|>%@`,".utf16.contains(c) {                                                // klíč mapy „klíč: hodnota“
+                    var j = i
+                    if c == 34 || c == 39 {
+                        j = i + 1
+                        while j < n && u[j] != c && u[j] != 10 { if c == 34 && u[j] == 92 { j += 1 }; j += 1 }
+                        j = (j < n && u[j] == c) ? j + 1 : -1
+                    } else {
+                        while j < n && u[j] != 10 && !(u[j] == 58 && (j + 1 >= n || isBlank(u[j + 1]))) {
+                            if u[j] == 35 && j > i && u[j - 1] == 32 { break }
+                            j += 1
+                        }
+                    }
+                    if j > i {
+                        var k = j; while k < n && (u[k] == 32 || u[k] == 9) { k += 1 }
+                        if k < n, u[k] == 58, k + 1 >= n || isBlank(u[k + 1]) {
+                            var e = j; while e > i && u[e - 1] == 32 { e -= 1 }
+                            add(i, e, .attribute); i = k + 1; continue
+                        }
+                    }
+                }
+                if c == 38 || c == 42 || c == 33 {                                                           // &kotva, *alias, !!značka
+                    var j = i + 1; while j < n && !isBlank(u[j]) && u[j] != 44 && u[j] != 93 && u[j] != 125 { j += 1 }
+                    if j > i + 1 { add(i, j, .type); i = j; continue }
+                }
             }
             if cfg.markup {
                 if c == 60 {                                          // <tag attr="…">
@@ -125,7 +210,12 @@ public enum SyntaxHighlighter {
                 var j = i + 3; while j < n && !(u[j] == c && j + 2 < n && u[j + 1] == c && u[j + 2] == c) { j += 1 }
                 j = min(n, j + 3); add(i, j, .string); i = j; continue
             }
-            if cfg.quotes.contains(where: { $0.utf16.first == c }) || (cfg.backtickStrings && c == 96) {
+            let yamlQuoteOK: Bool = {
+                guard cfg.yaml else { return true }
+                var p = i - 1; while p >= 0 && (u[p] == 32 || u[p] == 9) { p -= 1 }
+                return p < 0 || [10, 13, 58, 45, 91, 123, 44, 63].contains(u[p])
+            }()
+            if (cfg.quotes.contains(where: { $0.utf16.first == c }) && yamlQuoteOK) || (cfg.backtickStrings && c == 96) {
                 var j = i + 1
                 let multiline = c == 96
                 while j < n && u[j] != c && (multiline || u[j] != 10) { if u[j] == 92 { j += 1 }; j += 1 }
@@ -136,6 +226,11 @@ public enum SyntaxHighlighter {
                 var j = i + 1
                 while j < n && (isIdent(u[j]) || u[j] == 46) { if u[j] == 46 && j + 1 < n && !isDigit(u[j + 1]) { break }; j += 1 }
                 add(i, j, .number); i = j; continue
+            }
+            if cfg.arrows, "-.<>|=*#".utf16.contains(c) {                    // šipky a spojnice PlantUML
+                var j = i; while j < n && "-.<>|=*".utf16.contains(u[j]) { j += 1 }
+                let run = u[i..<j]
+                if run.count >= 2, run.contains(45) || run.contains(61) || (run.contains(46) && (run.contains(60) || run.contains(62))) { add(i, j, .attribute); i = j; continue }
             }
             // identifikátory
             if isIdentStart(c) {
