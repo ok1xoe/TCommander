@@ -50,6 +50,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         add("Start menu", buttonsTab(start: true))
         add("Uživatelské příkazy", commandsTab())
         add("Přidružení souborů", associationsTab())
+        add("Sloupce", columnsTab())
         add("Barvy", colorsTab())
     }
 
@@ -204,6 +205,21 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         }
         keepAlive.append(table)
         return table.view
+    }
+
+    // MARK: Sloupce (vlastní pohledy)
+
+    private func columnsTab() -> NSView {
+        let table = StringTable(columns: [.init(title: "Název pohledu", width: 200), .init(title: "Sloupce (čárkou): \(PanelColumn.allCases.map(\.rawValue).joined(separator: ", "))", width: 640)],
+                                rows: model.settings.columnSets.map { [$0.name, $0.columns.map(\.rawValue).joined(separator: ", ")] },
+                                newRow: { ["Nový pohled", "name, size, date"] })
+        table.onChange = { [weak self] r in
+            self?.model.settings.columnSets = r.filter { !$0[0].isEmpty }.map { ColumnSet(name: $0[0], columns: ColumnSet.parse($0[1])) }
+        }
+        keepAlive.append(table)
+        let hint = NSTextField(labelWithString: "Pohled vyberete v menu Zobrazení › Sloupce. Název je vždy první sloupec.")
+        hint.textColor = .secondaryLabelColor; hint.font = .systemFont(ofSize: 11)
+        return stackWithFooter(table.view, [hint])
     }
 
     // MARK: Barvy

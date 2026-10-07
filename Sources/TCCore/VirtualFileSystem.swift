@@ -45,8 +45,10 @@ public struct LocalFileSystem: VirtualFileSystem {
         let name = url.lastPathComponent
         let hidden = name.hasPrefix(".") || (st.st_flags & UInt32(UF_HIDDEN)) != 0
         let date = Date(timeIntervalSince1970: TimeInterval(mtime.tv_sec) + TimeInterval(mtime.tv_nsec) / 1e9)
+        func time(_ t: timespec) -> Date? { t.tv_sec > 0 ? Date(timeIntervalSince1970: TimeInterval(t.tv_sec) + TimeInterval(t.tv_nsec) / 1e9) : nil }
         return FileEntry(url: url, name: name, isDirectory: isDir, isSymlink: isLink, isHidden: hidden,
-                         size: isDir ? 0 : size, modified: date, permissions: UInt16(st.st_mode & 0o777))
+                         size: isDir ? 0 : size, modified: date, permissions: UInt16(st.st_mode & 0o777),
+                         created: time(st.st_birthtimespec), accessed: time(st.st_atimespec), ownerID: UInt32(st.st_uid))
     }
 
     public func exists(_ url: URL) -> Bool {

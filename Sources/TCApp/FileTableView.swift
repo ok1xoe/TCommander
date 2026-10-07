@@ -106,19 +106,7 @@ struct FileTableView: NSViewRepresentable {
         table.rowHeight = 20
         table.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
 
-        func add(_ id: String, _ title: String, _ width: CGFloat, min: CGFloat) {
-            let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
-            col.title = title
-            col.width = width
-            col.minWidth = min
-            if id == "name" { col.resizingMask = .autoresizingMask } else { col.resizingMask = .userResizingMask }
-            table.addTableColumn(col)
-        }
-        add("name", "Název", 140, min: 100)
-        add("ext", "Přípona", 55, min: 40)
-        add("size", "Velikost", 85, min: 70)
-        add("date", "Datum", 125, min: 110)
-        add("attr", "Atr", 80, min: 70)
+        c.installColumns(on: table, tab.columns)
 
         table.registerForDraggedTypes([.fileURL])
         table.setDraggingSourceOperationMask([.copy, .move], forLocal: true)
@@ -151,6 +139,7 @@ struct FileTableView: NSViewRepresentable {
         private var lastActive = false
         private var syncing = false
         private var lastStyle = PanelStyle()
+        private var installedColumns: [PanelColumn] = []
 
         init(_ p: FileTableView) { parent = p }
 
@@ -160,8 +149,7 @@ struct FileTableView: NSViewRepresentable {
             syncing = true
             let styleChanged = parent.style != lastStyle
             if styleChanged { lastStyle = parent.style; table.rowHeight = CGFloat(parent.style.rowHeight); lastRevision = -1 }
-            let brief = tab.viewMode == .brief
-            for col in table.tableColumns { col.isHidden = brief && col.identifier.rawValue != "name" }
+            if installedColumns != tab.columns { installColumns(on: table, tab.columns); lastRevision = -1 }
             if parent.revision != lastRevision {
                 lastRevision = parent.revision
                 table.reloadData()
@@ -178,20 +166,36 @@ struct FileTableView: NSViewRepresentable {
             lastActive = parent.isActive
         }
 
+        func installColumns(on table: NSTableView, _ columns: [PanelColumn]) {
+            for c in table.tableColumns { table.removeTableColumn(c) }
+            let list = columns.isEmpty ? PanelColumn.standard : columns
+            for pc in list {
+                let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(pc.rawValue))
+                col.title = pc.title
+                col.width = CGFloat(pc.defaultWidth)
+                col.minWidth = pc == .name ? 100 : 40
+                col.resizingMask = pc == .name ? .autoresizingMask : .userResizingMask
+                table.addTableColumn(col)
+            }
+            installedColumns = columns
+            updateHeaders()
+        }
+
         private func updateHeaders() {
             guard let table else { return }
             let s = parent.tab.sort
-            let keys: [String: SortKey] = ["name": .name, "ext": .ext, "size": .size, "date": .date]
-            let titles = ["name": "Název", "ext": "Přípona", "size": "Velikost", "date": "Datum", "attr": "Atr"]
+            let keys: [PanelColumn: SortKey] = [.name: .name, .ext: .ext, .size: .size, .date: .date]
             for col in table.tableColumns {
-                let id = col.identifier.rawValue
-                var t = titles[id] ?? id
-                if keys[id] == s.key { t += s.ascending ? " ▲" : " ▼" }
+                guard let pc = PanelColumn(rawValue: col.identifier.rawValue) else { continue }
+                var t = pc.title
+                if keys[pc] == s.key { t += s.ascending ? " ▲" : " ▼" }
                 col.title = t
             }
         }
 
         // MARK: DataSource / Delegate
+
+        static let monoColumns: Set<String> = ["size", "date", "attr", "created", "accessed"]
 
         func numberOfRows(in tableView: NSTableView) -> Int { parent.tab.entries.count }
 
@@ -203,7 +207,7 @@ struct FileTableView: NSViewRepresentable {
             let cell = (tv.makeView(withIdentifier: id, owner: nil) as? FileCell) ?? FileCell(
                 identifier: id, withIcon: id.rawValue == "name",
                 alignment: id.rawValue == "size" ? .right : .left,
-                mono: ["size", "date", "attr"].contains(id.rawValue))
+                mono: Self.monoColumns.contains(id.rawValue))
             let isMarked = tab.marked.contains(e.url)
             let text: String
             switch id.rawValue {
@@ -211,6 +215,10 @@ struct FileTableView: NSViewRepresentable {
             case "ext": text = e.ext
             case "size": text = Fmt.size(of: e, dirSize: tab.dirSizes[e.url])
             case "date": text = e.isParentLink ? "" : Fmt.date(e.modified)
+            case "created": text = e.isParentLink ? "" : Fmt.date(e.created)
+            case "accessed": text = e.isParentLink ? "" : Fmt.date(e.accessed)
+            case "kind": text = e.isParentLink ? "" : Fmt.kind(of: e)
+            case "owner": text = e.isParentLink ? "" : Fmt.owner(e.ownerID)
             default: text = e.isParentLink ? "" : e.permissionString
             }
             cell.label.stringValue = text
@@ -218,7 +226,7 @@ struct FileTableView: NSViewRepresentable {
             if !e.isHidden, let hex = ColorRule.color(for: e.name, isDirectory: e.isDirectory, rules: parent.style.colorRules), let c = NSColor(hex: hex) { color = c }
             cell.label.textColor = isMarked ? .systemRed : color
             let fs = CGFloat(parent.style.fontSize)
-            let base: NSFont = ["size", "date", "attr"].contains(id.rawValue) ? .monospacedDigitSystemFont(ofSize: fs, weight: .regular) : .systemFont(ofSize: fs)
+            let base: NSFont = Self.monoColumns.contains(id.rawValue) ? .monospacedDigitSystemFont(ofSize: fs, weight: .regular) : .systemFont(ofSize: fs)
             cell.label.font = NSFontManager.shared.convert(base, toHaveTrait: isMarked ? .boldFontMask : .unboldFontMask)
             return cell
         }

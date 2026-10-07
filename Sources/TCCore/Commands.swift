@@ -108,7 +108,8 @@ public enum CommandRegistry {
         CommandInfo("cm_closetab", "Zavřít tab", "Panely"),
         CommandInfo("cm_nexttab", "Další tab", "Panely", [s("tab", [.ctrl])]),
         CommandInfo("cm_prevtab", "Předchozí tab", "Panely", [s("tab", [.ctrl, .shift])]),
-        CommandInfo("cm_locktab", "Zamknout tab", "Panely"),
+        CommandInfo("cm_locktab", "Zamknout / odemknout tab", "Panely"),
+        CommandInfo("cm_savetabs", "Uložit sadu karet", "Panely"),
         CommandInfo("cm_layout", "Panely nad sebou / vedle sebe", "Panely"),
         CommandInfo("cm_addhotlist", "Přidat do oblíbených", "Panely"),
         // porovnání, nástroje
@@ -262,6 +263,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var language = "cs"
     public var panelsStacked = false
     public var colorRules: [ColorRule] = ColorRule.defaults
+    public var columnSets: [ColumnSet] = ColumnSet.defaults
     public init() {}
 }
 

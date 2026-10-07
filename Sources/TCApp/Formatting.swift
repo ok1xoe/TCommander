@@ -1,5 +1,6 @@
 import Foundation
 import TCCore
+import UniformTypeIdentifiers
 
 enum Fmt {
     static let number: NumberFormatter = {
@@ -22,4 +23,26 @@ enum Fmt {
     }
 
     static func date(_ d: Date?) -> String { d.map { date.string(from: $0) } ?? "" }
+
+    nonisolated(unsafe) private static var kindCache: [String: String] = [:]
+    nonisolated(unsafe) private static var ownerCache: [UInt32: String] = [:]
+
+    /// Druh souboru podle přípony (např. "Dokument PDF").
+    static func kind(of e: FileEntry) -> String {
+        if e.isDirectory { return e.url.pathExtension == "app" ? "Aplikace" : "Složka" }
+        if e.isSymlink { return "Alias" }
+        let ext = e.ext.lowercased()
+        if let k = kindCache[ext] { return k }
+        let k = (ext.isEmpty ? nil : UTType(filenameExtension: ext)?.localizedDescription) ?? (ext.isEmpty ? "Soubor" : "Soubor \(ext.uppercased())")
+        kindCache[ext] = k
+        return k
+    }
+
+    static func owner(_ uid: UInt32?) -> String {
+        guard let uid else { return "" }
+        if let n = ownerCache[uid] { return n }
+        let n = getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? String(uid)
+        ownerCache[uid] = n
+        return n
+    }
 }

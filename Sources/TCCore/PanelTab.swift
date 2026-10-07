@@ -1,7 +1,20 @@
 import Foundation
 import Observation
 
-public enum ViewMode: String, Sendable, CaseIterable { case full, brief, thumbnails }
+public enum ViewMode: String, Sendable, CaseIterable { case full, brief, thumbnails, tree }
+
+/// Dostupné sloupce seznamu souborů.
+public enum PanelColumn: String, Sendable, CaseIterable, Codable {
+    case name, ext, size, date, attr, created, accessed, kind, owner
+    public var title: String {
+        switch self { case .name: "Název"; case .ext: "Přípona"; case .size: "Velikost"; case .date: "Změněno"; case .attr: "Atr"
+                      case .created: "Vytvořeno"; case .accessed: "Otevřeno"; case .kind: "Druh"; case .owner: "Vlastník" }
+    }
+    public var defaultWidth: Double {
+        switch self { case .name: 200; case .ext: 55; case .size: 85; case .date: 125; case .attr: 80; case .created: 125; case .accessed: 125; case .kind: 130; case .owner: 90 }
+    }
+    public static let standard: [PanelColumn] = [.name, .ext, .size, .date, .attr]
+}
 
 public struct PanelSummary: Sendable, Equatable {
     public var markedCount = 0, markedBytes: Int64 = 0
@@ -20,6 +33,11 @@ public final class PanelTab: Identifiable {
     public private(set) var revision = 0
     public var cursor = 0
     public var viewMode = ViewMode.full
+    /// Zobrazené sloupce v plném režimu (první je vždy název).
+    public var columns: [PanelColumn] = PanelColumn.standard
+    /// Zamčená karta: přechod do jiného adresáře se otevře v nové kartě.
+    public var locked = false
+    @ObservationIgnored public var lockedNavigationHandler: ((URL) -> Void)?
     /// Naposledy navštívené adresáře (nejnovější první).
     public private(set) var recent: [URL] = []
     /// Branch view: všechny soubory z podadresářů v jednom seznamu.
@@ -94,6 +112,7 @@ public final class PanelTab: Identifiable {
     @discardableResult
     public func navigate(to url: URL, select: URL? = nil, recordHistory: Bool = true, keepMarks: Bool = false) -> Bool {
         let target = url.standardizedFileURL
+        if locked, recordHistory, target != path, let handler = lockedNavigationHandler { handler(target); return true }
         if remote != nil {       // síť: načtení na pozadí, okno nezamrzne
             loadRemote(target, select: select, recordHistory: recordHistory, keepMarks: keepMarks, climb: false)
             return true
@@ -401,10 +420,26 @@ public final class PanelGroup {
     public init(paths: [URL], showHidden: Bool = false) {
         let valid = paths.isEmpty ? [FileManager.default.homeDirectoryForCurrentUser] : paths
         tabs = valid.map { PanelTab(path: $0, showHidden: showHidden) }
+        tabs.forEach(wire)
+    }
+
+    private func wire(_ t: PanelTab) { t.lockedNavigationHandler = { [weak self] url in self?.newTab(at: url) } }
+
+    /// Nahradí všechny karty (např. při načtení sady oblíbených karet).
+    public func replaceTabs(_ specs: [(path: URL, locked: Bool)], active: Int, showHidden: Bool = false) {
+        let list = specs.isEmpty ? [(FileManager.default.homeDirectoryForCurrentUser, false)] : specs
+        tabs = list.map { spec in
+            let t = PanelTab(path: spec.path, showHidden: showHidden)
+            t.locked = spec.locked
+            wire(t)
+            return t
+        }
+        activeIndex = min(max(0, active), tabs.count - 1)
     }
 
     public func newTab(at path: URL? = nil) {
         let tab = PanelTab(path: path ?? active.path, showHidden: active.showHidden)
+        wire(tab)
         tabs.insert(tab, at: activeIndex + 1)
         activeIndex += 1
     }

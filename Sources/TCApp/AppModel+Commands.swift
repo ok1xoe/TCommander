@@ -170,6 +170,38 @@ extension AppModel {
         NSWorkspace.shared.open([script], withApplicationAt: URL(fileURLWithPath: settings.terminalApp), configuration: NSWorkspace.OpenConfiguration())
     }
 
-    /// Příkazy doplněné v dalších částech (zatím žádné).
-    func performExtended(_ id: String) -> Bool { false }
+    /// Příkazy doplněné v dalších částech.
+    func performExtended(_ id: String) -> Bool {
+        switch id {
+        case "cm_viewtree": source.viewMode = .tree
+        case "cm_locktab": source.locked.toggle()
+        case "cm_savetabs": saveFavoriteTabs()
+        case "cm_layout": settings.panelsStacked.toggle()
+        default: return false
+        }
+        return true
+    }
+
+    // MARK: Sady oblíbených karet
+
+    func saveFavoriteTabs() {
+        guard let name = Dialogs.prompt(title: "Uložit sadu karet", message: "Název sady (stejný název sadu nahradí):", initial: "", ok: "Uložit"),
+              !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        func tabs(_ g: PanelGroup) -> [FavoriteTabSet.Tab] { g.tabs.map { .init(path: $0.persistentPath.path, locked: $0.locked) } }
+        let n = name.trimmingCharacters(in: .whitespaces)
+        let set = FavoriteTabSet(id: favoriteTabs.first { $0.name == n }?.id ?? UUID(), name: n, left: tabs(left), right: tabs(right),
+                                 leftActive: left.activeIndex, rightActive: right.activeIndex)
+        if let i = favoriteTabs.firstIndex(where: { $0.name == n }) { favoriteTabs[i] = set } else { favoriteTabs.append(set) }
+        status = "Sada karet „\(n)“ uložena"
+    }
+
+    func loadFavoriteTabs(_ set: FavoriteTabSet) {
+        func specs(_ t: [FavoriteTabSet.Tab]) -> [(path: URL, locked: Bool)] {
+            t.map { (URL(fileURLWithPath: $0.path), $0.locked) }.filter { FileManager.default.fileExists(atPath: $0.0.path) }
+        }
+        left.replaceTabs(specs(set.left), active: set.leftActive, showHidden: showHidden)
+        right.replaceTabs(specs(set.right), active: set.rightActive, showHidden: showHidden)
+    }
+
+    func deleteFavoriteTabs(_ set: FavoriteTabSet) { favoriteTabs.removeAll { $0.id == set.id } }
 }
