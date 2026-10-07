@@ -55,6 +55,41 @@ final class ThumbItem: NSCollectionViewItem {
     func setImage(_ img: NSImage, for url: URL) { if representedURL == url { image.image = img } }
 }
 
+/// Položka stručného režimu: ikona a název v jednom řádku.
+final class BriefItem: NSCollectionViewItem {
+    static let id = NSUserInterfaceItemIdentifier("brief")
+    private let image = NSImageView()
+    private let label = NSTextField(labelWithString: "")
+
+    override func loadView() {
+        let v = NSView()
+        label.lineBreakMode = .byTruncatingMiddle
+        for sub in [image, label] as [NSView] { sub.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(sub) }
+        NSLayoutConstraint.activate([
+            image.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 3), image.centerYAnchor.constraint(equalTo: v.centerYAnchor),
+            image.widthAnchor.constraint(equalToConstant: 16), image.heightAnchor.constraint(equalToConstant: 16),
+            label.leadingAnchor.constraint(equalTo: image.trailingAnchor, constant: 5), label.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -3),
+            label.centerYAnchor.constraint(equalTo: v.centerYAnchor),
+        ])
+        view = v
+        v.wantsLayer = true
+    }
+
+    override var isSelected: Bool {
+        didSet { view.layer?.backgroundColor = isSelected ? NSColor.selectedContentBackgroundColor.withAlphaComponent(0.35).cgColor : nil }
+    }
+
+    func configure(_ e: FileEntry, marked: Bool, style: PanelStyle) {
+        label.stringValue = e.isParentLink ? ".." : e.name
+        var color: NSColor = e.isHidden ? .secondaryLabelColor : .labelColor
+        if !e.isHidden, let hex = ColorRule.color(for: e.name, isDirectory: e.isDirectory, rules: style.colorRules), let c = NSColor(hex: hex) { color = c }
+        label.textColor = marked ? .systemRed : color
+        let base = NSFont.systemFont(ofSize: CGFloat(style.fontSize))
+        label.font = NSFontManager.shared.convert(base, toHaveTrait: marked ? .boldFontMask : .unboldFontMask)
+        image.image = IconCache.icon(for: e)
+    }
+}
+
 @MainActor
 enum ThumbnailCache {
     private static var cache: [String: NSImage] = [:]
@@ -75,6 +110,9 @@ enum ThumbnailCache {
 }
 
 struct ThumbnailGridView: NSViewRepresentable {
+    /// Stručný režim: názvy ve sloupcích (shora dolů, pak doprava); jinak mřížka náhledů.
+    var brief = false
+    var style = PanelStyle()
     let tab: PanelTab
     let revision: Int
     let isActive: Bool
@@ -88,13 +126,21 @@ struct ThumbnailGridView: NSViewRepresentable {
         let c = context.coordinator
         let grid = KeyCollectionView()
         let layout = NSCollectionViewFlowLayout()
-        layout.itemSize = NSSize(width: 130, height: 126)
-        layout.minimumInteritemSpacing = 6; layout.minimumLineSpacing = 6
-        layout.sectionInset = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        if brief {
+            layout.scrollDirection = .horizontal
+            layout.itemSize = NSSize(width: 220, height: CGFloat(style.rowHeight))
+            layout.minimumInteritemSpacing = 0; layout.minimumLineSpacing = 10
+            layout.sectionInset = NSEdgeInsets(top: 4, left: 6, bottom: 4, right: 6)
+        } else {
+            layout.itemSize = NSSize(width: 130, height: 126)
+            layout.minimumInteritemSpacing = 6; layout.minimumLineSpacing = 6
+            layout.sectionInset = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        }
         grid.collectionViewLayout = layout
         grid.isSelectable = true
         grid.allowsMultipleSelection = false
         grid.register(ThumbItem.self, forItemWithIdentifier: ThumbItem.id)
+        grid.register(BriefItem.self, forItemWithIdentifier: BriefItem.id)
         grid.dataSource = c; grid.delegate = c
         grid.keyHandler = { [weak c] e in c?.parent.onKey(e) ?? false }
         grid.focusHandler = { [weak c] in c?.parent.onFocus() }
@@ -105,7 +151,8 @@ struct ThumbnailGridView: NSViewRepresentable {
         grid.addGestureRecognizer(click)
         let scroll = NSScrollView()
         scroll.documentView = grid
-        scroll.hasVerticalScroller = true
+        scroll.hasVerticalScroller = !brief
+        scroll.hasHorizontalScroller = brief
         return scroll
     }
 
@@ -141,8 +188,13 @@ struct ThumbnailGridView: NSViewRepresentable {
         func collectionView(_ cv: NSCollectionView, numberOfItemsInSection section: Int) -> Int { parent.tab.entries.count }
 
         func collectionView(_ cv: NSCollectionView, itemForRepresentedObjectAt ip: IndexPath) -> NSCollectionViewItem {
-            let item = cv.makeItem(withIdentifier: ThumbItem.id, for: ip) as! ThumbItem
             let e = parent.tab.entries[ip.item]
+            if parent.brief {
+                let b = cv.makeItem(withIdentifier: BriefItem.id, for: ip) as! BriefItem
+                b.configure(e, marked: parent.tab.marked.contains(e.url), style: parent.style)
+                return b
+            }
+            let item = cv.makeItem(withIdentifier: ThumbItem.id, for: ip) as! ThumbItem
             item.configure(e, marked: parent.tab.marked.contains(e.url), thumbnail: e.isDirectory ? nil : ThumbnailCache.cached(e))
             if !e.isDirectory && !e.isParentLink && ThumbnailCache.cached(e) == nil {
                 ThumbnailCache.load(e) { [weak item] img in item?.setImage(img, for: e.url) }

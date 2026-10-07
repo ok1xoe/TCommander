@@ -48,6 +48,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--mode"), i + 1 < CommandLine.arguments.count {      // ladění: režim zobrazení
+            let parts = CommandLine.arguments[i + 1].split(separator: ":").map(String.init)
+            AppModel.shared.source.viewMode = ViewMode(rawValue: parts[0]) ?? .full
+            if parts.count > 1 { AppModel.shared.source.columns = ColumnSet.parse(parts[1].replacingOccurrences(of: "+", with: ",")) }
+            if parts.count > 2 { AppModel.shared.source.navigate(to: URL(fileURLWithPath: parts[2])) }
+        }
         if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
@@ -168,6 +174,17 @@ struct TCCommands: Commands {
                 }
             }
         }
+        CommandMenu("Karty") {
+            Button("Zamknout / odemknout kartu") { model.perform("cm_locktab") }
+            Divider()
+            Button("Uložit sadu karet…") { model.saveFavoriteTabs() }
+            if !model.favoriteTabs.isEmpty {
+                Divider()
+                ForEach(model.favoriteTabs) { set in Button(set.name) { model.loadFavoriteTabs(set) } }
+                Divider()
+                Menu("Smazat sadu") { ForEach(model.favoriteTabs) { set in Button(set.name) { model.deleteFavoriteTabs(set) } } }
+            }
+        }
         CommandMenu("Oblíbené") {
             Button("Přidat aktuální adresář") { model.hotlist.add(model.source.persistentPath) }.keyboardShortcut("d")
             Divider()
@@ -192,6 +209,13 @@ struct TCCommands: Commands {
             Button("Plný režim") { model.source.viewMode = .full }.keyboardShortcut("1", modifiers: .control)
             Button("Stručný režim") { model.source.viewMode = .brief }.keyboardShortcut("2", modifiers: .control)
             Button("Náhledy") { model.source.viewMode = .thumbnails }.keyboardShortcut("3", modifiers: .control)
+            Button("Strom adresářů") { model.source.viewMode = .tree }.keyboardShortcut("4", modifiers: .control)
+            Menu("Sloupce (plný režim)") {
+                ForEach(model.settings.columnSets) { cs in
+                    Button(cs.name) { model.source.viewMode = .full; model.source.columns = cs.columns }
+                }
+            }
+            Button("Panely nad sebou / vedle sebe") { model.perform("cm_layout") }
             Button("Quick View (druhý panel)") { model.quickViewOn.toggle() }.keyboardShortcut("q", modifiers: .control)
             Divider()
             Button("Obnovit") { model.reloadAll() }.keyboardShortcut("r")

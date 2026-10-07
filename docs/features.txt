@@ -13,12 +13,12 @@
 Panely a zobrazení | Dva panely vedle sebe | D | 1 |
 Panely a zobrazení | Panely nad sebou | D | 6 | Nastavení › Obecné; ověřeno jen překladem
 Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |
-Panely a zobrazení | Zamykání karet, uložené sady karet (Favorite tabs) | T | 6 |
+Panely a zobrazení | Zamykání karet, uložené sady karet (Favorite tabs) | D | 6 | zamčená karta otevře jiný adresář v nové kartě; sady v menu Karty; jádro otestováno
 Panely a zobrazení | Režim Plný (název, přípona, velikost, datum, atributy) | D | 1 |
-Panely a zobrazení | Režim Stručný (Brief) | P | 2 | jen sloupec názvů (⌃2); víc sloupců vedle sebe zatím ne
-Panely a zobrazení | Strom adresářů (Tree) | T | 6 |
+Panely a zobrazení | Režim Stručný (Brief) | D | 6 | názvy ve více sloupcích (⌃2), ověřeno vizuálně
+Panely a zobrazení | Strom adresářů (Tree) | D | 6 | ⌃4, líné načítání podadresářů, synchronizace s cestou panelu; ověřeno vizuálně
 Panely a zobrazení | Náhledy obrázků (Thumbnails) | D | 2 | ⌃3, náhledy přes Quick Look; ověřeno jen spuštěním bez pádu
-Panely a zobrazení | Vlastní sloupce a pohledy | T | 6 |
+Panely a zobrazení | Vlastní sloupce a pohledy | D | 6 | sloupce: název, přípona, velikost, změněno, atributy, vytvořeno, otevřeno, druh, vlastník; pohledy v Nastavení a menu Zobrazení; ověřeno vizuálně
 Panely a zobrazení | Řazení podle názvu / přípony / velikosti / data (klik na hlavičku) | D | 1 |
 Panely a zobrazení | Rychlé hledání psaním (type-ahead) | D | 1 | vestavěné v tabulce
 Panely a zobrazení | Rychlý filtr (Ctrl+S, ⌘F) | D | 2 | pole nad seznamem, Esc zruší

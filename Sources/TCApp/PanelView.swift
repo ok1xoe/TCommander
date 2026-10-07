@@ -38,20 +38,21 @@ struct PanelView: View {
             }
             if model.quickViewOn && !isActive {
                 QuickViewPane(url: model.source.cursorEntry.flatMap { $0.isDirectory ? nil : $0.url })
-            } else if tab.viewMode == .thumbnails {
+            } else if tab.viewMode == .thumbnails || tab.viewMode == .brief {
                 ThumbnailGridView(
+                    brief: tab.viewMode == .brief, style: model.panelStyle,
                     tab: tab, revision: tab.revision, isActive: isActive,
                     onFocus: { if model.activeSide != side { model.activeSide = side } },
                     onKey: { model.handleKey($0, side: side) },
                     onOpen: { model.activeSide = side; model.open() })
+            } else if tab.viewMode == .tree {
+                HSplitView {
+                    TreeView(tab: tab, revision: tab.revision, onNavigate: { url in model.activeSide = side; tab.navigateLocal(url) })
+                        .frame(minWidth: 140, idealWidth: 200, maxWidth: 360)
+                    fileTable(tab: tab, isActive: isActive)
+                }
             } else {
-                FileTableView(
-                    style: model.panelStyle,
-                    tab: tab, revision: tab.revision, isActive: isActive,
-                    onFocus: { if model.activeSide != side { model.activeSide = side } },
-                    onKey: { model.handleKey($0, side: side) },
-                    onOpen: { model.activeSide = side; model.open() },
-                    onDrop: { urls, dest, move in model.drop(urls, into: dest, move: move) })
+                fileTable(tab: tab, isActive: isActive)
             }
             StatusBar(tab: tab, message: tab.error)
         }
@@ -60,6 +61,16 @@ struct PanelView: View {
         }
         .onChange(of: tab.path) { _, _ in model.pathEdit[side.key] = nil }
         .onChange(of: group.activeIndex) { _, _ in model.pathEdit[side.key] = nil }
+    }
+
+    private func fileTable(tab: PanelTab, isActive: Bool) -> some View {
+        FileTableView(
+            style: model.panelStyle,
+            tab: tab, revision: tab.revision, isActive: isActive,
+            onFocus: { if model.activeSide != side { model.activeSide = side } },
+            onKey: { model.handleKey($0, side: side) },
+            onOpen: { model.activeSide = side; model.open() },
+            onDrop: { urls, dest, move in model.drop(urls, into: dest, move: move) })
     }
 
     private func navigateToText(_ tab: PanelTab) {
@@ -79,7 +90,7 @@ struct TabBar: View {
             HStack(spacing: 2) {
                 ForEach(Array(group.tabs.enumerated()), id: \.element.id) { i, t in
                     let title = t.archiveFile?.lastPathComponent ?? (t.path.path == "/" ? "/" : t.path.lastPathComponent)
-                    Text(title)
+                    Text((t.locked ? "🔒 " : "") + title)
                         .lineLimit(1)
                         .font(.system(size: 11, weight: i == group.activeIndex ? .semibold : .regular))
                         .padding(.horizontal, 10).padding(.vertical, 3)

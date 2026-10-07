@@ -11,9 +11,15 @@ public struct FileEntry: Identifiable, Hashable, Sendable {
     public let modified: Date?
     public let permissions: UInt16
     public let isParentLink: Bool
+    public let created: Date?
+    public let accessed: Date?
+    /// Číslo uživatele (uid) vlastníka; jméno se zjišťuje až při zobrazení.
+    public let ownerID: UInt32?
 
     public init(url: URL, name: String, isDirectory: Bool, isSymlink: Bool = false, isHidden: Bool = false,
-                size: Int64 = 0, modified: Date? = nil, permissions: UInt16 = 0, isParentLink: Bool = false) {
+                size: Int64 = 0, modified: Date? = nil, permissions: UInt16 = 0, isParentLink: Bool = false,
+                created: Date? = nil, accessed: Date? = nil, ownerID: UInt32? = nil) {
+        self.created = created; self.accessed = accessed; self.ownerID = ownerID
         self.url = url
         self.name = name
         self.isDirectory = isDirectory
