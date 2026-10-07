@@ -10,7 +10,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "TCCore"),
-        .executableTarget(name: "TCApp", dependencies: ["TCCore"]),
+        .executableTarget(
+            name: "TCApp",
+            dependencies: ["TCCore"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         .testTarget(name: "TCCoreTests", dependencies: ["TCCore"]),
     ]
 )
