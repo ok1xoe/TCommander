@@ -105,7 +105,7 @@ Příkazová řádka | Příkaz `cd` | D | 1 |
 Příkazová řádka | Vložit název souboru do příkazové řádky (Ctrl+Enter) | D | 1 |
 Příkazová řádka | Otevření souboru přidruženým programem (Enter) | D | 1 |
 Příkazová řádka | Historie příkazů | D | 2 | šipky nahoru/dolů v příkazové řádce
-Příkazová řádka | Vestavěný terminál | P | 6 | okno se shellem na pseudoterminálu: barvy (SGR, 256 barev), změna velikosti okna se promítá do shellu, editace řádku, Ctrl+C, vkládání, historie; více oken najednou; ověřeno v reálné aplikaci | Celoobrazovkové programy (vim, top, htop) a plné řízení obrazovky (pozice kurzoru, mazání obrazovky), karty terminálu v jednom okně.
+Příkazová řádka | Vestavěný terminál | D | 9 | okno se shellem na pseudoterminálu: barvy písma i pozadí (SGR, 256 barev, TrueColor), inverzní a podtržený text, celoobrazovkové programy (vim, top, less) na mřížce buněk s alternativní obrazovkou, adresováním kurzoru, rolovacími oblastmi, vkládáním a mazáním řádků i znaků, odpověďmi na dotazy programů, aplikačními šipkami a funkčními klávesami; změna velikosti okna se promítá do shellu; Ctrl+C, vkládání; více oken najednou; ověřeno s vim a top. Nepodporováno: myš v programech a znaky o dvojité šířce (CJK)
 Příkazová řádka | Vlastní přidružení souborů k programům | D | 6 | Nastavení › Přidružení; Enter na souboru spustí přidružený program
 
 Přizpůsobení | Konfigurovatelné klávesové zkratky | D | 6 | Nastavení › Zkratky, kontrola konfliktů; platí pro klávesy v panelech, zkratky v hlavním menu jsou pevné

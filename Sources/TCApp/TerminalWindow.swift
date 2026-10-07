@@ -74,6 +74,8 @@ final class PTYShell: @unchecked Sendable {
 final class TerminalTextView: NSTextView {
     var sendInput: ((String) -> Void)?
     var interrupt: (() -> Void)?
+    /// Program zapnul aplikační režim šipek (ESC O A…), např. vim, less, top.
+    var applicationCursor = false
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -89,10 +91,25 @@ final class TerminalTextView: NSTextView {
         case 51: sendInput?("\u{7F}")
         case 48: sendInput?("\t")
         case 53: sendInput?("\u{1B}")
-        case 126: sendInput?("\u{1B}[A")
-        case 125: sendInput?("\u{1B}[B")
-        case 124: sendInput?("\u{1B}[C")
-        case 123: sendInput?("\u{1B}[D")
+        case 126: sendInput?(applicationCursor ? "\u{1B}OA" : "\u{1B}[A")
+        case 125: sendInput?(applicationCursor ? "\u{1B}OB" : "\u{1B}[B")
+        case 124: sendInput?(applicationCursor ? "\u{1B}OC" : "\u{1B}[C")
+        case 123: sendInput?(applicationCursor ? "\u{1B}OD" : "\u{1B}[D")
+        case 115: sendInput?(applicationCursor ? "\u{1B}OH" : "\u{1B}[H")
+        case 119: sendInput?(applicationCursor ? "\u{1B}OF" : "\u{1B}[F")
+        case 116: sendInput?("\u{1B}[5~")
+        case 121: sendInput?("\u{1B}[6~")
+        case 117: sendInput?("\u{1B}[3~")
+        case 122: sendInput?("\u{1B}OP")
+        case 120: sendInput?("\u{1B}OQ")
+        case 99: sendInput?("\u{1B}OR")
+        case 118: sendInput?("\u{1B}OS")
+        case 96: sendInput?("\u{1B}[15~")
+        case 97: sendInput?("\u{1B}[17~")
+        case 98: sendInput?("\u{1B}[18~")
+        case 100: sendInput?("\u{1B}[19~")
+        case 101: sendInput?("\u{1B}[20~")
+        case 109: sendInput?("\u{1B}[21~")
         default: if let s = e.characters, !s.isEmpty { sendInput?(s) }
         }
     }
@@ -102,7 +119,7 @@ final class TerminalTextView: NSTextView {
     }
 }
 
-/// Okno s jednoduchým terminálem (shell v pseudoterminálu); celoobrazovkové programy (vim, top) nejsou podporovány.
+/// Okno s terminálem (shell v pseudoterminálu) včetně celoobrazovkových programů (vim, top, less…) na mřížce buněk.
 @MainActor
 final class TerminalWindow: NSObject, NSWindowDelegate {
     private static var open: [TerminalWindow] = []
@@ -162,6 +179,7 @@ final class TerminalWindow: NSObject, NSWindowDelegate {
 
     private func received(_ data: Data) {
         buffer.append(data)
+        if !buffer.replies.isEmpty { shell.send(buffer.replies); buffer.replies = "" }
         guard !scheduled else { return }
         scheduled = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { [weak self] in
@@ -174,13 +192,19 @@ final class TerminalWindow: NSObject, NSWindowDelegate {
         let normal = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), bold = NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
         let defaultColor = NSColor(calibratedWhite: 0.92, alpha: 1)
         let out = NSMutableAttributedString()
+        func ns(_ rgb: UInt32) -> NSColor { NSColor(srgbRed: CGFloat((rgb >> 16) & 255) / 255, green: CGFloat((rgb >> 8) & 255) / 255, blue: CGFloat(rgb & 255) / 255, alpha: 1) }
+        let background = view.backgroundColor
         for run in buffer.runs {
-            var color = defaultColor
-            if let rgb = run.style.rgb() { color = NSColor(srgbRed: CGFloat((rgb >> 16) & 255) / 255, green: CGFloat((rgb >> 8) & 255) / 255, blue: CGFloat(rgb & 255) / 255, alpha: 1) }
-            out.append(NSAttributedString(string: run.text, attributes: [.font: run.style.bold ? bold : normal, .foregroundColor: color]))
+            var fg: NSColor? = run.style.rgb().map(ns), bg: NSColor? = run.style.backgroundRGB().map(ns)
+            if run.style.inverse { (fg, bg) = (bg ?? background, fg ?? defaultColor) }
+            var attrs: [NSAttributedString.Key: Any] = [.font: run.style.bold ? bold : normal, .foregroundColor: fg ?? defaultColor]
+            if let bg { attrs[.backgroundColor] = bg }
+            if run.style.underline { attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue }
+            out.append(NSAttributedString(string: run.text, attributes: attrs))
         }
         view.textStorage?.setAttributedString(out)
-        view.scrollToEndOfDocument(nil)
+        view.applicationCursor = buffer.applicationCursor
+        if buffer.isFullScreen { view.scrollToBeginningOfDocument(nil) } else { view.scrollToEndOfDocument(nil) }
     }
 
     func windowDidResize(_ notification: Notification) { updateSize() }
@@ -190,7 +214,9 @@ final class TerminalWindow: NSObject, NSWindowDelegate {
         let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         let cw = ("M" as NSString).size(withAttributes: [.font: font]).width, lh = NSLayoutManager().defaultLineHeight(for: font)
         guard let scroll = view.enclosingScrollView, cw > 0, lh > 0 else { return }
-        shell.resize(columns: Int((scroll.contentSize.width - 10) / cw), rows: Int(scroll.contentSize.height / lh))
+        let cols = Int((scroll.contentSize.width - 10) / cw), rows = Int(scroll.contentSize.height / lh)
+        buffer.resize(columns: cols, rows: rows)
+        shell.resize(columns: cols, rows: rows)
     }
 
     func windowWillClose(_ notification: Notification) {
