@@ -4,8 +4,8 @@
 # Formát funkcí:   kategorie | funkce | stav | fáze | poznámka
 @phase | 0 | Průzkum TC a návrh | hotovo | 582 208 (cache čtení 533 596, output 9 064)
 @phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 3 237 493 (cache čtení 3 067 722, output 76 954)
-@phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 8 718 567 (cache čtení 8 516 701, output 90 868), stav k PR 2f
-@phase | 3 | Multi-Rename, porovnání, synchronizace | probíhá | -
+@phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 9 273 793 (cache čtení 9 067 468, output 93 127)
+@phase | 3 | Multi-Rename, porovnání, synchronizace, duplicity, kódování | hotovo | 4 031 289 (cache čtení 3 926 612, output 50 938), stav k PR 3c
 @phase | 4 | Archivy jako adresáře | plán | -
 @phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | plán | -
 @phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | plán | -
@@ -59,13 +59,13 @@ Souborové operace | Vlastnosti (Alt+Enter) | P | 2 | cesta, velikost, oprávně
 Souborové operace | Symbolické a pevné odkazy | D | 2 | menu Nástroje
 Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | D | 2 | menu Nástroje, uložení do .sha256/.md5…, ověření ze souboru
 Souborové operace | Rozdělit a spojit soubory | D | 2 | části .001, .002 …
-Souborové operace | Kódování UUE / XXE / MIME | T | 3 |
+Souborové operace | Kódování UUE / XXE / MIME | D | 3 | kódování i dekódování, menu Nástroje; ověřeno testy včetně známého vektoru
 
 Hledání | Hledání podle masky, velikosti a data (Alt+F7) | P | 2 | podadresáře, skryté, velikost od–do, změněno za N dní; podle atributů zatím ne
 Hledání | Hledání textu v souborech (regex, kódování) | D | 2 | rozpoznání kódování, regex, bez ohledu na diakritiku; binární soubory po bajtech
 Hledání | Hledání uvnitř archivů | T | 4 |
 Hledání | Výsledky jako panel, uložené šablony hledání | P | 2 | výsledky v okně s přechodem na soubor a zobrazením; jako virtuální panel a šablony ne
-Hledání | Hledání duplicitních souborů | T | 3 |
+Hledání | Hledání duplicitních souborů | D | 3 | podle velikosti a obsahu (SHA-256), okno s označením nadbytečných kopií a smazáním do koše; okno ověřeno jen spuštěním
 
 Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | D | 3 | ⌃M; `[N1-3]`, `[N2,5]`, `[C10+5:3]`, `[P]`, datum `[Y][M][D][h][m][s]`
 Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | D | 3 | zvlášť maska názvu a přípony

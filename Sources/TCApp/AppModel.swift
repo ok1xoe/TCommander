@@ -318,6 +318,52 @@ final class AppModel {
         SyncWindow.show(left: left.active.path, right: right.active.path, jobs: jobs) { [weak self] in self?.reloadAll() }
     }
 
+    // MARK: Duplicity a kódování
+
+    func findDuplicates() {
+        DuplicatesWindow.show(root: source.path, goTo: { [weak self] url in
+            guard let self else { return }
+            self.source.navigate(to: url.deletingLastPathComponent(), select: url)
+        }, onChange: { [weak self] in self?.reloadAll() })
+    }
+
+    func encodeFiles() {
+        let files = source.targets.filter { !$0.isDirectory }
+        guard !files.isEmpty else { return }
+        let kinds = FileEncoding.allCases
+        guard let i = Dialogs.choose(title: "Kódovat soubory", message: "Formát (výsledek do \(target.path.path)):", options: kinds.map(\.rawValue), ok: "Kódovat") else { return }
+        let kind = kinds[i], dir = target.path
+        var errors: [String] = []
+        for f in files {
+            do {
+                let data = try Data(contentsOf: f.url)
+                let out = dir.appendingPathComponent(f.name + "." + kind.fileExtension)
+                guard !FileManager.default.fileExists(atPath: out.path) else { errors.append("\(out.lastPathComponent): již existuje"); continue }
+                try TextCodecs.encode(data, as: kind, fileName: f.name, mode: f.permissions).write(to: out, atomically: true, encoding: .utf8)
+            } catch { errors.append("\(f.name): \(error.localizedDescription)") }
+        }
+        reloadAll()
+        if !errors.isEmpty { Dialogs.error("Některé soubory se nepodařilo zakódovat", errors.prefix(10).joined(separator: "\n")) }
+    }
+
+    func decodeFiles() {
+        let files = source.targets.filter { !$0.isDirectory }
+        guard !files.isEmpty else { return }
+        let dir = target.path
+        var errors: [String] = []
+        for f in files {
+            let kind = FileEncoding.from(fileName: f.name)
+            guard let kind, let raw = try? Data(contentsOf: f.url) else { errors.append("\(f.name): neznámá přípona (.uue, .xxe, .b64)"); continue }
+            guard let result = TextCodecs.decode(TextDecoding.decode(raw).text, as: kind) else { errors.append("\(f.name): neplatná data"); continue }
+            let name = result.name ?? (f.name as NSString).deletingPathExtension
+            let out = dir.appendingPathComponent((name as NSString).lastPathComponent)
+            guard !FileManager.default.fileExists(atPath: out.path) else { errors.append("\(out.lastPathComponent): již existuje"); continue }
+            do { try result.data.write(to: out) } catch { errors.append("\(f.name): \(error.localizedDescription)") }
+        }
+        reloadAll()
+        if !errors.isEmpty { Dialogs.error("Některé soubory se nepodařilo dekódovat", errors.prefix(10).joined(separator: "\n")) }
+    }
+
     // MARK: Nástroje
 
     func multiRename() {
