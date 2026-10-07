@@ -10,7 +10,8 @@ let package = Package(
     ],
     targets: [
         .target(name: "CArchive", linkerSettings: [.linkedLibrary("archive")]),
-        .target(name: "TCCore", dependencies: ["CArchive"]),
+        .target(name: "CCurl", linkerSettings: [.linkedLibrary("curl")]),
+        .target(name: "TCCore", dependencies: ["CArchive", "CCurl"]),
         .executableTarget(
             name: "TCApp",
             dependencies: ["TCCore"],
