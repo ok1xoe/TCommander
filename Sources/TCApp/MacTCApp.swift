@@ -176,7 +176,17 @@ struct MacTCApp: App {
     }
 }
 
+/// Hlavní menu; kvůli omezení `CommandsBuilder` (nejvýš 10 položek najednou) rozdělené na dvě skupiny.
 struct TCCommands: Commands {
+    let model: AppModel
+
+    var body: some Commands {
+        TCCommandsFirst(model: model)
+        TCCommandsSecond(model: model)
+    }
+}
+
+struct TCCommandsFirst: Commands {
     let model: AppModel
 
     var body: some Commands {
@@ -249,6 +259,13 @@ struct TCCommands: Commands {
             Button(L("Symbolický odkaz do druhého panelu…")) { model.makeLink(hard: false) }.hideable(model, "Nástroje/Symbolický odkaz do druhého panelu…")
             Button(L("Pevný odkaz do druhého panelu…")) { model.makeLink(hard: true) }.hideable(model, "Nástroje/Pevný odkaz do druhého panelu…")
         }
+    }
+}
+
+struct TCCommandsSecond: Commands {
+    let model: AppModel
+
+    var body: some Commands {
         CommandMenu(L("Označit")) {
             Button(L("Označit vše")) { model.source.markAll() }.keyboardShortcut("a").hideable(model, "Označit/Označit vše")
             Button(L("Zrušit označení")) { model.source.unmarkAll() }.keyboardShortcut("a", modifiers: [.command, .shift]).hideable(model, "Označit/Zrušit označení")
