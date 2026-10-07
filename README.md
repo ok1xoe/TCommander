@@ -37,5 +37,5 @@ FTP/FTPS, SFTP, SMB a WebDAV, terminál, vestavěný editor, příkazy a konfigu
 
 ## Známá omezení
 
-Nastavení uložené v `~/Library/Application Support/macTC/`. SMB, WebDAV, TLS u FTP, SOCKS proxy a přihlášení heslem u SFTP jsou implementované, ale nebyly ověřeny proti skutečné službě.
+Nastavení uložené v `~/Library/Application Support/macTC/`. WebDAV, TLS u FTP, SOCKS proxy a přihlášení heslem u SFTP jsou implementované, ale nebyly ověřeny proti skutečné službě.
 Většina oken a dialogů je ověřená spuštěním a snímky, nikoli automatizovanými UI testy; automaticky testovaná je logika.

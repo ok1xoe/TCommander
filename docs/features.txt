@@ -92,7 +92,7 @@ Archivy | Kopie do archivu, mazání, přejmenování a nové složky uvnitř ar
 
 Síť | FTP a FTPS (obnovení stahování, fronta) | D | 5 | Enter na server jako do adresáře (načítání na pozadí), F5/F6/F8/F7/F2 se serverem, otevření/zobrazení/editace přes dočasné stažení, kopie server ↔ disk ↔ archiv ↔ server, obnovení přerušeného stahování; ověřeno proti testovacímu serveru, TLS neověřeno klient hotový a ověřený proti testovacímu serveru (MLSD i LIST, stahování s obnovením, nahrávání, mazání, přejmenování, TLS volba); napojení na panely přijde v dalším kroku
 Síť | SFTP | D | 5 | přes systémový sftp (OpenSSH): výpis, stahování s obnovením a přesnými časy, nahrávání, mazání, přejmenování, sdílené spojení; ověřeno proti skutečnému sshd s klíčem; ověření heslem (SSH_ASKPASS) neověřeno
-Síť | SMB (sdílené složky) | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem | Ověření proti skutečnému serveru; procházení sdílených složek bez připojení svazku; vlastní SMB klient s průběhem přenosu.
+Síť | SMB (sdílené složky) | D | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem; ověřeno uživatelem proti skutečné sdílené složce
 Síť | WebDAV | P | 5 | připojení jako systémový svazek (NetFS) a práce s ním jako s místním adresářem | Ověření proti skutečnému serveru; vlastní klient s obnovením přenosu a průběhem.
 Síť | Proxy SOCKS / HTTP pro FTP | P | 5 | pole Proxy ve správci spojení, hodnota se předává libcurl (FTP) | Ověření proti proxy serveru; proxy pro SFTP (ProxyCommand) a samostatné nastavení HTTP proxy.
 Síť | Správce spojení | D | 5 | menu Síť (⌘K), uložená připojení, hesla v Klíčence; dialog ručně neověřen
