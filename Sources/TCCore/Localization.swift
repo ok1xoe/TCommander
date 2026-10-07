@@ -67,6 +67,7 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Plugin není k dispozici.": "The plugin is not available.",
         "Vybrat…": "Choose…",
         "Vybrat...": "Choose...",
         "Nainstalovat ukázkové pluginy": "Install Sample Plugins",
@@ -440,6 +441,9 @@ public enum Localization {
 
     /// Frázové úpravy pro složené texty (čísla, názvy souborů); aplikují se po sobě na celý řetězec.
     public static let phrases: [(pattern: String, replacement: String)] = [
+        ("Plugin „(.*)“ zpracovává soubor…", "Plugin “$1” is processing the file…"),
+        ("Plugin „(.*)“ soubor nezobrazil\\.", "Plugin “$1” did not display the file."),
+        ("Zdroj souboru je v záložce Text\\.", "The file source is on the Text tab."),
         ("Plugin je složka s plugin.json a spustitelným souborem; viz docs/plugins.md\\. Složka: (.*)", "A plugin is a folder with plugin.json and an executable; see docs/plugins.md. Folder: $1"),
         ("Nainstalováno: (.*)", "Installed: $1"),
         ("Už existují \\(ponecháno\\): (.*)", "Already present (kept): $1"),

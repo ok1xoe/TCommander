@@ -2,7 +2,7 @@ import Foundation
 import UniformTypeIdentifiers
 
 public enum ListerMode: String, Sendable, CaseIterable {
-    case text, hex, image, pdf, media, web, diagram, markdown
+    case text, hex, image, pdf, media, web, diagram, markdown, plugin
 }
 
 public enum ListerSupport {
@@ -10,6 +10,16 @@ public enum ListerSupport {
     public static func isMarkdown(_ url: URL) -> Bool { markdownExtensions.contains(url.pathExtension.lowercased()) }
 
     /// Režimy, které dává smysl pro soubor nabídnout; první je výchozí.
+    /// Režimy pro soubor; `hasViewerPlugin` přidá záložku pluginu-prohlížeče. Soubory, které umíme zvýraznit (kód, Markdown, diagramy…),
+    /// zůstávají ve výchozím zobrazení a plugin je až další záložka; u ostatních a u binárních souborů je plugin první.
+    public static func modes(for url: URL, sample: Data, hasViewerPlugin: Bool) -> [ListerMode] {
+        var m = modes(for: url, sample: sample)
+        guard hasViewerPlugin else { return m }
+        let highlighted = SyntaxHighlighter.language(forFileName: url.lastPathComponent) != nil || m.first == .markdown || m.first == .diagram
+        m.insert(.plugin, at: (looksBinary(sample) || !highlighted) ? 0 : 1)
+        return m
+    }
+
     public static func modes(for url: URL, sample: Data) -> [ListerMode] {
         if PlantUML.isDiagramFile(url) { return [.diagram, .text, .hex] }
         if ListerSupport.isMarkdown(url) { return [.markdown, .text, .hex] }

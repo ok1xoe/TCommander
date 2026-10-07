@@ -76,3 +76,26 @@ import Foundation
         #expect(TextDecoding.encode("čeština 🐎", as: "UTF-8") != nil)
     }
 }
+
+@Suite struct ListerPluginTabTests {
+    let text = Data("abc".utf8), bin = Data([0, 1, 2, 3])
+    func modes(_ name: String, _ sample: Data, plugin: Bool = true) -> [ListerMode] { ListerSupport.modes(for: URL(fileURLWithPath: "/x/\(name)"), sample: sample, hasViewerPlugin: plugin) }
+
+    @Test func highlightedFilesKeepTheirTextViewAndGetThePluginAsAnotherTab() {
+        #expect(modes("a.json", text) == [.text, .plugin, .hex])
+        #expect(modes("log.adi", text) == [.text, .plugin, .hex])
+        #expect(modes("a.md", text) == [.markdown, .plugin, .text, .hex])
+        #expect(modes("a.puml", text) == [.diagram, .plugin, .text, .hex])
+    }
+
+    @Test func otherAndBinaryFilesShowThePluginFirst() {
+        #expect(modes("a.csv", text) == [.plugin, .text, .hex])
+        #expect(modes("a.plist", bin) == [.plugin, .hex, .text])           // binární plist
+        #expect(modes("a.dat", bin) == [.plugin, .hex, .text])
+    }
+
+    @Test func withoutAPluginNothingChanges() {
+        #expect(modes("a.json", text, plugin: false) == [.text, .hex])
+        #expect(modes("a.png", bin, plugin: false).first == .image)
+    }
+}

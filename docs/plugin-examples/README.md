@@ -7,7 +7,7 @@ Všechny jsou v Pythonu 3 (stačí systémový `/usr/bin/python3`, bez dalších
 
 | Plugin | Druh | Co dělá |
 |---|---|---|
-| `adifview` | prohlížeč (F3) | Deník ADIF/ADI jako tabulka spojení seřazená podle data, se souhrnem podle pásem a módů. Pozor: při instalaci nahradí v F3 zvýrazněný text těchto souborů; textový pohled zůstane v Listeru dostupný ze záložky *Text*, jen když plugin odebereš, vrátí se původní chování. |
+| `adifview` | prohlížeč (F3) | Deník ADIF/ADI jako tabulka spojení seřazená podle data, se souhrnem podle pásem a módů. Zvýrazněný text (a zdroj) zůstává výchozím zobrazením v Listeru, tabulka je záložka „adifview“ vedle Text a Hex. |
 | `filehash` | sloupce | Kontrolní součty MD5, SHA-1 a SHA-256 jako sloupce panelu (soubory do 256 MB). |
 | `photoinfo` | sloupce | Fotoaparát, datum pořízení a DPI fotografií (přes systémový `sips`). |
 | `structview` | prohlížeč (F3) | JSON (i na jeden řádek) a plist (XML i binární, `.mobileconfig`, `.entitlements`) jako odsazený text. |
