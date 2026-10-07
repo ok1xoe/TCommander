@@ -221,3 +221,66 @@ import Foundation
         #expect(g.tabs.count == 1)
     }
 }
+
+@Suite struct TransferEngineTests {
+    let ops = FileOperations()
+
+    @Test func progressAndVerifyAcrossTree() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        try write(d, "s/tree/a.bin", String(repeating: "a", count: 3_000_000))
+        try write(d, "s/tree/sub/b.txt", "bbb")
+        try FileManager.default.createSymbolicLink(atPath: d.appendingPathComponent("s/tree/link").path, withDestinationPath: "a.bin")
+        try FileManager.default.createDirectory(at: d.appendingPathComponent("t"), withIntermediateDirectories: true)
+        final class Box: @unchecked Sendable { var last = TransferProgress(); var calls = 0 }
+        let box = Box()
+        let items = ops.plan(sources: [d.appendingPathComponent("s/tree")], into: d.appendingPathComponent("t"))
+        let r = ops.perform(.copy, items, policy: .overwrite, verify: true, progress: { box.last = $0; box.calls += 1 })
+        #expect(r.failures.isEmpty && r.succeeded == 1)
+        #expect(box.last.bytesDone == box.last.bytesTotal && box.last.filesDone == box.last.filesTotal && box.calls > 1)
+        let out = d.appendingPathComponent("t/tree")
+        #expect(try String(contentsOf: out.appendingPathComponent("sub/b.txt"), encoding: .utf8) == "bbb")
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: out.appendingPathComponent("link").path) == "a.bin")
+        #expect(Checksum.hash(out.appendingPathComponent("a.bin"), .md5) == Checksum.hash(d.appendingPathComponent("s/tree/a.bin"), .md5))
+    }
+
+    @Test func cancelStopsAndLeavesNoPartialFile() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let a = try write(d, "a.bin", "x"), b = try write(d, "b.bin", "y")
+        let c = OperationControl(); c.cancel()
+        let t = d.appendingPathComponent("t"); try FileManager.default.createDirectory(at: t, withIntermediateDirectories: true)
+        let r = ops.perform(.copy, ops.plan(sources: [a, b], into: t), policy: .overwrite, control: c)
+        #expect(r.cancelled && r.succeeded == 0)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: t.path).isEmpty)
+    }
+
+    @Test func pauseBlocksUntilResume() async throws {
+        let c = OperationControl(); c.pause()
+        final class Flag: @unchecked Sendable { var passed = false }
+        let f = Flag()
+        let t = Task.detached { _ = c.checkpoint(); f.passed = true }
+        try await Task.sleep(nanoseconds: 150_000_000)
+        #expect(!f.passed)
+        c.resume(); await t.value
+        #expect(f.passed)
+    }
+
+    @Test func moveWithinVolumeIsRenameAndReportsProgress() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let a = try write(d, "s/a.txt", "12345")
+        let t = d.appendingPathComponent("t"); try FileManager.default.createDirectory(at: t, withIntermediateDirectories: true)
+        final class Box: @unchecked Sendable { var last = TransferProgress() }
+        let box = Box()
+        let r = ops.perform(.move, ops.plan(sources: [a], into: t), policy: .overwrite, progress: { box.last = $0 })
+        #expect(r.succeeded == 1 && !FileManager.default.fileExists(atPath: a.path))
+        #expect(box.last.bytesDone == 5 && box.last.filesDone == 1)
+    }
+
+    @Test func deleteReportsProgressAndCancels() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let a = try write(d, "a"), b = try write(d, "b")
+        let c = OperationControl(); c.cancel()
+        #expect(ops.delete([a, b], toTrash: false, control: c).cancelled)
+        #expect(FileManager.default.fileExists(atPath: a.path))
+        #expect(ops.delete([a, b], toTrash: false).succeeded == 2)
+    }
+}

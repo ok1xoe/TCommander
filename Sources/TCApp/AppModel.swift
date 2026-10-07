@@ -18,6 +18,8 @@ final class AppModel {
     /// Rozepsaná cesta v adresním řádku panelu (nil = zobrazuje se skutečná cesta).
     var pathEdit: [Bool: String] = [:]
     var busy: String?
+    let jobs = JobManager()
+    var verifyCopies = false { didSet { defaults.set(verifyCopies, forKey: "verifyCopies") } }
     var status: String?
     var deleteToTrash = true
     var showHidden = false { didSet { for t in left.tabs + right.tabs { t.showHidden = showHidden } } }
@@ -38,6 +40,7 @@ final class AppModel {
         left = restore("tabs.left")
         right = restore("tabs.right")
         showHidden = UserDefaults.standard.bool(forKey: "showHidden")
+        verifyCopies = UserDefaults.standard.bool(forKey: "verifyCopies")
         for t in left.tabs + right.tabs { t.showHidden = showHidden }
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.save() }
@@ -134,7 +137,6 @@ final class AppModel {
     // MARK: Souborové operace
 
     func transfer(_ kind: TransferKind) {
-        guard busy == nil else { return }
         let src = source, sources = src.targets.map(\.url)
         guard !sources.isEmpty else { return }
         let verb = kind == .copy ? "Kopírovat" : "Přesunout"
@@ -150,12 +152,12 @@ final class AppModel {
             guard let p = Dialogs.conflictPolicy(count: conflicts.count, example: conflicts[0].destination.path) else { return }
             policy = p
         }
-        let ops = self.ops
-        busy = kind == .copy ? "Kopíruji…" : "Přesouvám…"
-        Task {
-            let report = await Task.detached { ops.perform(kind, items, policy: policy) }.value
-            self.finish(report, success: kind == .copy ? "Zkopírováno" : "Přesunuto")
-        }
+        let ops = self.ops, verify = verifyCopies, chosen = policy
+        jobs.enqueue(title: "\(verb) \(what)", work: { control, progress in
+            ops.perform(kind, items, policy: chosen, verify: verify, control: control, progress: progress)
+        }, onFinish: { [weak self] report in
+            self?.finish(report, success: kind == .copy ? "Zkopírováno" : "Přesunuto")
+        })
     }
 
     private func resolveTransfer(sources: [URL], destination text: String, base: URL) -> [TransferItem]? {
@@ -180,7 +182,6 @@ final class AppModel {
     }
 
     func delete(permanent: Bool) {
-        guard busy == nil else { return }
         let targets = source.targets.map(\.url)
         guard !targets.isEmpty else { return }
         let toTrash = deleteToTrash && !permanent
@@ -188,18 +189,18 @@ final class AppModel {
         guard Dialogs.confirm(title: toTrash ? "Přesunout do koše?" : "Smazat trvale?", message: what,
                               ok: toTrash ? "Do koše" : "Smazat", destructive: !toTrash) else { return }
         let ops = self.ops
-        busy = "Mažu…"
-        Task {
-            let report = await Task.detached { ops.delete(targets, toTrash: toTrash) }.value
-            self.finish(report, success: toTrash ? "Do koše" : "Smazáno")
-        }
+        jobs.enqueue(title: "\(toTrash ? "Do koše" : "Mazání"): \(what)", work: { control, progress in
+            ops.delete(targets, toTrash: toTrash, control: control, progress: progress)
+        }, onFinish: { [weak self] report in
+            self?.finish(report, success: toTrash ? "Do koše" : "Smazáno")
+        })
     }
 
     private func finish(_ report: OperationReport, success: String) {
-        busy = nil
         source.unmarkAll()
         reloadAll()
-        var parts = ["\(success): \(report.succeeded)"]
+        var parts = [report.cancelled ? "Zrušeno" : success, "\(report.succeeded)"]
+        parts = [parts[0] + ": " + parts[1]]
         if report.skipped > 0 { parts.append("přeskočeno: \(report.skipped)") }
         if !report.failures.isEmpty { parts.append("chyb: \(report.failures.count)") }
         status = parts.joined(separator: ", ")

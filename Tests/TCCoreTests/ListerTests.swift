@@ -33,3 +33,24 @@ import Foundation
         #expect(ListerSupport.modes(for: URL(fileURLWithPath: "/a.html"), sample: text).first == .web)
     }
 }
+
+@Suite struct ChecksumTests {
+    @Test func knownVectors() {
+        let abc = Data("abc".utf8)
+        #expect(Checksum.hash(of: abc, .md5) == "900150983cd24fb0d6963f7d28e17f72")
+        #expect(Checksum.hash(of: abc, .sha1) == "a9993e364706816aba3e25717850c26c9cd0d89d")
+        #expect(Checksum.hash(of: abc, .sha256) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        #expect(Checksum.hash(of: Data("123456789".utf8), .crc32) == "cbf43926")
+    }
+
+    @Test func fileHashMatchesDataHash() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let big = String(repeating: "macTC", count: 500_000)
+        let f = try write(d, "big.txt", big)
+        for a in ChecksumAlgorithm.allCases {
+            #expect(Checksum.hash(f, a) == Checksum.hash(of: Data(big.utf8), a))
+        }
+        #expect(Checksum.hash(f, .sha256, onBytes: { _ in false }) == nil)
+        #expect(Checksum.hash(d.appendingPathComponent("missing"), .md5) == nil)
+    }
+}

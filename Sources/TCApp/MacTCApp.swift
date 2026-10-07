@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TCCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -10,6 +11,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ListerWindow.show(URL(fileURLWithPath: CommandLine.arguments[i + 1]))
         }
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
+        if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
+            for n in 1...2 {
+                AppModel.shared.jobs.enqueue(title: "Kopírovat demo \(n)", work: { control, progress in
+                    var p = TransferProgress(); p.bytesTotal = 100_000_000; p.filesTotal = 10
+                    for i in 1...100 {
+                        guard control.checkpoint() else { break }
+                        Thread.sleep(forTimeInterval: 0.08)
+                        p.bytesDone = Int64(i) * 1_000_000; p.filesDone = i / 10; p.current = "soubor-\(i).bin"; progress(p)
+                    }
+                    return OperationReport()
+                }, onFinish: { _ in })
+            }
+        }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
@@ -49,6 +63,8 @@ struct TCCommands: Commands {
             Button("Přesunout…") { model.transfer(.move) }
             Button("Smazat…") { model.delete(permanent: false) }.keyboardShortcut(.delete, modifiers: .command)
             Button("Smazat trvale…") { model.delete(permanent: true) }
+            Divider()
+            Toggle("Ověřovat kopie (SHA-256)", isOn: Binding(get: { model.verifyCopies }, set: { model.verifyCopies = $0 }))
         }
         CommandMenu("Označit") {
             Button("Označit vše") { model.source.markAll() }.keyboardShortcut("a")
