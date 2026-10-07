@@ -30,15 +30,13 @@ public struct LocalFileSystem: VirtualFileSystem {
     }
 
     public func stat(_ url: URL) throws -> FileEntry {
-        var st = Darwin.stat()
-        guard lstat(url.path, &st) == 0 else { throw posixError(url) }
+        guard let st = sysLstat(url.path) else { throw posixError(url) }
         let isLink = (st.st_mode & S_IFMT) == S_IFLNK
         var isDir = (st.st_mode & S_IFMT) == S_IFDIR
         var size = Int64(st.st_size)
         var mtime = st.st_mtimespec
         if isLink {
-            var target = Darwin.stat()
-            if Darwin.stat(url.path, &target) == 0 {
+            if let target = sysStat(url.path) {
                 isDir = (target.st_mode & S_IFMT) == S_IFDIR
                 size = Int64(target.st_size)
                 mtime = target.st_mtimespec
@@ -52,8 +50,7 @@ public struct LocalFileSystem: VirtualFileSystem {
     }
 
     public func exists(_ url: URL) -> Bool {
-        var st = Darwin.stat()
-        return lstat(url.path, &st) == 0
+        sysLstat(url.path) != nil
     }
 
     public func createDirectory(_ url: URL) throws {
@@ -74,6 +71,16 @@ public struct LocalFileSystem: VirtualFileSystem {
         NSError(domain: NSPOSIXErrorDomain, code: Int(errno),
                 userInfo: [NSLocalizedDescriptionKey: String(cString: strerror(errno)), NSFilePathErrorKey: url.path])
     }
+}
+
+private func sysLstat(_ path: String) -> stat? {
+    var st = stat()
+    return lstat(path, &st) == 0 ? st : nil
+}
+
+private func sysStat(_ path: String) -> stat? {
+    var st = stat()
+    return stat(path, &st) == 0 ? st : nil
 }
 
 public enum DirectorySize {
