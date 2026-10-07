@@ -94,6 +94,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--dump-menu"), i + 1 < CommandLine.arguments.count {         // ladění: struktura hlavního menu do souboru
+            let out = CommandLine.arguments[i + 1]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                func dump(_ m: NSMenu, _ depth: Int) -> String {
+                    m.items.map { item in
+                        let key = item.keyEquivalent.isEmpty ? "" : "  [" + (item.keyEquivalentModifierMask.contains(.control) ? "⌃" : "") + (item.keyEquivalentModifierMask.contains(.shift) ? "⇧" : "") + (item.keyEquivalentModifierMask.contains(.option) ? "⌥" : "") + (item.keyEquivalentModifierMask.contains(.command) ? "⌘" : "") + item.keyEquivalent + "]"
+                        let line = String(repeating: "  ", count: depth) + (item.isSeparatorItem ? "----" : item.title) + key + (item.isHidden ? " (skryto)" : "") + "\n"
+                        return line + (item.submenu.map { dump($0, depth + 1) } ?? "")
+                    }.joined()
+                }
+                try? (NSApp.mainMenu.map { dump($0, 0) } ?? "(bez menu)").write(toFile: out, atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }
@@ -152,23 +166,23 @@ struct TCCommands: Commands {
             Button(L("Zavřít tab")) { model.group(model.activeSide).closeActiveTab() }.keyboardShortcut("w")
         }
         CommandMenu(L("Soubor")) {
-            Button(L("Otevřít")) { model.open() }.keyboardShortcut("o")
-            Button(L("Hledat soubory…")) { model.search() }.keyboardShortcut("f", modifiers: [.command, .shift])
-            Button(L("Přejmenovat…")) { model.rename() }
-            Button(L("Nový adresář…")) { model.makeDirectory() }.keyboardShortcut("n", modifiers: [.command, .shift])
-            Button(L("Nový soubor…")) { model.newFile() }
+            Button(L("Otevřít")) { model.open() }.keyboardShortcut("o").hideable(model, "Soubor/Otevřít")
+            Button(L("Hledat soubory…")) { model.search() }.keyboardShortcut("f", modifiers: [.command, .shift]).hideable(model, "Soubor/Hledat soubory…")
+            Button(L("Přejmenovat…")) { model.rename() }.hideable(model, "Soubor/Přejmenovat…")
+            Button(L("Nový adresář…")) { model.makeDirectory() }.keyboardShortcut("n", modifiers: [.command, .shift]).hideable(model, "Soubor/Nový adresář…")
+            Button(L("Nový soubor…")) { model.newFile() }.hideable(model, "Soubor/Nový soubor…")
             Divider()
-            Button(L("Kopírovat…")) { model.transfer(.copy) }
-            Button(L("Přesunout…")) { model.transfer(.move) }
-            Button(L("Smazat…")) { model.delete(permanent: false) }.keyboardShortcut(.delete, modifiers: .command)
-            Button(L("Smazat trvale…")) { model.delete(permanent: true) }
+            Button(L("Kopírovat…")) { model.transfer(.copy) }.hideable(model, "Soubor/Kopírovat…")
+            Button(L("Přesunout…")) { model.transfer(.move) }.hideable(model, "Soubor/Přesunout…")
+            Button(L("Smazat…")) { model.delete(permanent: false) }.keyboardShortcut(.delete, modifiers: .command).hideable(model, "Soubor/Smazat…")
+            Button(L("Smazat trvale…")) { model.delete(permanent: true) }.hideable(model, "Soubor/Smazat trvale…")
             Divider()
-            Toggle(L("Ověřovat kopie (SHA-256)"), isOn: Binding(get: { model.verifyCopies }, set: { model.verifyCopies = $0 }))
+            Toggle(L("Ověřovat kopie (SHA-256)"), isOn: Binding(get: { model.verifyCopies }, set: { model.verifyCopies = $0 })).hideable(model, "Soubor/Ověřovat kopie (SHA-256)")
         }
         CommandMenu(L("Porovnání")) {
-            Button(L("Porovnat soubory podle obsahu…")) { model.compareFiles() }.keyboardShortcut("c", modifiers: [.control, .shift])
-            Button(L("Porovnat adresáře (označit rozdíly)")) { model.compareDirectories() }.keyboardShortcut("d", modifiers: [.control, .shift])
-            Button(L("Synchronizovat adresáře…")) { model.synchronize() }.keyboardShortcut("s", modifiers: [.control, .shift])
+            Button(L("Porovnat soubory podle obsahu…")) { model.compareFiles() }.keyboardShortcut("c", modifiers: [.control, .shift]).hideable(model, "Porovnání/Porovnat soubory podle obsahu…")
+            Button(L("Porovnat adresáře (označit rozdíly)")) { model.compareDirectories() }.keyboardShortcut("d", modifiers: [.control, .shift]).hideable(model, "Porovnání/Porovnat adresáře (označit rozdíly)")
+            Button(L("Synchronizovat adresáře…")) { model.synchronize() }.keyboardShortcut("s", modifiers: [.control, .shift]).hideable(model, "Porovnání/Synchronizovat adresáře…")
         }
         CommandMenu("Start") {
             ForEach(model.startMenu) { item in
@@ -179,48 +193,56 @@ struct TCCommands: Commands {
                 ForEach(model.userCommands) { u in Button(u.title) { model.runUser(u) } }
             }
         }
+        CommandMenu(model.mainMenu.customTitle.isEmpty ? "Vlastní" : model.mainMenu.customTitle) {
+            let tree = MenuNode.tree(from: model.mainMenu.customItems)
+            if tree.isEmpty {
+                Button(L("(prázdné – položky přidáte v Nastavení › Hlavní menu)")) {}.disabled(true)
+            } else {
+                CustomMenuContent(model: model, nodes: tree)
+            }
+        }
         CommandMenu(L("Nástroje")) {
-            Button(L("Nastavení…")) { model.perform("cm_settings") }.keyboardShortcut(",")
-            Button(L("Terminál")) { model.perform("cm_terminal") }.keyboardShortcut("t", modifiers: [.command, .option])
-            Button(L("Importovat nastavení z Total Commanderu…")) { model.importFromTotalCommander() }
+            Button(L("Nastavení…")) { model.perform("cm_settings") }.keyboardShortcut(",").hideable(model, "Nástroje/Nastavení…")
+            Button(L("Terminál")) { model.perform("cm_terminal") }.keyboardShortcut("t", modifiers: [.command, .option]).hideable(model, "Nástroje/Terminál")
+            Button(L("Importovat nastavení z Total Commanderu…")) { model.importFromTotalCommander() }.hideable(model, "Nástroje/Importovat nastavení z Total Commanderu…")
             Divider()
-            Button(L("Hromadné přejmenování…")) { model.multiRename() }.keyboardShortcut("m", modifiers: .control)
+            Button(L("Hromadné přejmenování…")) { model.multiRename() }.keyboardShortcut("m", modifiers: .control).hideable(model, "Nástroje/Hromadné přejmenování…")
             Divider()
-            Button(L("Vlastnosti…")) { model.properties() }.keyboardShortcut(.return, modifiers: .option)
+            Button(L("Vlastnosti…")) { model.properties() }.keyboardShortcut(.return, modifiers: .option).hideable(model, "Nástroje/Vlastnosti…")
             Divider()
-            Button(L("Kontrolní součty…")) { model.checksums() }
-            Button(L("Ověřit kontrolní součty ze souboru")) { model.verifyChecksums() }
+            Button(L("Kontrolní součty…")) { model.checksums() }.hideable(model, "Nástroje/Kontrolní součty…")
+            Button(L("Ověřit kontrolní součty ze souboru")) { model.verifyChecksums() }.hideable(model, "Nástroje/Ověřit kontrolní součty ze souboru")
             Divider()
-            Button(L("Zabalit do archivu…")) { model.packFiles() }
-            Button(L("Rozbalit archiv…")) { model.unpackArchives() }
-            Button(L("Otestovat archiv")) { model.testArchives() }
+            Button(L("Zabalit do archivu…")) { model.packFiles() }.hideable(model, "Nástroje/Zabalit do archivu…")
+            Button(L("Rozbalit archiv…")) { model.unpackArchives() }.hideable(model, "Nástroje/Rozbalit archiv…")
+            Button(L("Otestovat archiv")) { model.testArchives() }.hideable(model, "Nástroje/Otestovat archiv")
             Divider()
-            Button(L("Najít duplicitní soubory…")) { model.findDuplicates() }
+            Button(L("Najít duplicitní soubory…")) { model.findDuplicates() }.hideable(model, "Nástroje/Najít duplicitní soubory…")
             Divider()
-            Button(L("Kódovat soubory (MIME, UUE, XXE) do druhého panelu…")) { model.encodeFiles() }
-            Button(L("Dekódovat soubory do druhého panelu…")) { model.decodeFiles() }
+            Button(L("Kódovat soubory (MIME, UUE, XXE) do druhého panelu…")) { model.encodeFiles() }.hideable(model, "Nástroje/Kódovat soubory (MIME, UUE, XXE) do druhého panelu…")
+            Button(L("Dekódovat soubory do druhého panelu…")) { model.decodeFiles() }.hideable(model, "Nástroje/Dekódovat soubory do druhého panelu…")
             Divider()
-            Button(L("Rozdělit soubor…")) { model.splitFile() }
-            Button(L("Spojit soubory (.001)…")) { model.combineFiles() }
+            Button(L("Rozdělit soubor…")) { model.splitFile() }.hideable(model, "Nástroje/Rozdělit soubor…")
+            Button(L("Spojit soubory (.001)…")) { model.combineFiles() }.hideable(model, "Nástroje/Spojit soubory (.001)…")
             Divider()
-            Button(L("Symbolický odkaz do druhého panelu…")) { model.makeLink(hard: false) }
-            Button(L("Pevný odkaz do druhého panelu…")) { model.makeLink(hard: true) }
+            Button(L("Symbolický odkaz do druhého panelu…")) { model.makeLink(hard: false) }.hideable(model, "Nástroje/Symbolický odkaz do druhého panelu…")
+            Button(L("Pevný odkaz do druhého panelu…")) { model.makeLink(hard: true) }.hideable(model, "Nástroje/Pevný odkaz do druhého panelu…")
         }
         CommandMenu(L("Označit")) {
-            Button(L("Označit vše")) { model.source.markAll() }.keyboardShortcut("a")
-            Button(L("Zrušit označení")) { model.source.unmarkAll() }.keyboardShortcut("a", modifiers: [.command, .shift])
-            Button(L("Invertovat označení")) { model.source.invertMarks() }
-            Button(L("Označit podle masky…")) { model.markByMask(on: true) }
-            Button(L("Odznačit podle masky…")) { model.markByMask(on: false) }
-            Button(L("Označit stejnou příponu")) { model.source.markSameExtension() }.keyboardShortcut("e", modifiers: [.command, .shift])
-            Button(L("Uložit výběr")) { model.source.saveSelection() }
-            Button(L("Obnovit výběr")) { model.source.restoreSelection() }
+            Button(L("Označit vše")) { model.source.markAll() }.keyboardShortcut("a").hideable(model, "Označit/Označit vše")
+            Button(L("Zrušit označení")) { model.source.unmarkAll() }.keyboardShortcut("a", modifiers: [.command, .shift]).hideable(model, "Označit/Zrušit označení")
+            Button(L("Invertovat označení")) { model.source.invertMarks() }.hideable(model, "Označit/Invertovat označení")
+            Button(L("Označit podle masky…")) { model.markByMask(on: true) }.hideable(model, "Označit/Označit podle masky…")
+            Button(L("Odznačit podle masky…")) { model.markByMask(on: false) }.hideable(model, "Označit/Odznačit podle masky…")
+            Button(L("Označit stejnou příponu")) { model.source.markSameExtension() }.keyboardShortcut("e", modifiers: [.command, .shift]).hideable(model, "Označit/Označit stejnou příponu")
+            Button(L("Uložit výběr")) { model.source.saveSelection() }.hideable(model, "Označit/Uložit výběr")
+            Button(L("Obnovit výběr")) { model.source.restoreSelection() }.hideable(model, "Označit/Obnovit výběr")
             Divider()
-            Button(L("Spočítat velikosti adresářů")) { model.source.computeAllDirSizes() }
+            Button(L("Spočítat velikosti adresářů")) { model.source.computeAllDirSizes() }.hideable(model, "Označit/Spočítat velikosti adresářů")
         }
         CommandMenu(L("Síť")) {
-            Button(L("Připojit k serveru…")) { model.connectToServer() }.keyboardShortcut("k")
-            Button(L("Odpojit panel od serveru")) { model.disconnect() }.keyboardShortcut("k", modifiers: [.command, .shift])
+            Button(L("Připojit k serveru…")) { model.connectToServer() }.keyboardShortcut("k").hideable(model, "Síť/Připojit k serveru…")
+            Button(L("Odpojit panel od serveru")) { model.disconnect() }.keyboardShortcut("k", modifiers: [.command, .shift]).hideable(model, "Síť/Odpojit panel od serveru")
             if !model.connections.items.isEmpty {
                 Divider()
                 ForEach(model.connections.items) { c in Button("\(c.name)  (\(c.kind.rawValue))") { model.connect(saved: c) } }
@@ -231,9 +253,9 @@ struct TCCommands: Commands {
             }
         }
         CommandMenu(L("Karty")) {
-            Button(L("Zamknout / odemknout kartu")) { model.perform("cm_locktab") }
+            Button(L("Zamknout / odemknout kartu")) { model.perform("cm_locktab") }.hideable(model, "Karty/Zamknout / odemknout kartu")
             Divider()
-            Button(L("Uložit sadu karet…")) { model.saveFavoriteTabs() }
+            Button(L("Uložit sadu karet…")) { model.saveFavoriteTabs() }.hideable(model, "Karty/Uložit sadu karet…")
             if !model.favoriteTabs.isEmpty {
                 Divider()
                 ForEach(model.favoriteTabs) { set in Button(set.name) { model.loadFavoriteTabs(set) } }
@@ -242,7 +264,7 @@ struct TCCommands: Commands {
             }
         }
         CommandMenu(L("Oblíbené")) {
-            Button(L("Přidat aktuální adresář")) { model.hotlist.add(model.source.persistentPath) }.keyboardShortcut("d")
+            Button(L("Přidat aktuální adresář")) { model.hotlist.add(model.source.persistentPath) }.keyboardShortcut("d").hideable(model, "Oblíbené/Přidat aktuální adresář")
             Divider()
             ForEach(model.hotlist.entries) { e in
                 Button(e.name) { model.goTo(URL(fileURLWithPath: e.path)) }
@@ -260,32 +282,32 @@ struct TCCommands: Commands {
             }
         }
         CommandMenu(L("Zobrazení")) {
-            Toggle(L("Skryté soubory"), isOn: Binding(get: { model.showHidden }, set: { model.showHidden = $0 }))
+            Toggle(L("Skryté soubory"), isOn: Binding(get: { model.showHidden }, set: { model.showHidden = $0 })).hideable(model, "Zobrazení/Skryté soubory")
                 .keyboardShortcut(".", modifiers: [.command, .shift])
-            Button(L("Plný režim")) { model.source.viewMode = .full }.keyboardShortcut("1", modifiers: .control)
-            Button(L("Stručný režim")) { model.source.viewMode = .brief }.keyboardShortcut("2", modifiers: .control)
-            Button(L("Náhledy")) { model.source.viewMode = .thumbnails }.keyboardShortcut("3", modifiers: .control)
-            Button(L("Strom adresářů")) { model.source.viewMode = .tree }.keyboardShortcut("4", modifiers: .control)
+            Button(L("Plný režim")) { model.source.viewMode = .full }.keyboardShortcut("1", modifiers: .control).hideable(model, "Zobrazení/Plný režim")
+            Button(L("Stručný režim")) { model.source.viewMode = .brief }.keyboardShortcut("2", modifiers: .control).hideable(model, "Zobrazení/Stručný režim")
+            Button(L("Náhledy")) { model.source.viewMode = .thumbnails }.keyboardShortcut("3", modifiers: .control).hideable(model, "Zobrazení/Náhledy")
+            Button(L("Strom adresářů")) { model.source.viewMode = .tree }.keyboardShortcut("4", modifiers: .control).hideable(model, "Zobrazení/Strom adresářů")
             Menu(L("Sloupce (plný režim)")) {
                 ForEach(model.settings.columnSets) { cs in
                     Button(cs.name) { model.source.viewMode = .full; model.source.columns = cs.columns }
                 }
             }
-            Button(L("Panely nad sebou / vedle sebe")) { model.perform("cm_layout") }
-            Button("Quick View (druhý panel)") { model.quickViewOn.toggle() }.keyboardShortcut("q", modifiers: .control)
+            Button(L("Panely nad sebou / vedle sebe")) { model.perform("cm_layout") }.hideable(model, "Zobrazení/Panely nad sebou / vedle sebe")
+            Button("Quick View (druhý panel)") { model.quickViewOn.toggle() }.keyboardShortcut("q", modifiers: .control).hideable(model, "Zobrazení/Quick View (druhý panel)")
             Divider()
-            Button(L("Obnovit")) { model.reloadAll() }.keyboardShortcut("r")
-            Button("Branch view (všechny podadresáře)") { model.toggleBranchView() }.keyboardShortcut("b")
-            Button(L("Rychlý filtr")) { model.toggleFilter() }.keyboardShortcut("f")
+            Button(L("Obnovit")) { model.reloadAll() }.keyboardShortcut("r").hideable(model, "Zobrazení/Obnovit")
+            Button("Branch view (všechny podadresáře)") { model.toggleBranchView() }.keyboardShortcut("b").hideable(model, "Zobrazení/Branch view (všechny podadresáře)")
+            Button(L("Rychlý filtr")) { model.toggleFilter() }.keyboardShortcut("f").hideable(model, "Zobrazení/Rychlý filtr")
             Divider()
-            Button(L("Nadřazený adresář")) { model.source.goUp() }.keyboardShortcut(.upArrow, modifiers: .command)
-            Button(L("Zpět")) { model.source.goBack() }.keyboardShortcut("[")
-            Button(L("Vpřed")) { model.source.goForward() }.keyboardShortcut("]")
+            Button(L("Nadřazený adresář")) { model.source.goUp() }.keyboardShortcut(.upArrow, modifiers: .command).hideable(model, "Zobrazení/Nadřazený adresář")
+            Button(L("Zpět")) { model.source.goBack() }.keyboardShortcut("[").hideable(model, "Zobrazení/Zpět")
+            Button(L("Vpřed")) { model.source.goForward() }.keyboardShortcut("]").hideable(model, "Zobrazení/Vpřed")
             Divider()
-            Button(L("Cíl = zdroj")) { model.targetEqualsSource() }.keyboardShortcut("=")
-            Button(L("Prohodit panely")) { model.swapPanels() }.keyboardShortcut("u")
-            Button(L("Další tab")) { model.group(model.activeSide).nextTab() }.keyboardShortcut("]", modifiers: [.command, .shift])
-            Button(L("Předchozí tab")) { model.group(model.activeSide).previousTab() }.keyboardShortcut("[", modifiers: [.command, .shift])
+            Button(L("Cíl = zdroj")) { model.targetEqualsSource() }.keyboardShortcut("=").hideable(model, "Zobrazení/Cíl = zdroj")
+            Button(L("Prohodit panely")) { model.swapPanels() }.keyboardShortcut("u").hideable(model, "Zobrazení/Prohodit panely")
+            Button(L("Další tab")) { model.group(model.activeSide).nextTab() }.keyboardShortcut("]", modifiers: [.command, .shift]).hideable(model, "Zobrazení/Další tab")
+            Button(L("Předchozí tab")) { model.group(model.activeSide).previousTab() }.keyboardShortcut("[", modifiers: [.command, .shift]).hideable(model, "Zobrazení/Předchozí tab")
         }
     }
 }

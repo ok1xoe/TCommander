@@ -11,6 +11,9 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         let w = SettingsWindow(model)
         current = w
         w.window.makeKeyAndOrderFront(nil)
+        // ladění: --settings-tab <název záložky>
+        if let i = CommandLine.arguments.firstIndex(of: "--settings-tab"), i + 1 < CommandLine.arguments.count,
+           let item = w.tabs.tabViewItems.first(where: { $0.label == CommandLine.arguments[i + 1] }) { w.tabs.selectTabViewItem(item) }
     }
 
     private let model: AppModel
@@ -30,7 +33,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     private init(_ model: AppModel) {
         self.model = model
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 600),
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 620),
                           styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         super.init()
         window.title = "Nastavení macTC"
@@ -49,6 +52,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         add(L("Zkratky"), shortcutsTab())
         add(L("Tlačítková lišta"), buttonsTab(start: false))
         add(L("Start menu"), buttonsTab(start: true))
+        add(L("Hlavní menu"), mainMenuTab())
         add(L("Uživatelské příkazy"), commandsTab())
         add(L("Přidružení souborů"), associationsTab())
         add(L("Sloupce"), columnsTab())
@@ -180,6 +184,64 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         return stackWithFooter(table.view, [hint])
     }
 
+    // MARK: Hlavní menu
+
+    private func mainMenuTab() -> NSView {
+        let titleField = NSTextField(string: model.mainMenu.customTitle)
+        titleField.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        let titleHandler = FieldHandler { [weak self] text in self?.model.mainMenu.customTitle = text.trimmingCharacters(in: .whitespaces) }
+        titleField.target = titleHandler; titleField.action = #selector(FieldHandler.fire(_:))
+        let titleLabel = NSTextField(labelWithString: "Název vlastního menu:")
+        let titleRow = NSStackView(views: [titleLabel, titleField]); titleRow.spacing = 8
+
+        let custom = StringTable(columns: [.init(title: "Název (Podmenu/Položka; „-“ = oddělovač)", width: 280), .init(title: "Příkaz (cm_*, em_* nebo program)", width: 220),
+                                           .init(title: "Parametry", width: 160), .init(title: "Zkratka", width: 120)],
+                                 rows: model.mainMenu.customItems.map { [$0.title, $0.command, $0.parameters, $0.shortcut] },
+                                 newRow: { ["Nová položka", "cm_", "", ""] })
+        custom.validate = { _, column, value in column != 3 || value.trimmingCharacters(in: .whitespaces).isEmpty || Shortcut(value) != nil }
+        custom.onChange = { [weak self] r in
+            guard let self else { return }
+            self.model.mainMenu.customItems = r.enumerated().map { i, row in
+                let id = i < self.model.mainMenu.customItems.count ? self.model.mainMenu.customItems[i].id : UUID()
+                return CustomMenuItem(id: id, title: row[0], command: row[1], parameters: row[2], shortcut: row[3])
+            }
+        }
+
+        let builtin = StringTable(columns: [.init(title: "Menu", width: 120, editable: false), .init(title: "Vestavěná položka", width: 420, editable: false), .init(title: "Zobrazit (ano/ne)", width: 120)],
+                                  rows: MainMenuCatalog.items.map { [MainMenuCatalog.menu(of: $0), MainMenuCatalog.title(of: $0), self.model.mainMenu.isVisible($0) ? "ano" : "ne"] },
+                                  canAddRemove: false)
+        builtin.validate = { _, column, value in column != 2 || ["ano", "ne"].contains(value.lowercased()) }
+        builtin.onChange = { [weak self] r in
+            var hidden = Set<String>()
+            for (i, row) in r.enumerated() where row[2].lowercased() == "ne" { hidden.insert(MainMenuCatalog.items[i]) }
+            self?.model.mainMenu.hidden = hidden
+        }
+        keepAlive.append(contentsOf: [custom, builtin, titleHandler] as [AnyObject])
+
+        let hint1 = NSTextField(wrappingLabelWithString: "Vlastní menu se zobrazí v hlavním menu za menu Porovnání. Příkazy a parametry jsou stejné jako ve Start menu; zkratka např. ctrl+shift+k nebo f9.")
+        let hint2 = NSTextField(wrappingLabelWithString: "Skrytá položka zmizí z menu včetně své zkratky. Pořadí vestavěných položek je pevné; vlastní uspořádání vytvoříte ve vlastním menu.")
+        for h in [hint1, hint2] { h.textColor = .secondaryLabelColor; h.font = .systemFont(ofSize: 11) }
+        let customLabel = NSTextField(labelWithString: "Vlastní položky")
+        let builtinLabel = NSTextField(labelWithString: "Vestavěné položky")
+        for l in [customLabel, builtinLabel] { l.font = .boldSystemFont(ofSize: 12) }
+
+        let v = NSView()
+        let views: [NSView] = [titleRow, hint1, customLabel, custom.view, builtinLabel, builtin.view, hint2]
+        for sub in views { sub.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(sub) }
+        var c: [NSLayoutConstraint] = []
+        for (i, sub) in views.enumerated() {
+            c += [sub.leadingAnchor.constraint(equalTo: v.leadingAnchor), sub.trailingAnchor.constraint(lessThanOrEqualTo: v.trailingAnchor)]
+            if i == 0 { c.append(sub.topAnchor.constraint(equalTo: v.topAnchor)) }
+            else { c.append(sub.topAnchor.constraint(equalTo: views[i - 1].bottomAnchor, constant: i == 3 || i == 5 ? 4 : 8)) }
+        }
+        for t in [custom.view, builtin.view] { c.append(t.trailingAnchor.constraint(equalTo: v.trailingAnchor)) }
+        c += [hint1.trailingAnchor.constraint(equalTo: v.trailingAnchor), hint2.trailingAnchor.constraint(equalTo: v.trailingAnchor),
+              hint2.bottomAnchor.constraint(equalTo: v.bottomAnchor),
+              custom.view.heightAnchor.constraint(equalTo: builtin.view.heightAnchor, multiplier: 0.8)]
+        NSLayoutConstraint.activate(c)
+        return v
+    }
+
     // MARK: Uživatelské příkazy
 
     private func commandsTab() -> NSView {
@@ -283,6 +345,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { Self.current = nil }
+}
+
+private final class FieldHandler: NSObject {
+    let handler: (String) -> Void
+    init(_ handler: @escaping (String) -> Void) { self.handler = handler }
+    @objc func fire(_ sender: NSTextField) { handler(sender.stringValue) }
 }
 
 private final class ResetHandler: NSObject {
