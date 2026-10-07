@@ -5,7 +5,7 @@
 @phase | 0 | Průzkum TC a návrh | hotovo | 582 208 (cache čtení 533 596, output 9 064)
 @phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 3 237 493 (cache čtení 3 067 722, output 76 954)
 @phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 8 718 567 (cache čtení 8 516 701, output 90 868), stav k PR 2f
-@phase | 3 | Multi-Rename, porovnání, synchronizace | plán | -
+@phase | 3 | Multi-Rename, porovnání, synchronizace | probíhá | -
 @phase | 4 | Archivy jako adresáře | plán | -
 @phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | plán | -
 @phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | plán | -
@@ -67,9 +67,9 @@ Hledání | Hledání uvnitř archivů | T | 4 |
 Hledání | Výsledky jako panel, uložené šablony hledání | P | 2 | výsledky v okně s přechodem na soubor a zobrazením; jako virtuální panel a šablony ne
 Hledání | Hledání duplicitních souborů | T | 3 |
 
-Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | T | 3 |
-Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | T | 3 |
-Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | T | 3 |
+Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | D | 3 | ⌃M; `[N1-3]`, `[N2,5]`, `[C10+5:3]`, `[P]`, datum `[Y][M][D][h][m][s]`
+Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | D | 3 | zvlášť maska názvu a přípony
+Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | D | 3 | živý náhled s kontrolou konfliktů, bezpečné záměny názvů; okno ručně neověřeno
 
 Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | T | 3 |
 Porovnání a synchronizace | Porovnání adresářů | T | 3 |

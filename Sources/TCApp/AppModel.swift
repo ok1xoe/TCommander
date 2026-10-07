@@ -93,6 +93,7 @@ final class AppModel {
         case 78: if m == [] { markByMask(on: false); return true }
         case 67: if m == [] { source.invertMarks(); return true }
         case 11: if m == .control { toggleBranchView(); return true }   // Ctrl+B
+        case 46: if m == .control { multiRename(); return true }        // Ctrl+M
         case 1: if m == .control { toggleFilter(); return true }        // Ctrl+S
         case 12: if m == .control { quickViewOn.toggle(); return true } // Ctrl+Q
         case 53: // Esc
@@ -292,6 +293,17 @@ final class AppModel {
     }
 
     // MARK: Nástroje
+
+    func multiRename() {
+        let files = source.targets.map(\.url)
+        guard !files.isEmpty else { return }
+        MultiRenameWindow.show(files: files) { [weak self] newURL in
+            guard let self else { return }
+            self.source.unmarkAll()
+            self.reloadAll()
+            if let newURL { self.source.reload(select: newURL) }
+        }
+    }
 
     func properties() {
         let t = source.targets

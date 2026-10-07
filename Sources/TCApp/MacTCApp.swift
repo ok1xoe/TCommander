@@ -71,6 +71,8 @@ struct TCCommands: Commands {
             Toggle("Ověřovat kopie (SHA-256)", isOn: Binding(get: { model.verifyCopies }, set: { model.verifyCopies = $0 }))
         }
         CommandMenu("Nástroje") {
+            Button("Hromadné přejmenování…") { model.multiRename() }.keyboardShortcut("m", modifiers: .control)
+            Divider()
             Button("Vlastnosti…") { model.properties() }.keyboardShortcut(.return, modifiers: .option)
             Divider()
             Button("Kontrolní součty…") { model.checksums() }
