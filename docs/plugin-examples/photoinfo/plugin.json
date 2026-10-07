@@ -1,0 +1,6 @@
+{"name": "photoinfo", "version": "1.0", "description": "Údaje o fotografiích (fotoaparát, datum pořízení, rozlišení DPI) ze systémového nástroje sips",
+ "executable": "plugin.py", "interpreter": "/usr/bin/python3",
+ "capabilities": {"columns": [
+   {"id": "camera", "title": "Fotoaparát", "width": 180, "extensions": ["jpg", "jpeg", "heic", "heif", "tif", "tiff", "png", "dng", "cr2", "nef", "arw"]},
+   {"id": "taken", "title": "Pořízeno", "width": 130, "extensions": ["jpg", "jpeg", "heic", "heif", "tif", "tiff", "png", "dng", "cr2", "nef", "arw"]},
+   {"id": "dpi", "title": "DPI", "width": 60, "align": "right", "extensions": ["jpg", "jpeg", "heic", "heif", "tif", "tiff", "png"]}]}}

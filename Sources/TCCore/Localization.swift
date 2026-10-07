@@ -67,6 +67,11 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Vybrat…": "Choose…",
+        "Vybrat...": "Choose...",
+        "Nainstalovat ukázkové pluginy": "Install Sample Plugins",
+        "Ukázkové pluginy": "Sample Plugins",
+        "Složka s ukázkami nebyla nalezena.": "The folder with samples was not found.",
         "Soubory se zvýrazněním syntaxe (F4) vždy ve vestavěném editoru": "Files with syntax highlighting (F4) always in the built-in editor",
         "Markdown": "Markdown",
         "Otevřít adresář jako záložku?": "Open folder as a tab?",
@@ -435,6 +440,10 @@ public enum Localization {
 
     /// Frázové úpravy pro složené texty (čísla, názvy souborů); aplikují se po sobě na celý řetězec.
     public static let phrases: [(pattern: String, replacement: String)] = [
+        ("Plugin je složka s plugin.json a spustitelným souborem; viz docs/plugins.md\\. Složka: (.*)", "A plugin is a folder with plugin.json and an executable; see docs/plugins.md. Folder: $1"),
+        ("Nainstalováno: (.*)", "Installed: $1"),
+        ("Už existují \\(ponecháno\\): (.*)", "Already present (kept): $1"),
+        ("Selhalo: (.*)", "Failed: $1"),
         ("Adresář „(.*)“ se otevře v nové záložce\\.", "Folder “$1” will be opened in a new tab."),
         ("(\\d[\\d  ]*) souborů, (\\d[\\d ]*) adresářů", "$1 files, $2 folders"),
         ("(\\d+) souborů", "$1 files"),

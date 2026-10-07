@@ -72,6 +72,14 @@ enum Dialogs {
         }
     }
 
+    static func info(_ title: String, _ message: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.runModal()
+    }
+
     static func error(_ title: String, _ message: String) {
         let alert = NSAlert()
         alert.messageText = title

@@ -92,7 +92,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
         func row(_ label: String, _ v: [NSView]) -> NSStackView {
             let l = NSTextField(labelWithString: label); l.alignment = .right
-            l.widthAnchor.constraint(equalToConstant: 170).isActive = true
+            l.widthAnchor.constraint(equalToConstant: 220).isActive = true
             let st = NSStackView(views: [l] + v); st.spacing = 8; return st
         }
         editor.widthAnchor.constraint(greaterThanOrEqualToConstant: 380).isActive = true
@@ -320,14 +320,28 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
                                 rows: rows(), canAddRemove: false)
         let reload = NSButton(title: "Znovu načíst", target: nil, action: nil)
         let openFolder = NSButton(title: "Otevřít složku pluginů", target: nil, action: nil)
+        let installExamples = NSButton(title: "Nainstalovat ukázkové pluginy", target: nil, action: nil)
         let h1 = ResetHandler { PluginHost.shared.reload(); table.setRows(rows()) }
         let h2 = ResetHandler { NSWorkspace.shared.open(PluginHost.shared.directory) }
+        let h3 = ResetHandler {
+            guard let source = PluginExamples.sourceDirectory() else {
+                Dialogs.error("Ukázkové pluginy", "Složka s ukázkami nebyla nalezena."); return
+            }
+            let r = PluginExamples.install(from: source, to: PluginHost.shared.directory)
+            PluginHost.shared.reload(); table.setRows(rows())
+            var lines: [String] = []
+            if !r.installed.isEmpty { lines.append("Nainstalováno: " + r.installed.joined(separator: ", ")) }
+            if !r.alreadyPresent.isEmpty { lines.append("Už existují (ponecháno): " + r.alreadyPresent.joined(separator: ", ")) }
+            if !r.failed.isEmpty { lines.append("Selhalo: " + r.failed.joined(separator: ", ")) }
+            Dialogs.info("Ukázkové pluginy", lines.joined(separator: "\n"))
+        }
+        installExamples.target = h3; installExamples.action = #selector(ResetHandler.fire)
         reload.target = h1; reload.action = #selector(ResetHandler.fire)
         openFolder.target = h2; openFolder.action = #selector(ResetHandler.fire)
-        keepAlive += [table, h1, h2]
+        keepAlive += [table, h1, h2, h3]
         let hint = NSTextField(wrappingLabelWithString: "Plugin je složka s plugin.json a spustitelným souborem; viz docs/plugins.md. Složka: \(PluginHost.shared.directory.path)")
         hint.textColor = .secondaryLabelColor; hint.font = .systemFont(ofSize: 11)
-        return stackWithFooter(table.view, [hint, NSView(), openFolder, reload])
+        return stackWithFooter(table.view, [hint, NSView(), installExamples, openFolder, reload])
     }
 
     // MARK: Barvy

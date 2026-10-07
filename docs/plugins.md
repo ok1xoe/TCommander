@@ -64,8 +64,9 @@ Cesty jsou absolutní v rámci pluginu (`/` je kořen). Mazání adresářů s o
 
 ## Ukázky
 
-Funkční pluginy jsou v [`docs/plugin-examples/`](plugin-examples) a používají se i v automatických testech:
-`wordcount` (sloupce), `csvview` (prohlížeč), `demozip` (archiv), `memfs` (souborový systém nad adresářem na disku).
+Deset funkčních pluginů je v [`docs/plugin-examples/`](plugin-examples) (popis každého v [README](plugin-examples/README.md)) a všechny se testují automaticky:
+`adifview`, `filehash`, `photoinfo`, `structview`, `macpackages`, `httpindex` a nejjednodušší `wordcount`, `csvview`, `demozip`, `memfs`.
+Instalace jedním tlačítkem: Nastavení › Pluginy › *Nainstalovat ukázkové pluginy*.
 
 ## Vestavěné sloupce
 

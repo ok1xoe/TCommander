@@ -1,0 +1,3 @@
+{"name": "macpackages", "version": "1.0", "description": "Obsah instalačních balíčků .pkg a obrazů disků .dmg jako adresář (jen pro čtení)",
+ "executable": "plugin.py", "interpreter": "/usr/bin/python3",
+ "capabilities": {"archive": {"extensions": ["pkg", "dmg"]}}}

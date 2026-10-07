@@ -7,6 +7,9 @@ BIN="$(swift build -c release --show-bin-path 2>/dev/null)/TCommander"
 APP="dist/TCommander.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/TCommander"
+mkdir -p "$APP/Contents/Resources/PluginExamples"
+cp -R docs/plugin-examples/. "$APP/Contents/Resources/PluginExamples/"
+find "$APP/Contents/Resources/PluginExamples" -name __pycache__ -type d -prune -exec rm -r {} +
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

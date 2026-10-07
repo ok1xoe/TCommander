@@ -1,0 +1,3 @@
+{"name": "structview", "version": "1.0", "description": "JSON a plist (i binární) přehledně formátované a odsazené",
+ "executable": "plugin.py", "interpreter": "/usr/bin/python3",
+ "capabilities": {"viewer": {"extensions": ["json", "plist", "mobileconfig", "entitlements"]}}}

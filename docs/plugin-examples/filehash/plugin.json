@@ -1,0 +1,6 @@
+{"name": "filehash", "version": "1.0", "description": "Kontrolní součty MD5, SHA-1 a SHA-256 jako sloupce panelu",
+ "executable": "plugin.py", "interpreter": "/usr/bin/python3",
+ "capabilities": {"columns": [
+   {"id": "md5", "title": "MD5", "width": 260},
+   {"id": "sha1", "title": "SHA-1", "width": 300},
+   {"id": "sha256", "title": "SHA-256", "width": 520}]}}

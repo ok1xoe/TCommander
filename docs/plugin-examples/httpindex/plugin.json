@@ -1,0 +1,3 @@
+{"name": "httpindex", "version": "1.0", "description": "Webové výpisy adresářů (Apache, nginx, python -m http.server) jako souborový systém jen pro čtení",
+ "executable": "plugin.py", "interpreter": "/usr/bin/python3",
+ "capabilities": {"filesystem": {"scheme": "http", "title": "HTTP index"}}}
