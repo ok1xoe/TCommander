@@ -22,14 +22,14 @@ public enum ArchiveSupport {
     }
 
     /// Normalizace cesty záznamu: bez "./", úvodního a koncového "/".
-    static func normalize(_ p: String) -> String {
+    public static func normalize(_ p: String) -> String {
         var s = p
         while s.hasPrefix("./") { s.removeFirst(2) }
         return s.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 
     /// Ochrana proti "zip slip": žádné ".." ani absolutní cesty.
-    static func isSafe(_ p: String) -> Bool {
+    public static func isSafe(_ p: String) -> Bool {
         !p.isEmpty && !p.hasPrefix("/") && !p.split(separator: "/").contains("..")
     }
 }

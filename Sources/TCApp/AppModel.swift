@@ -104,7 +104,7 @@ final class AppModel {
         case 120: rename(); return true                                  // F2
         case 99: view(); return true                                     // F3
         case 118: if m == .shift { newFile() } else { edit() }; return true // F4
-        case 96: transfer(.copy); return true                            // F5
+        case 96: if m == .option { packFiles() } else { transfer(.copy) }; return true   // F5, Alt+F5
         case 97: if m == .shift { rename() } else { transfer(.move) }; return true // F6
         case 98: if m == .option { search() } else { makeDirectory() }; return true // F7
         case 100: delete(permanent: m == .shift); return true            // F8
@@ -168,18 +168,18 @@ final class AppModel {
     // MARK: Souborové operace
 
     private func requireLocal() -> Bool {
-        if source.insideArchive { Dialogs.error("Archiv", "Tato operace zatím v archivu není k dispozici (zápis do archivů přijde ve fázi 4b)."); return false }
+        if source.insideArchive { Dialogs.error("Archiv", "Tato operace uvnitř archivu není k dispozici."); return false }
         return true
     }
 
     private func requireLocalTarget() -> Bool {
-        if target.insideArchive { Dialogs.error("Archiv", "Cílový panel je uvnitř archivu; zápis do archivů přijde ve fázi 4b."); return false }
+        if target.insideArchive { Dialogs.error("Archiv", "Cílový panel je uvnitř archivu; tato operace do archivu zapisovat neumí."); return false }
         return true
     }
 
 
     func transfer(_ kind: TransferKind) {
-        if target.insideArchive { _ = requireLocalTarget(); return }
+        if target.insideArchive { copyIntoArchive(kind); return }
         if source.insideArchive { extractFromArchive(kind); return }
         let src = source, sources = src.targets.map(\.url)
         guard !sources.isEmpty else { return }
@@ -225,6 +225,144 @@ final class AppModel {
         }
         do { try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true); return url }
         catch { Dialogs.error("Cíl nelze vytvořit", error.localizedDescription); return nil }
+    }
+
+    // MARK: Zápis do archivů
+
+    /// Archiv, který se bude upravovat (musí být zapisovatelného formátu).
+    private func writableArchive(_ tab: PanelTab) -> ArchiveFileSystem? {
+        guard let fs = tab.archiveFS else { return nil }
+        guard fs.isWritable else {
+            Dialogs.error("Archiv je jen pro čtení", "Formát „\(tab.archiveFile?.pathExtension ?? "")“ nelze upravovat. Upravovat lze zip, tar.gz/bz2/xz a 7z.")
+            return nil
+        }
+        return fs
+    }
+
+    /// Spustí úpravu archivu jako úlohu ve frontě a po dokončení obnoví všechny panely zobrazující tento archiv.
+    private func modifyArchive(_ fs: ArchiveFileSystem, title: String, changes: ArchiveFileSystem.Changes,
+                               after: @escaping @Sendable () -> Void = {}, success: String) {
+        let url = fs.archiveURL
+        jobs.enqueue(title: title, work: { control, progress in
+            let r = fs.apply(changes, control: control, progress: progress)
+            if r.failures.isEmpty && !r.cancelled { after() }
+            return r
+        }, onFinish: { [weak self] report in
+            guard let self else { return }
+            for t in self.left.tabs + self.right.tabs where t.archiveFile == url { t.refreshArchive() }
+            self.finish(report, success: success)
+        })
+    }
+
+    private func innerName(_ tab: PanelTab, _ name: String) -> String {
+        ArchiveSupport.normalize(tab.path.path == "/" ? name : tab.path.path + "/" + name)
+    }
+
+    private func deleteFromArchive() {
+        guard let fs = writableArchive(source) else { return }
+        let targets = source.targets
+        guard !targets.isEmpty else { return }
+        let what = targets.count == 1 ? "„\(targets[0].name)“" : "\(targets.count) položek"
+        guard Dialogs.confirm(title: "Smazat z archivu?", message: "\(what) bude trvale odstraněno z archivu (nelze vrátit).", ok: "Smazat", destructive: true) else { return }
+        var c = ArchiveFileSystem.Changes()
+        c.remove = targets.map { ArchiveSupport.normalize($0.url.path) }
+        modifyArchive(fs, title: "Smazat z archivu: \(what)", changes: c, success: "Smazáno z archivu")
+    }
+
+    private func renameInArchive() {
+        guard let fs = writableArchive(source), let e = source.targets.first, source.targets.count == 1 else { return }
+        guard let name = Dialogs.prompt(title: "Přejmenovat v archivu", message: "Nový název:", initial: e.name, ok: "Přejmenovat") else { return }
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty, !n.contains("/"), n != e.name else { return }
+        guard !fs.exists(URL(fileURLWithPath: "/" + innerName(source, n))) else { Dialogs.error("Přejmenování", "„\(n)“ v archivu už existuje."); return }
+        var c = ArchiveFileSystem.Changes()
+        c.rename = [ArchiveSupport.normalize(e.url.path): innerName(source, n)]
+        modifyArchive(fs, title: "Přejmenovat v archivu: \(e.name)", changes: c, success: "Přejmenováno")
+    }
+
+    private func makeDirectoryInArchive() {
+        guard let fs = writableArchive(source) else { return }
+        guard let name = Dialogs.prompt(title: "Nová složka v archivu", message: "Název (lze i vnořený a/b/c):", initial: "", ok: "Vytvořit") else { return }
+        let n = name.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        guard !n.isEmpty else { return }
+        var c = ArchiveFileSystem.Changes()
+        c.makeDirectories = [innerName(source, n)]
+        modifyArchive(fs, title: "Nová složka v archivu: \(n)", changes: c, success: "Vytvořeno")
+    }
+
+    /// F5/F6 do panelu uvnitř archivu: ze souborů na disku, nebo z jiného archivu (přes dočasné rozbalení).
+    private func copyIntoArchive(_ kind: TransferKind) {
+        guard let dst = writableArchive(target) else { return }
+        let entries = source.targets
+        guard !entries.isEmpty else { return }
+        let what = entries.count == 1 ? "„\(entries[0].name)“" : "\(entries.count) položek"
+        let innerDir = ArchiveSupport.normalize(target.path.path)
+        let existing = entries.filter { dst.exists(URL(fileURLWithPath: "/" + innerName(target, $0.name))) }
+        if !existing.isEmpty {
+            guard Dialogs.confirm(title: "Přepsat v archivu?", message: "\(existing.count) položek už v archivu existuje a bude nahrazeno (např. „\(existing[0].name)“).",
+                                  ok: "Přepsat", destructive: true) else { return }
+        }
+        guard Dialogs.confirm(title: (kind == .copy ? "Zkopírovat " : "Přesunout ") + what + " do archivu?",
+                              message: "\(target.archiveFile?.lastPathComponent ?? "") ▸ \(target.path.path)", ok: kind == .copy ? "Kopírovat" : "Přesunout") else { return }
+        let srcArchive = source.archiveFS
+        let paths = entries.map(\.url)
+        let move = kind == .move
+        if srcArchive != nil && move { Dialogs.error("Archiv", "Z archivu lze jen kopírovat."); return }
+        let url = dst.archiveURL
+        jobs.enqueue(title: "\(move ? "Přesunout" : "Kopírovat") \(what) do archivu", work: { control, progress in
+            var locals = paths
+            var tmp: URL?
+            if let srcArchive {
+                let t = ArchiveFileSystem.temporaryRoot.appendingPathComponent(UUID().uuidString)
+                try? FileManager.default.createDirectory(at: t, withIntermediateDirectories: true)
+                tmp = t
+                let r = srcArchive.extract(paths.map(\.path), to: t, control: control)
+                if !r.failures.isEmpty || r.cancelled { try? FileManager.default.removeItem(at: t); return r }
+                locals = paths.map { t.appendingPathComponent($0.lastPathComponent) }
+            }
+            defer { if let tmp { try? FileManager.default.removeItem(at: tmp) } }
+            var c = ArchiveFileSystem.Changes()
+            c.add = locals.map { .init(local: $0, innerDirectory: innerDir) }
+            let report = dst.apply(c, control: control, progress: progress)
+            if move && report.failures.isEmpty && !report.cancelled { _ = FileOperations().delete(paths, toTrash: false) }
+            return report
+        }, onFinish: { [weak self] report in
+            guard let self else { return }
+            for t in self.left.tabs + self.right.tabs where t.archiveFile == url { t.refreshArchive() }
+            self.finish(report, success: move ? "Přesunuto do archivu" : "Zkopírováno do archivu")
+        })
+    }
+
+    /// Alt+F5: zabalí vybrané soubory do nového archivu.
+    func packFiles() {
+        guard requireLocal(), requireLocalTarget() else { return }
+        let items = source.targets
+        guard !items.isEmpty else { return }
+        let formats = ArchiveFormat.allCases
+        guard let fi = Dialogs.choose(title: "Zabalit do archivu", message: "Formát:", options: formats.map(\.displayName), ok: "Pokračovat") else { return }
+        let format = formats[fi]
+        let base = items.count == 1 ? items[0].baseName : source.path.lastPathComponent
+        let initial = target.path.appendingPathComponent(base + "." + format.fileExtension).path
+        guard let text = Dialogs.prompt(title: "Zabalit \(items.count == 1 ? "„\(items[0].name)“" : "\(items.count) položek")",
+                                        message: "Soubor archivu:", initial: initial, ok: "Zabalit") else { return }
+        var path = (text.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath
+        if !path.hasPrefix("/") { path = target.path.appendingPathComponent(path).path }
+        let dest = URL(fileURLWithPath: path).standardizedFileURL
+        if ArchiveFormat.detect(fileName: dest.lastPathComponent) != format {
+            Dialogs.error("Zabalit", "Název souboru musí končit „.\(format.fileExtension)“."); return
+        }
+        guard FileManager.default.fileExists(atPath: dest.deletingLastPathComponent().path) else {
+            Dialogs.error("Zabalit", "Adresář „\(dest.deletingLastPathComponent().path)“ neexistuje."); return
+        }
+        if FileManager.default.fileExists(atPath: dest.path),
+           !Dialogs.confirm(title: "Přepsat existující archiv?", message: dest.path, ok: "Přepsat", destructive: true) { return }
+        let urls = items.map(\.url)
+        if urls.contains(where: { dest.path == $0.path || dest.path.hasPrefix($0.path + "/") }) {
+            Dialogs.error("Zabalit", "Archiv nelze uložit do zabalovaného adresáře."); return
+        }
+        jobs.enqueue(title: "Zabalit do \(dest.lastPathComponent)", work: { control, progress in
+            ArchiveWriter.create(dest, format: format, sources: urls, control: control, progress: progress)
+        }, onFinish: { [weak self] r in self?.finish(r, success: "Zabaleno") })
     }
 
     // MARK: Archivy
@@ -341,7 +479,7 @@ final class AppModel {
     }
 
     func delete(permanent: Bool) {
-        guard requireLocal() else { return }
+        if source.insideArchive { deleteFromArchive(); return }
         let targets = source.targets.map(\.url)
         guard !targets.isEmpty else { return }
         let toTrash = deleteToTrash && !permanent
@@ -371,7 +509,7 @@ final class AppModel {
     }
 
     func rename() {
-        guard requireLocal() else { return }
+        if source.insideArchive { renameInArchive(); return }
         guard let e = source.targets.first, source.targets.count == 1 else { return }
         guard let name = Dialogs.prompt(title: "Přejmenovat", message: "Nový název:", initial: e.name, ok: "Přejmenovat") else { return }
         do { let new = try ops.rename(e.url, to: name); source.unmarkAll(); reloadAll(); source.reload(select: new) }
@@ -379,7 +517,7 @@ final class AppModel {
     }
 
     func makeDirectory() {
-        guard requireLocal() else { return }
+        if source.insideArchive { makeDirectoryInArchive(); return }
         guard let name = Dialogs.prompt(title: "Nový adresář", message: "Název (lze i vnořený a/b/c):", initial: "", ok: "Vytvořit") else { return }
         do { let new = try ops.makeDirectory(name, in: source.path); reloadAll(); source.reload(select: new) }
         catch { Dialogs.error("Vytvoření adresáře selhalo", error.localizedDescription) }
@@ -394,9 +532,18 @@ final class AppModel {
 
     func search() {
         guard requireLocal() else { return }
-        SearchWindow.show(root: source.path) { [weak self] url in
+        SearchWindow.show(root: source.path) { [weak self] url, inner in
             guard let self else { return }
-            self.source.navigateLocal(url.deletingLastPathComponent(), select: url)
+            if let inner {
+                // nález uvnitř archivu: vstoupit do archivu a nastavit se na soubor
+                self.source.navigateLocal(url.deletingLastPathComponent(), select: url)
+                if self.source.enterArchive(url) {
+                    let dir = (("/" + inner) as NSString).deletingLastPathComponent
+                    self.source.navigate(to: URL(fileURLWithPath: dir), select: URL(fileURLWithPath: "/" + inner))
+                }
+            } else {
+                self.source.navigateLocal(url.deletingLastPathComponent(), select: url)
+            }
             NSApp.windows.first { $0.isVisible && $0.title == "macTC" }?.makeKeyAndOrderFront(nil)
         }
     }

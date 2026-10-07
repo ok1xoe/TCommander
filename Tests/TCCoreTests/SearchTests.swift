@@ -71,3 +71,27 @@ import Foundation
         #expect(n == 0)
     }
 }
+
+@Suite struct ArchiveSearchTests {
+    @Test func findsFilesAndTextInsideArchives() throws {
+        let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
+        let a = try write(d, "src/notes.txt", "alpha\nsecret word here\nomega"), b = try write(d, "src/data/readme.md", "nothing")
+        let zip = d.appendingPathComponent("pack/a.zip"); try FileManager.default.createDirectory(at: zip.deletingLastPathComponent(), withIntermediateDirectories: true)
+        #expect(ArchiveWriter.create(zip, format: .zip, sources: [a, b.deletingLastPathComponent()]).failures.isEmpty)
+        func run(_ c: SearchCriteria) -> [SearchHit] {
+            nonisolated(unsafe) var hits: [SearchHit] = []
+            FileSearch().run(c) { hits.append($0) }
+            return hits
+        }
+        var c = SearchCriteria(root: d.appendingPathComponent("pack")); c.masks = "*.txt"
+        #expect(run(c).isEmpty)                                       // bez volby se archivy neprohledávají
+        c.searchInArchives = true
+        let byName = run(c)
+        #expect(byName.count == 1 && byName[0].inner == "notes.txt" && byName[0].url == zip)
+        c.masks = "*"; c.text = "SECRET"
+        let byText = run(c)
+        #expect(byText.count == 1 && byText[0].inner == "notes.txt" && byText[0].line == 2 && byText[0].snippet == "secret word here")
+        c.text = ""; c.masks = "readme.*"
+        #expect(run(c).first?.inner == "data/readme.md")
+    }
+}

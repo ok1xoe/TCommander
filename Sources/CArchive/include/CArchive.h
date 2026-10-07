@@ -28,6 +28,9 @@ int archive_read_support_format_all(struct archive *);
 int archive_read_open_filename(struct archive *, const char *filename, size_t block_size);
 int archive_read_next_header(struct archive *, struct archive_entry **);
 ssize_t archive_read_data(struct archive *, void *, size_t);
+int archive_filter_count(struct archive *);
+int archive_filter_code(struct archive *, int);
+int archive_format(struct archive *);
 int archive_read_data_skip(struct archive *);
 int archive_read_free(struct archive *);
 const char *archive_error_string(struct archive *);
@@ -35,6 +38,7 @@ int archive_read_add_passphrase(struct archive *, const char *);
 
 // záznamy
 struct archive_entry *archive_entry_new(void);
+struct archive_entry *archive_entry_clone(struct archive_entry *);
 void archive_entry_free(struct archive_entry *);
 const char *archive_entry_pathname(struct archive_entry *);
 int64_t archive_entry_size(struct archive_entry *);

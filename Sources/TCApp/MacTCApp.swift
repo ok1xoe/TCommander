@@ -95,6 +95,7 @@ struct TCCommands: Commands {
             Button("Kontrolní součty…") { model.checksums() }
             Button("Ověřit kontrolní součty ze souboru") { model.verifyChecksums() }
             Divider()
+            Button("Zabalit do archivu…") { model.packFiles() }
             Button("Rozbalit archiv…") { model.unpackArchives() }
             Button("Otestovat archiv") { model.testArchives() }
             Divider()
