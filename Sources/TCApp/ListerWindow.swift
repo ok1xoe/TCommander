@@ -30,6 +30,10 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private let info = NSTextField(labelWithString: "")
     private var encodingName = ""
     private var hexTable: NSTableView?
+    private var textPage = 0
+    private var textArea: NSTextView?
+    private var pageLabel = NSTextField(labelWithString: "")
+    private let hexSearch = NSSearchField()
     private var player: AVPlayer?
 
     private init?(url: URL) {
@@ -78,7 +82,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     @objc private func modeChanged() { show(modes[segmented.selectedSegment]) }
 
     private func show(_ mode: ListerMode) {
-        player?.pause(); player = nil; hexTable = nil
+        player?.pause(); player = nil; hexTable = nil; textArea = nil
         container.subviews.forEach { $0.removeFromSuperview() }
         let view: NSView
         switch mode {
@@ -117,13 +121,38 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         tv.autoresizingMask = [.width]
         tv.isVerticallyResizable = true
         tv.textContainer?.widthTracksTextView = true
-        let chunk = data.count > Self.textLimit ? data.prefix(Self.textLimit) : data
-        let decoded = TextDecoding.decode(Data(chunk))
-        encodingName = decoded.encoding + (data.count > Self.textLimit ? " · zobrazeno prvních 16 MB (celý soubor v režimu Hex)" : "")
-        tv.string = decoded.text
         scroll.documentView = tv
-        return scroll
+        textArea = tv
+        let pages = TextPager.count(of: data.count, size: Self.textLimit)
+        showTextPage(min(textPage, pages - 1))
+        guard pages > 1 else { return scroll }
+        // velký soubor: stránkování po 16 MB (části končí na konci řádku)
+        let prev = NSButton(title: "◀︎ Předchozí část", target: self, action: #selector(prevPage))
+        let next = NSButton(title: "Další část ▶︎", target: self, action: #selector(nextPage))
+        pageLabel.font = .systemFont(ofSize: 11); pageLabel.textColor = .secondaryLabelColor
+        let bar = NSStackView(views: [prev, next, pageLabel, NSView()]); bar.spacing = 8
+        bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        let box = NSStackView(views: [bar, scroll]); box.orientation = .vertical; box.spacing = 0; box.alignment = .leading
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.widthAnchor.constraint(equalTo: box.widthAnchor).isActive = true
+        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        return box
     }
+
+    private func showTextPage(_ i: Int) {
+        let pages = TextPager.count(of: data.count, size: Self.textLimit)
+        textPage = max(0, min(i, pages - 1))
+        let r = TextPager.range(in: data, index: textPage, size: Self.textLimit)
+        let decoded = TextDecoding.decode(Data(data[data.startIndex + r.lowerBound..<data.startIndex + r.upperBound]))
+        encodingName = decoded.encoding + (pages > 1 ? " · část \(textPage + 1) z \(pages)" : "")
+        textArea?.string = decoded.text
+        textArea?.scrollToBeginningOfDocument(nil)
+        pageLabel.stringValue = pages > 1 ? "Část \(textPage + 1) z \(pages) (bajty \(r.lowerBound)–\(r.upperBound))" : ""
+        info.stringValue = [ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file), encodingName].joined(separator: " · ")
+    }
+
+    @objc private func prevPage() { showTextPage(textPage - 1) }
+    @objc private func nextPage() { showTextPage(textPage + 1) }
 
     private func hexView() -> NSView {
         let scroll = NSScrollView()
@@ -139,7 +168,27 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         t.delegate = self
         scroll.documentView = t
         hexTable = t
-        return scroll
+        hexSearch.placeholderString = "Hledat: text nebo bajty (např. 4D 5A)"
+        hexSearch.target = self; hexSearch.action = #selector(searchHex)
+        hexSearch.translatesAutoresizingMaskIntoConstraints = false
+        hexSearch.widthAnchor.constraint(equalToConstant: 320).isActive = true
+        let bar = NSStackView(views: [hexSearch, NSView()]); bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        let box = NSStackView(views: [bar, scroll]); box.orientation = .vertical; box.spacing = 0; box.alignment = .leading
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.widthAnchor.constraint(equalTo: box.widthAnchor).isActive = true
+        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        return box
+    }
+
+    /// Enter v poli hledání: najde další výskyt od vybraného řádku (na konci se vrací na začátek).
+    @objc private func searchHex() {
+        guard let t = hexTable, let pattern = HexSearch.pattern(from: hexSearch.stringValue) else { return }
+        let from = t.selectedRow >= 0 ? (t.selectedRow + 1) * HexDump.width : 0
+        guard let off = HexSearch.find(pattern, in: data, from: from) else { info.stringValue = "Nenalezeno"; NSSound.beep(); return }
+        let row = off / HexDump.width
+        t.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        t.scrollRowToVisible(row)
+        info.stringValue = String(format: "Nalezeno na offsetu 0x%X (%d)", off, off)
     }
 
     private func imageView() -> NSView {

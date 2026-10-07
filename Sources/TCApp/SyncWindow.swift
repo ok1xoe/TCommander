@@ -30,6 +30,8 @@ final class SyncWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTab
     private var plan: [PlannedSync] = []
     private var visible: [Int] = []
     private var comparing = false
+    private var stagedLeft: ArchiveSyncSupport.Staged?
+    private var stagedRight: ArchiveSyncSupport.Staged?
 
     private static let directions: [(SyncDirection, String)] = [
         (.bothNewer, "Obousměrně (novější vyhrává)"), (.leftToRight, "Zleva doprava (aktualizovat)"),
@@ -99,25 +101,45 @@ final class SyncWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTab
 
     // MARK: Porovnání
 
+    private func cleanupStaged() {
+        for st in [stagedLeft, stagedRight].compactMap({ $0 }) { ArchiveSyncSupport.cleanup(st) }
+        stagedLeft = nil; stagedRight = nil
+    }
+
     @objc private func compare() {
         guard !comparing else { return }
-        var isDir: ObjCBool = false
-        for u in [leftURL, rightURL] {
-            guard FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir), isDir.boolValue else {
-                Dialogs.error("Neplatný adresář", u.path); return
-            }
-        }
         var o = SyncOptions()
         o.recursive = recursive.state == .on; o.compareContent = content.state == .on
         o.ignoreDate = ignoreDate.state == .on; o.includeHidden = hidden.state == .on; o.ignoreMasks = ignoreMask.stringValue
         let l = leftURL, r = rightURL, dir = currentDirection
         comparing = true
         status.stringValue = "Porovnávám…"
+        cleanupStaged()
         Task {
-            let items = await Task.detached { DirectoryComparer.compare(left: l, right: r, options: o) }.value
-            self.plan = SyncPlanner.plan(items, direction: dir)
+            let result = await Task.detached { () -> Result<([SyncItem], ArchiveSyncSupport.Staged?, ArchiveSyncSupport.Staged?), Error> in
+                Result {
+                    func stage(_ u: URL) throws -> (URL, ArchiveSyncSupport.Staged?) {
+                        var isDir: ObjCBool = false
+                        guard FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir) else { throw ArchiveError(message: "Neexistuje: \(u.path)") }
+                        if isDir.boolValue { return (u, nil) }
+                        guard ArchiveSupport.isArchive(u.lastPathComponent) else { throw ArchiveError(message: "Není adresář ani archiv: \(u.path)") }
+                        let st = try ArchiveSyncSupport.extractToTemporary(u)
+                        return (st.directory, st)
+                    }
+                    let (ld, ls) = try stage(l), (rd, rs) = try stage(r)
+                    return (DirectoryComparer.compare(left: ld, right: rd, options: o), ls, rs)
+                }
+            }.value
             self.comparing = false
-            self.applyFilter()
+            switch result {
+            case .success(let (items, ls, rs)):
+                self.stagedLeft = ls; self.stagedRight = rs
+                self.plan = SyncPlanner.plan(items, direction: dir)
+                self.applyFilter()
+            case .failure(let e):
+                Dialogs.error("Porovnání selhalo", e.localizedDescription)
+                self.status.stringValue = ""
+            }
         }
     }
 
@@ -170,11 +192,26 @@ final class SyncWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTab
         let todo = plan.filter { $0.action != .none }
         guard !todo.isEmpty else { return }
         let deletes = todo.filter { $0.action == .deleteLeft || $0.action == .deleteRight }.count
-        let msg = "Kopírování: \(todo.count - deletes) souborů" + (deletes > 0 ? ", do koše: \(deletes) souborů" : "")
+        let modLeft = todo.contains { $0.action == .copyToLeft || $0.action == .deleteLeft }
+        let modRight = todo.contains { $0.action == .copyToRight || $0.action == .deleteRight }
+        if (modLeft && stagedLeft != nil && stagedLeft?.format == nil) || (modRight && stagedRight != nil && stagedRight?.format == nil) {
+            Dialogs.error("Archiv je jen pro čtení", "Do tohoto formátu archivu nelze zapisovat (lze zip, tar.gz/bz2/xz a 7z). Změňte směr synchronizace."); return
+        }
+        var msg = "Kopírování: \(todo.count - deletes) souborů" + (deletes > 0 ? ", do koše: \(deletes) souborů" : "")
+        if (modLeft && stagedLeft != nil) || (modRight && stagedRight != nil) { msg += "\nArchiv se po synchronizaci znovu vytvoří." }
         guard Dialogs.confirm(title: "Provést synchronizaci?", message: msg, ok: "Synchronizovat", destructive: deletes > 0) else { return }
-        let l = leftURL, r = rightURL
-        jobs.enqueue(title: "Synchronizace \(l.lastPathComponent) ↔ \(r.lastPathComponent)", work: { control, progress in
-            SyncPlanner.execute(todo, left: l, right: r, control: control, progress: progress)
+        let l = stagedLeft?.directory ?? leftURL, r = stagedRight?.directory ?? rightURL
+        let repackLeft = modLeft ? stagedLeft : nil, repackRight = modRight ? stagedRight : nil
+        let title = "Synchronizace \(leftURL.lastPathComponent) ↔ \(rightURL.lastPathComponent)"
+        jobs.enqueue(title: title, work: { control, progress in
+            var report = SyncPlanner.execute(todo, left: l, right: r, control: control, progress: progress)
+            guard report.failures.isEmpty, !report.cancelled else { return report }
+            for st in [repackLeft, repackRight].compactMap({ $0 }) {
+                let rr = ArchiveSyncSupport.repack(st, control: control, progress: progress)
+                report.failures += rr.failures
+                if rr.cancelled { report.cancelled = true }
+            }
+            return report
         }, onFinish: { [weak self] report in
             self?.onDone()
             if !report.failures.isEmpty {
@@ -217,5 +254,5 @@ final class SyncWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTab
         return cell
     }
 
-    func windowWillClose(_ notification: Notification) { Self.current = nil }
+    func windowWillClose(_ notification: Notification) { cleanupStaged(); Self.current = nil }
 }

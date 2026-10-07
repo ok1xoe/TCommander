@@ -21,15 +21,20 @@ private final class HitCollector: @unchecked Sendable {
 final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
     private static var current: SearchWindow?
 
-    static func show(root: URL, goTo: @escaping (URL, String?) -> Void) {
+    static func show(root: URL, goTo: @escaping (URL, String?) -> Void, toPanel: @escaping ([URL], String) -> Void) {
         if let w = current { w.root.stringValue = root.path; w.window.makeKeyAndOrderFront(nil); return }
-        let w = SearchWindow(root: root, goTo: goTo)
+        let w = SearchWindow(root: root, goTo: goTo, toPanel: toPanel)
         current = w
         w.window.makeKeyAndOrderFront(nil)
     }
 
     private let window: NSWindow
     private let goTo: (URL, String?) -> Void
+    private let toPanel: ([URL], String) -> Void
+    private let exclude = NSTextField()
+    private let attrs = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let templates = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let templateStore = JSONStore<[SearchTemplate]>(name: "searchtemplates")
     private let masks = NSTextField(string: "*")
     private let root = NSTextField()
     private let text = NSTextField()
@@ -46,8 +51,9 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private var collector: HitCollector?
     private var timer: Timer?
 
-    private init(root rootURL: URL, goTo: @escaping (URL, String?) -> Void) {
+    private init(root rootURL: URL, goTo: @escaping (URL, String?) -> Void, toPanel: @escaping ([URL], String) -> Void) {
         self.goTo = goTo
+        self.toPanel = toPanel
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 620),
                           styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         super.init()
@@ -57,6 +63,9 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         window.center()
         root.stringValue = rootURL.path
         subdirs.state = .on
+        exclude.placeholderString = "vyloučit masky, např. *.tmp;node_modules"
+        attrs.addItems(withTitles: AttributeFilter.allCases.map(\.rawValue))
+        reloadTemplates()
         text.placeholderString = "text v souboru (nepovinné)"
         for f in [minKB, maxKB, days] { f.placeholderString = "—"; f.alignment = .right }
 
@@ -71,10 +80,12 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         let form = NSStackView(views: [
             row("Hledat soubory:", [masks]),
             row("V adresáři:", [root]),
+            row("Vyloučit:", [exclude]),
             row("Obsahující text:", [text]),
             row("", [subdirs, hidden, archives, caseSens, regex]),
             row("Velikost (KB):", [minKB, NSTextField(labelWithString: "až"), maxKB,
                                    NSTextField(labelWithString: "   změněno za posledních"), days, NSTextField(labelWithString: "dní")]),
+            row("Atributy:", [attrs, NSView(), templates]),
         ])
         form.orientation = .vertical; form.alignment = .leading; form.spacing = 6
 
@@ -89,7 +100,8 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
 
         let goButton = NSButton(title: "Přejít na soubor", target: self, action: #selector(openSelected))
         let viewButton = NSButton(title: "Zobrazit (F3)", target: self, action: #selector(viewSelected))
-        let bottom = NSStackView(views: [status, NSView(), viewButton, goButton, searchButton]); bottom.spacing = 8
+        let panelButton = NSButton(title: "Výsledky do panelu", target: self, action: #selector(sendToPanel))
+        let bottom = NSStackView(views: [status, NSView(), panelButton, viewButton, goButton, searchButton]); bottom.spacing = 8
 
         let content = window.contentView!
         for v in [form, scroll, bottom] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; content.addSubview(v) }
@@ -121,6 +133,8 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         c.includeSubdirectories = subdirs.state == .on
         c.includeHidden = hidden.state == .on
         c.searchInArchives = archives.state == .on
+        c.excludeMasks = exclude.stringValue
+        c.attributes = AttributeFilter.allCases[max(0, attrs.indexOfSelectedItem)]
         c.caseSensitive = caseSens.state == .on
         c.useRegex = regex.state == .on
         if let v = Int64(minKB.stringValue) { c.minSize = v * 1024 }
@@ -163,6 +177,66 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             searchButton.title = "Hledat"
             if col.isCancelled { status.stringValue = "Zastaveno: \(results.count) nalezeno" }
         }
+    }
+
+    @objc private func sendToPanel() {
+        let urls = results.filter { $0.inner == nil }.map(\.url)
+        guard !urls.isEmpty else { Dialogs.error("Výsledky do panelu", "Nejsou žádné nalezené soubory na disku (nálezy v archivech se do panelu nedávají)."); return }
+        toPanel(urls, "Výsledky hledání (\(urls.count)) v \(root.stringValue)")
+    }
+
+    // MARK: Šablony
+
+    private func template(named name: String) -> SearchTemplate {
+        SearchTemplate(name: name, masks: masks.stringValue, excludeMasks: exclude.stringValue, text: text.stringValue,
+                       subdirectories: subdirs.state == .on, hidden: hidden.state == .on, archives: archives.state == .on,
+                       caseSensitive: caseSens.state == .on, regex: regex.state == .on, minKB: minKB.stringValue, maxKB: maxKB.stringValue,
+                       days: days.stringValue, attributes: AttributeFilter.allCases[max(0, attrs.indexOfSelectedItem)])
+    }
+
+    private func apply(_ t: SearchTemplate) {
+        masks.stringValue = t.masks; exclude.stringValue = t.excludeMasks; text.stringValue = t.text
+        subdirs.state = t.subdirectories ? .on : .off; hidden.state = t.hidden ? .on : .off; archives.state = t.archives ? .on : .off
+        caseSens.state = t.caseSensitive ? .on : .off; regex.state = t.regex ? .on : .off
+        minKB.stringValue = t.minKB; maxKB.stringValue = t.maxKB; days.stringValue = t.days
+        attrs.selectItem(at: AttributeFilter.allCases.firstIndex(of: t.attributes) ?? 0)
+    }
+
+    private func reloadTemplates() {
+        templates.removeAllItems()
+        templates.addItem(withTitle: "Šablony")
+        templates.addItem(withTitle: "Uložit aktuální nastavení…")
+        templates.lastItem?.target = self; templates.lastItem?.action = #selector(saveTemplate)
+        let list = templateStore.load(default: [])
+        if !list.isEmpty { templates.menu?.addItem(.separator()) }
+        for t in list {
+            templates.addItem(withTitle: t.name)
+            templates.lastItem?.target = self; templates.lastItem?.action = #selector(chooseTemplate(_:))
+        }
+        if !list.isEmpty {
+            templates.menu?.addItem(.separator())
+            templates.addItem(withTitle: "Smazat šablonu…")
+            templates.lastItem?.target = self; templates.lastItem?.action = #selector(deleteTemplate)
+        }
+    }
+
+    @objc private func saveTemplate() {
+        guard let name = Dialogs.prompt(title: "Uložit šablonu hledání", message: "Název (stejný název šablonu nahradí):", initial: "", ok: "Uložit"),
+              !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        var list = templateStore.load(default: [])
+        let t = template(named: name.trimmingCharacters(in: .whitespaces))
+        if let i = list.firstIndex(where: { $0.name == t.name }) { list[i] = t } else { list.append(t) }
+        templateStore.save(list); reloadTemplates()
+    }
+
+    @objc private func chooseTemplate(_ item: NSMenuItem) {
+        if let t = templateStore.load(default: []).first(where: { $0.name == item.title }) { apply(t) }
+    }
+
+    @objc private func deleteTemplate() {
+        let list = templateStore.load(default: [])
+        guard let i = Dialogs.choose(title: "Smazat šablonu", message: "Která šablona se má smazat?", options: list.map(\.name), ok: "Smazat") else { return }
+        var l = list; l.remove(at: i); templateStore.save(l); reloadTemplates()
     }
 
     private var selectedHit: SearchHit? { table.selectedRow >= 0 && table.selectedRow < results.count ? results[table.selectedRow] : nil }

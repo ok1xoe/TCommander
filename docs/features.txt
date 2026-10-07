@@ -61,10 +61,10 @@ Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit |
 Souborové operace | Rozdělit a spojit soubory | D | 2 | části .001, .002 …
 Souborové operace | Kódování UUE / XXE / MIME | D | 3 | kódování i dekódování, menu Nástroje; ověřeno testy včetně známého vektoru
 
-Hledání | Hledání podle masky, velikosti a data (Alt+F7) | P | 2 | více masek najednou, podadresáře, skryté soubory, velikost od–do, změněno za posledních N dní, text v obsahu (regex), v archivech | Hledání podle atributů souboru, vyloučení masek, hledání souborů starších než N dní (dnes jen novějších), uložení nastavení hledání.
+Hledání | Hledání podle masky, velikosti, data a atributů (Alt+F7) | P | 2 | více masek, vyloučení masek, podadresáře, skryté, velikost od–do, změněno za posledních N dní, atributy (spustitelné, jen pro čtení, skryté), text v obsahu, v archivech | Hledání souborů starších než N dní (dnes jen novějších).
 Hledání | Hledání textu v souborech (regex, kódování) | D | 2 | rozpoznání kódování, regex, bez ohledu na diakritiku; binární soubory po bajtech
 Hledání | Hledání uvnitř archivů | D | 4 | volba „V archivech“ v hledání (název, velikost, datum i text); nález otevře archiv na daném souboru
-Hledání | Výsledky jako panel, uložené šablony hledání | P | 2 | výsledky v okně s průběžným doplňováním, přechod na soubor v panelu, zobrazení v Listeru | Výsledky jako virtuální panel, na který lze použít F5/F6/F8 jako na běžný seznam; uložené šablony hledání.
+Hledání | Výsledky jako panel, uložené šablony hledání | D | 6 | tlačítko „Výsledky do panelu“ (s nimi lze pracovat jako s běžným seznamem), šablony hledání v okně; jádro otestováno
 Hledání | Hledání duplicitních souborů | D | 3 | podle velikosti a obsahu (SHA-256), okno s označením nadbytečných kopií a smazáním do koše; okno ověřeno jen spuštěním
 
 Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | D | 3 | ⌃M; `[N1-3]`, `[N2,5]`, `[C10+5:3]`, `[P]`, datum `[Y][M][D][h][m][s]`
@@ -74,13 +74,13 @@ Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | D | 3 | ži
 Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | P | 3 | rozdíly vedle sebe (Myers diff), zvýraznění změn, synchronní posun, skok na další a předchozí rozdíl | Úprava textu přímo v okně porovnání, přenos jednotlivého rozdílu doleva/doprava, porovnání binárních souborů s vyznačením rozdílných bajtů.
 Porovnání a synchronizace | Porovnání adresářů | D | 3 | označí rozdílné soubory v obou panelech
 Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | D | 3 | pět směrů včetně zrcadlení, úprava akcí po řádcích, běží ve frontě; okno ověřeno jen spuštěním
-Porovnání a synchronizace | Synchronizace s ZIP | T | 4 |
+Porovnání a synchronizace | Synchronizace s archivem (ZIP, TAR, 7z) | D | 6 | adresář ↔ archiv: archiv se rozbalí, porovná a po synchronizaci znovu zabalí; porovnání ověřeno vizuálně, přebalení testy
 
 Prohlížení a editace | Zobrazit (F3) podle typu souboru | D | 2 | text, obrázky, PDF a média v Listeru, dokumenty (Word, Pages, Excel…) přes Quick Look, vlastní příkaz podle přípony v Nastavení › Přidružení
-Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | P | 2 | text (UTF-8, UTF-16, Windows-1250) do 16 MB; hex režim přes mmap pro soubory libovolné velikosti | Stránkování textu nad 16 MB (dnes se zobrazí jen začátek), ruční výběr kódování, zalamování řádků, přechod na offset v hex režimu.
+Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | P | 2 | text po částech po 16 MB (části končí na konci řádku), hex režim přes mmap pro soubory libovolné velikosti, hledání v hex režimu | Ruční výběr kódování, zalamování řádků, přechod na zadaný offset.
 Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8, UTF-16, Windows-1250 (automaticky)
 Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementované režimy obrázek, PDF, HTML a přehrávač médií; vizuálně ověřen zatím jen textový režim | Vizuální ověření režimů obrázek, PDF, HTML a média; přiblížení a otočení obrázků, listování dalším a předchozím souborem klávesami.
-Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém režimu přes ⌘F (lišta hledání macOS) | Hledání v hex režimu (bajty i text), hledání dalšího výskytu klávesou F3 jako v TC.
+Prohlížení a editace | Lister: hledání v obsahu | D | 2 | text přes ⌘F, hex režim hledá text i bajty (např. 4D 5A) od vybraného řádku, cyklicky
 Prohlížení a editace | Editace (F4) podle typu souboru | D | 1 | text a zdrojové soubory ve zvoleném editoru, ostatní typy v jejich výchozí aplikaci, vlastní příkaz podle přípony v Nastavení › Přidružení
 Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | D | 6 | volba externího editoru i vestavěný editor (zachová kódování, hlídá neuložené změny, u souborů z archivu a serveru ukládá zpět); okno editoru ověřeno jen překladem
 

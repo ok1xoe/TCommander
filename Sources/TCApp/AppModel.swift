@@ -575,6 +575,11 @@ final class AppModel {
                 self.source.navigateLocal(url.deletingLastPathComponent(), select: url)
             }
             NSApp.windows.first { $0.isVisible && $0.title == "macTC" }?.makeKeyAndOrderFront(nil)
+        } toPanel: { [weak self] urls, title in
+            guard let self else { return }
+            if self.source.isVirtual { self.source.leaveVirtual() }
+            self.source.showResults(urls, title: title)
+            NSApp.windows.first { $0.isVisible && $0.title == "macTC" }?.makeKeyAndOrderFront(nil)
         }
     }
 

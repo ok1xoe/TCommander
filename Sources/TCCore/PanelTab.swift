@@ -69,6 +69,9 @@ public final class PanelTab: Identifiable {
     public private(set) var recent: [URL] = []
     /// Branch view: všechny soubory z podadresářů v jednom seznamu.
     public private(set) var isBranch = false
+    /// Panel zobrazuje výsledky hledání (plochý seznam souborů z různých míst).
+    public private(set) var resultURLs: [URL]?
+    public private(set) var resultsTitle = ""
     @ObservationIgnored private var savedSelection: Set<URL> = []
     @ObservationIgnored private var watcher: DirectoryWatcher?
     public var autoRefresh = true { didSet { updateWatcher() } }
@@ -107,6 +110,7 @@ public final class PanelTab: Identifiable {
 
     /// Cesta pro zobrazení v adresním řádku.
     public var displayPath: String {
+        if resultURLs != nil { return resultsTitle }
         if let r = remote { return r.displayName + path.path }
         return archiveFile.map { $0.path + " ▸ " + path.path } ?? path.path
     }
@@ -161,6 +165,7 @@ public final class PanelTab: Identifiable {
         path = target
         all = items
         isBranch = false
+        resultURLs = nil
         error = nil
         if !isVirtual {
             recent.removeAll { $0 == target }
@@ -216,6 +221,7 @@ public final class PanelTab: Identifiable {
     /// Znovu načte adresář; když zmizel, vyleze na nejbližší existující nadřazený.
     public func reload(select: URL? = nil) {
         if isBranch { enterBranchView(); return }
+        if let urls = resultURLs { showResults(urls, title: resultsTitle); return }
         if let a = archiveFile, !FileManager.default.fileExists(atPath: a.path) { leaveArchive(); return }
         if remote != nil { loadRemote(path, select: select ?? cursorURL, recordHistory: false, keepMarks: true, climb: true); return }
         var dir = path
@@ -387,6 +393,24 @@ public final class PanelTab: Identifiable {
         }
         all = flat
         isBranch = true
+        error = nil
+        marked.formIntersection(Set(flat.map(\.url)))
+        applyView(keeping: cursorURL)
+    }
+
+    /// Zobrazí výsledky hledání v panelu; s položkami lze pracovat jako s běžným seznamem (F5, F6, F8 …).
+    public func showResults(_ urls: [URL], title: String) {
+        guard !isVirtual else { return }
+        var flat: [FileEntry] = []
+        for u in urls {
+            guard let e = try? fs.stat(u) else { continue }
+            flat.append(FileEntry(url: u, name: u.path, isDirectory: e.isDirectory, isSymlink: e.isSymlink, isHidden: e.isHidden,
+                                  size: e.size, modified: e.modified, permissions: e.permissions, created: e.created, accessed: e.accessed, ownerID: e.ownerID))
+        }
+        all = flat
+        isBranch = true
+        resultURLs = urls
+        resultsTitle = title
         error = nil
         marked.formIntersection(Set(flat.map(\.url)))
         applyView(keeping: cursorURL)

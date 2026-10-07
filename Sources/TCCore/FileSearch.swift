@@ -1,6 +1,10 @@
 import CArchive
 import Foundation
 
+public enum AttributeFilter: String, Codable, CaseIterable, Sendable {
+    case any = "jakékoli", executable = "spustitelné", readOnly = "jen pro čtení", hidden = "skryté"
+}
+
 public struct SearchCriteria: Sendable {
     public var root: URL
     public var masks = "*"
@@ -15,6 +19,9 @@ public struct SearchCriteria: Sendable {
     public var maxSize: Int64?
     public var modifiedAfter: Date?
     public var modifiedBefore: Date?
+    /// Vyloučené masky (např. `*.tmp;node_modules`), uplatní se na název souboru.
+    public var excludeMasks = ""
+    public var attributes = AttributeFilter.any
     /// Soubory větší než tento limit se při hledání textu přeskakují.
     public var maxTextFileSize: Int64 = 512 * 1024 * 1024
 
@@ -49,7 +56,7 @@ public struct FileSearch: Sendable {
         var stack = [c.root]
         while let dir = stack.popLast() {
             if isCancelled() { break }
-            guard let entries = try? fs.list(dir, includeHidden: c.includeHidden) else { continue }
+            guard let entries = try? fs.list(dir, includeHidden: c.includeHidden || c.attributes == .hidden) else { continue }
             for e in entries {
                 if isCancelled() { return scanned }
                 if e.isDirectory {
@@ -107,6 +114,13 @@ public struct FileSearch: Sendable {
 
     func matchesAttributes(_ e: FileEntry, _ c: SearchCriteria) -> Bool {
         if !GlobMatcher.matches(e.name, masks: c.masks) { return false }
+        if !c.excludeMasks.isEmpty && GlobMatcher.matches(e.name, masks: c.excludeMasks) { return false }
+        switch c.attributes {
+        case .any: break
+        case .executable: if e.permissions & 0o111 == 0 { return false }
+        case .readOnly: if e.permissions & 0o222 != 0 { return false }
+        case .hidden: if !e.isHidden { return false }
+        }
         if let m = c.minSize, e.size < m { return false }
         if let m = c.maxSize, e.size > m { return false }
         if let a = c.modifiedAfter, (e.modified ?? .distantPast) < a { return false }
