@@ -11,7 +11,10 @@ public struct TransferItem: Sendable, Hashable {
 }
 
 public struct OperationReport: Sendable {
-    public struct Failure: Sendable { public let url: URL; public let message: String }
+    public struct Failure: Sendable {
+        public let url: URL; public let message: String
+        public init(url: URL, message: String) { self.url = url; self.message = message }
+    }
     public var succeeded = 0
     public var skipped = 0
     public var cancelled = false

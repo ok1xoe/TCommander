@@ -54,10 +54,12 @@ enum Dialogs {
         alert.runModal()
     }
 
-    static func output(title: String, text: String) {
+    @discardableResult
+    static func output(title: String, text: String, extraButton: String? = nil) -> Bool {
         let alert = NSAlert()
         alert.messageText = title
         alert.addButton(withTitle: "Zavřít")
+        if let extraButton { alert.addButton(withTitle: extraButton) }
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 640, height: 320))
         let tv = NSTextView(frame: scroll.bounds)
         tv.isEditable = false
@@ -66,6 +68,42 @@ enum Dialogs {
         scroll.documentView = tv
         scroll.hasVerticalScroller = true
         alert.accessoryView = scroll
-        alert.runModal()
+        return alert.runModal() == .alertSecondButtonReturn
+    }
+
+    /// Výběr z nabídky; vrací index nebo nil při zrušení.
+    static func choose(title: String, message: String, options: [String], ok: String = "OK") -> Int? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: ok)
+        alert.addButton(withTitle: "Zrušit")
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        popup.addItems(withTitles: options)
+        alert.accessoryView = popup
+        return alert.runModal() == .alertFirstButtonReturn ? popup.indexOfSelectedItem : nil
+    }
+
+    /// Dialog Vlastnosti: oprávnění (osmičkově) a datum změny; prázdné pole = beze změny.
+    static func properties(title: String, info: String, permissions: String, modified: String) -> (permissions: String, modified: String)? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = info
+        alert.addButton(withTitle: "Použít")
+        alert.addButton(withTitle: "Zrušit")
+        let perm = NSTextField(string: permissions), date = NSTextField(string: modified)
+        perm.placeholderString = "např. 644"; date.placeholderString = "dd.MM.yyyy HH:mm:ss"
+        func line(_ l: String, _ f: NSTextField) -> NSStackView {
+            let t = NSTextField(labelWithString: l); t.widthAnchor.constraint(equalToConstant: 130).isActive = true
+            f.widthAnchor.constraint(equalToConstant: 220).isActive = true
+            return NSStackView(views: [t, f])
+        }
+        let stack = NSStackView(views: [line("Oprávnění (osmičkově):", perm), line("Datum změny:", date)])
+        stack.orientation = .vertical; stack.alignment = .leading
+        stack.frame = NSRect(x: 0, y: 0, width: 360, height: 60)
+        alert.accessoryView = stack
+        alert.window.initialFirstResponder = perm
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        return (perm.stringValue, date.stringValue)
     }
 }
