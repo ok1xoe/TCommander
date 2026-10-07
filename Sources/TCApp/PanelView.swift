@@ -46,6 +46,7 @@ struct PanelView: View {
                     onOpen: { model.activeSide = side; model.open() })
             } else {
                 FileTableView(
+                    style: model.panelStyle,
                     tab: tab, revision: tab.revision, isActive: isActive,
                     onFocus: { if model.activeSide != side { model.activeSide = side } },
                     onKey: { model.handleKey($0, side: side) },

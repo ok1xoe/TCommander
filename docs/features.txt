@@ -8,10 +8,10 @@
 @phase | 3 | Multi-Rename, porovnání, synchronizace, duplicity, kódování | hotovo | 4 364 489 (cache čtení 4 257 286, output 52 593)
 @phase | 4 | Archivy jako adresáře | hotovo | 8 919 438 (cache čtení 8 779 513, output 66 180)
 @phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | hotovo | 13 939 083 (cache čtení 13 707 198, output 110 477), stav k PR 5c
-@phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | plán | -
+@phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | probíhá | -
 
 Panely a zobrazení | Dva panely vedle sebe | D | 1 |
-Panely a zobrazení | Panely nad sebou | T | 6 |
+Panely a zobrazení | Panely nad sebou | D | 6 | Nastavení › Obecné; ověřeno jen překladem
 Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |
 Panely a zobrazení | Zamykání karet, uložené sady karet (Favorite tabs) | T | 6 |
 Panely a zobrazení | Režim Plný (název, přípona, velikost, datum, atributy) | D | 1 |
@@ -24,7 +24,7 @@ Panely a zobrazení | Rychlé hledání psaním (type-ahead) | D | 1 | vestavěn
 Panely a zobrazení | Rychlý filtr (Ctrl+S, ⌘F) | D | 2 | pole nad seznamem, Esc zruší
 Panely a zobrazení | Skryté soubory (⇧⌘.) | D | 1 |
 Panely a zobrazení | Quick View panel (Ctrl+Q) | D | 2 | druhý panel ukazuje náhled souboru pod kurzorem; ověřeno jen překladem
-Panely a zobrazení | Barvy podle typu souboru | T | 6 |
+Panely a zobrazení | Barvy podle typu souboru | D | 6 | pravidla podle masek v Nastavení › Barvy
 Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků; tlačítková lišta disků ve fázi 6
 Panely a zobrazení | Historie adresářů (zpět / vpřed) | D | 1 | ⌘[ ⌘]
 Panely a zobrazení | Seznam historie a Directory hotlist (⌘D) | D | 2 | menu Oblíbené a Historie; hotlist uložen v Application Support
@@ -82,7 +82,7 @@ Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8,
 Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | P | 2 | implementováno; vizuálně ověřen zatím jen textový režim
 Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém režimu (⌘F); v hex režimu chybí
 Prohlížení a editace | Editace (F4) v externím editoru | D | 1 | TextEdit
-Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | T | 6 |
+Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | P | 6 | editor pro F4 lze zvolit v Nastavení; vestavěný editor chybí
 
 Archivy | Prohlížení archivu jako adresáře (ZIP, TAR, GZ, 7z, RAR…) | D | 4 | Enter na archivu, „..“ vystoupí; čtení přes systémovou libarchive (zip, tar.*, 7z, rar, cab, iso …); otestováno na zip a tar.gz
 Archivy | Balení (Alt+F5) do zip, tar.gz, tar.bz2, tar.xz, 7z, na pozadí | D | 4 | menu Nástroje, průběh ve frontě
@@ -106,15 +106,16 @@ Příkazová řádka | Vložit název souboru do příkazové řádky (Ctrl+Ente
 Příkazová řádka | Otevření souboru přidruženým programem (Enter) | D | 1 |
 Příkazová řádka | Historie příkazů | D | 2 | šipky nahoru/dolů v příkazové řádce
 Příkazová řádka | Vestavěný terminál | T | 6 |
-Příkazová řádka | Vlastní přidružení souborů k programům | T | 6 |
+Příkazová řádka | Vlastní přidružení souborů k programům | D | 6 | Nastavení › Přidružení; Enter na souboru spustí přidružený program
 
-Přizpůsobení | Konfigurovatelné klávesové zkratky | T | 6 |
-Přizpůsobení | Button bar a Start menu | T | 6 |
-Přizpůsobení | Konfigurovatelné hlavní menu, uživatelské příkazy | T | 6 |
-Přizpůsobení | Interní příkazy (cm_*) a jejich registr | T | 6 |
-Přizpůsobení | Nastavení (dialog), barvy, fonty | T | 6 |
+Přizpůsobení | Konfigurovatelné klávesové zkratky | D | 6 | Nastavení › Zkratky, kontrola konfliktů; platí pro klávesy v panelech, zkratky v hlavním menu jsou pevné
+Přizpůsobení | Button bar a Start menu | D | 6 | upravitelné v Nastavení (název, ikona, příkaz, parametry)
+Přizpůsobení | Uživatelské příkazy (em_*) s parametry %P %N %S %T %F %L | D | 6 | spuštění i v Terminálu; parametry se ošetří proti injekci (testováno)
+Přizpůsobení | Interní příkazy (cm_*) a jejich registr | D | 6 | 60 příkazů, použitelné ze zkratek, tlačítek i uživatelských příkazů
+Přizpůsobení | Nastavení (dialog), barvy, fonty | D | 6 | editor, terminál, písmo, výška řádku, barvy
 Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 6 | UI je nyní jen česky
 Přizpůsobení | Import nastavení z `wincmd.ini` | T | 6 |
 Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | T | 6 |
+Přizpůsobení | Konfigurovatelné hlavní menu (přidávání vlastních položek) | T | 6 | zatím jen Start menu a tlačítková lišta
 Přizpůsobení | Windows pluginy (.wcx, .wfx, .wlx, .wdx) | X | - | binárně nekompatibilní s macOS
 Přizpůsobení | Windows UAC a integrace s Průzkumníkem | X | - | nahrazeno oprávněními macOS a Finderem

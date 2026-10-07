@@ -48,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+        if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
             for n in 1...2 {
@@ -109,7 +110,18 @@ struct TCCommands: Commands {
             Button("Porovnat adresáře (označit rozdíly)") { model.compareDirectories() }.keyboardShortcut("d", modifiers: [.control, .shift])
             Button("Synchronizovat adresáře…") { model.synchronize() }.keyboardShortcut("s", modifiers: [.control, .shift])
         }
+        CommandMenu("Start") {
+            ForEach(model.startMenu) { item in
+                Button(item.title) { model.run(command: item.command, parameters: item.parameters) }
+            }
+            if !model.userCommands.isEmpty {
+                Divider()
+                ForEach(model.userCommands) { u in Button(u.title) { model.runUser(u) } }
+            }
+        }
         CommandMenu("Nástroje") {
+            Button("Nastavení…") { model.perform("cm_settings") }.keyboardShortcut(",")
+            Divider()
             Button("Hromadné přejmenování…") { model.multiRename() }.keyboardShortcut("m", modifiers: .control)
             Divider()
             Button("Vlastnosti…") { model.properties() }.keyboardShortcut(.return, modifiers: .option)

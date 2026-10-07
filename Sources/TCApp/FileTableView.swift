@@ -77,7 +77,15 @@ enum IconCache {
     }
 }
 
+/// Vzhled seznamu souborů (z nastavení).
+struct PanelStyle: Equatable {
+    var fontSize: Double = 12
+    var rowHeight: Double = 20
+    var colorRules: [ColorRule] = []
+}
+
 struct FileTableView: NSViewRepresentable {
+    var style = PanelStyle()
     let tab: PanelTab
     let revision: Int
     let isActive: Bool
@@ -142,6 +150,7 @@ struct FileTableView: NSViewRepresentable {
         private var lastRevision = -1
         private var lastActive = false
         private var syncing = false
+        private var lastStyle = PanelStyle()
 
         init(_ p: FileTableView) { parent = p }
 
@@ -149,6 +158,8 @@ struct FileTableView: NSViewRepresentable {
             guard let table else { return }
             let tab = parent.tab
             syncing = true
+            let styleChanged = parent.style != lastStyle
+            if styleChanged { lastStyle = parent.style; table.rowHeight = CGFloat(parent.style.rowHeight); lastRevision = -1 }
             let brief = tab.viewMode == .brief
             for col in table.tableColumns { col.isHidden = brief && col.identifier.rawValue != "name" }
             if parent.revision != lastRevision {
@@ -203,8 +214,11 @@ struct FileTableView: NSViewRepresentable {
             default: text = e.isParentLink ? "" : e.permissionString
             }
             cell.label.stringValue = text
-            cell.label.textColor = isMarked ? .systemRed : (e.isHidden ? .secondaryLabelColor : .labelColor)
-            let base = cell.label.font ?? .systemFont(ofSize: 12)
+            var color: NSColor = e.isHidden ? .secondaryLabelColor : .labelColor
+            if !e.isHidden, let hex = ColorRule.color(for: e.name, isDirectory: e.isDirectory, rules: parent.style.colorRules), let c = NSColor(hex: hex) { color = c }
+            cell.label.textColor = isMarked ? .systemRed : color
+            let fs = CGFloat(parent.style.fontSize)
+            let base: NSFont = ["size", "date", "attr"].contains(id.rawValue) ? .monospacedDigitSystemFont(ofSize: fs, weight: .regular) : .systemFont(ofSize: fs)
             cell.label.font = NSFontManager.shared.convert(base, toHaveTrait: isMarked ? .boldFontMask : .unboldFontMask)
             return cell
         }

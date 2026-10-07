@@ -6,9 +6,17 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HSplitView {
-                PanelView(model: model, side: .left).frame(minWidth: 380)
-                PanelView(model: model, side: .right).frame(minWidth: 380)
+            ButtonBarView(model: model)
+            if model.settings.panelsStacked {
+                VSplitView {
+                    PanelView(model: model, side: .left).frame(minHeight: 180)
+                    PanelView(model: model, side: .right).frame(minHeight: 180)
+                }
+            } else {
+                HSplitView {
+                    PanelView(model: model, side: .left).frame(minWidth: 380)
+                    PanelView(model: model, side: .right).frame(minWidth: 380)
+                }
             }
             JobsBar(jobs: model.jobs)
             CommandLineBar(model: model)
@@ -89,5 +97,38 @@ struct JobsBar: View {
             .padding(.horizontal, 8).padding(.vertical, 5)
             .background(.bar)
         }
+    }
+}
+
+struct ButtonBarView: View {
+    let model: AppModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Menu {
+                ForEach(model.startMenu) { item in
+                    Button { model.run(command: item.command, parameters: item.parameters) } label: { Label(item.title, systemImage: item.icon) }
+                }
+            } label: { Label("Start", systemImage: "play.circle") }
+                .menuStyle(.borderlessButton).fixedSize()
+            Divider().frame(height: 22)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 2) {
+                    ForEach(model.buttonBar) { b in
+                        Button { model.run(command: b.command, parameters: b.parameters) } label: {
+                            VStack(spacing: 1) {
+                                Image(systemName: b.icon).font(.system(size: 14))
+                                Text(b.title).font(.system(size: 9)).lineLimit(1)
+                            }
+                            .frame(minWidth: 52)
+                        }
+                        .buttonStyle(.borderless)
+                        .help(b.command + (b.parameters.isEmpty ? "" : " " + b.parameters))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 3)
+        .background(.bar)
     }
 }
