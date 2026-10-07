@@ -76,6 +76,7 @@ final class AppModel {
             else { activeSide = side.other }
             return true
         case 36, 76: // Return
+            if m == .option { properties(); return true }
             if m == .control { insertNameIntoCommandLine(); return true }
             if m == [] { open(); return true }
         case 51: // Backspace
@@ -267,6 +268,114 @@ final class AppModel {
     private func openInEditor(_ url: URL) {
         let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
         NSWorkspace.shared.open([url], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    // MARK: Nástroje
+
+    func properties() {
+        let t = source.targets
+        guard !t.isEmpty else { return }
+        let single = t.count == 1 ? t[0] : nil
+        let df = DateFormatter(); df.dateFormat = "dd.MM.yyyy HH:mm:ss"
+        var info = single.map { "\($0.url.path)\n\($0.isDirectory ? "Adresář" : Fmt.bytes($0.size) + " bajtů")" } ?? "\(t.count) vybraných položek"
+        if let e = single, e.isDirectory, let size = source.dirSizes[e.url] { info += " · \(Fmt.bytes(size)) bajtů" }
+        guard let r = Dialogs.properties(title: "Vlastnosti", info: info,
+                                         permissions: single.map { String($0.permissions, radix: 8) } ?? "",
+                                         modified: single?.modified.map { df.string(from: $0) } ?? "") else { return }
+        var perms: UInt16?, date: Date?
+        if !r.permissions.trimmingCharacters(in: .whitespaces).isEmpty {
+            guard let p = FileAttributes.parseOctal(r.permissions) else { Dialogs.error("Neplatná oprávnění", "Zadejte osmičkově, např. 644."); return }
+            perms = p
+        }
+        if !r.modified.trimmingCharacters(in: .whitespaces).isEmpty {
+            guard let d = df.date(from: r.modified) else { Dialogs.error("Neplatné datum", "Formát: dd.MM.yyyy HH:mm:ss"); return }
+            date = d
+        }
+        var errors: [String] = []
+        for e in t {
+            do { try FileAttributes.apply(e.url, permissions: perms, modified: date) } catch { errors.append("\(e.name): \(error.localizedDescription)") }
+        }
+        reloadAll()
+        if !errors.isEmpty { Dialogs.error("Některé změny se nepodařily", errors.prefix(10).joined(separator: "\n")) }
+    }
+
+    private final class LineBox: @unchecked Sendable { var lines: [ChecksumFile.Line] = [] }
+
+    func checksums() {
+        let files = source.targets.filter { !$0.isDirectory }
+        guard !files.isEmpty else { Dialogs.error("Kontrolní součty", "Vyberte soubory (ne adresáře)."); return }
+        let algs = ChecksumAlgorithm.allCases
+        guard let i = Dialogs.choose(title: "Kontrolní součty", message: "Algoritmus pro \(files.count) souborů:",
+                                     options: algs.map(\.rawValue), ok: "Spočítat") else { return }
+        let alg = algs[i], urls = files.map(\.url), total = files.reduce(Int64(0)) { $0 + $1.size }
+        let box = LineBox(), dir = source.path
+        jobs.enqueue(title: "Kontrolní součty \(alg.rawValue)", work: { control, progress in
+            var rep = OperationReport(), p = TransferProgress()
+            p.filesTotal = urls.count; p.bytesTotal = total
+            for u in urls {
+                p.current = u.lastPathComponent
+                let h = Checksum.hash(u, alg) { n in p.bytesDone += Int64(n); progress(p); return control.checkpoint() }
+                guard let h else {
+                    if control.isCancelled { rep.cancelled = true; break }
+                    rep.failures.append(.init(url: u, message: "Soubor nelze přečíst")); continue
+                }
+                box.lines.append(.init(hash: h, name: u.lastPathComponent)); p.filesDone += 1
+            }
+            rep.succeeded = box.lines.count
+            return rep
+        }, onFinish: { [weak self] rep in
+            guard let self, !rep.cancelled, !box.lines.isEmpty else { return }
+            let text = ChecksumFile.format(box.lines)
+            if Dialogs.output(title: "\(alg.rawValue)", text: text, extraButton: "Uložit do souboru") {
+                let name = box.lines.count == 1 ? "\(box.lines[0].name).\(alg.fileExtension)" : "checksums.\(alg.fileExtension)"
+                do { try text.write(to: dir.appendingPathComponent(name), atomically: true, encoding: .utf8); self.reloadAll() }
+                catch { Dialogs.error("Uložení selhalo", error.localizedDescription) }
+            }
+        })
+    }
+
+    func verifyChecksums() {
+        guard let e = source.targets.first, !e.isDirectory else { return }
+        busy = "Ověřuji součty…"
+        let url = e.url
+        Task {
+            let r = await Task.detached { ChecksumFile.verify(sumFile: url) }.value
+            self.busy = nil
+            guard let r else { Dialogs.error("Ověření součtů", "Soubor „\(e.name)“ není platný soubor s kontrolními součty."); return }
+            let bad = r.filter { $0.status != .ok }
+            let text = r.map { ($0.status == .ok ? "OK        " : $0.status == .missing ? "CHYBÍ     " : "NESOUHLASÍ ") + $0.name }.joined(separator: "\n")
+            Dialogs.output(title: bad.isEmpty ? "Všech \(r.count) souborů souhlasí" : "Nesouhlasí nebo chybí: \(bad.count) z \(r.count)", text: text)
+        }
+    }
+
+    func splitFile() {
+        guard let e = source.targets.first, !e.isDirectory, source.targets.count == 1 else { return }
+        guard let t = Dialogs.prompt(title: "Rozdělit „\(e.name)“", message: "Velikost jedné části v MB (do \(target.path.path)):", initial: "100", ok: "Rozdělit"),
+              let mb = Double(t.replacingOccurrences(of: ",", with: ".")), mb > 0 else { return }
+        let size = Int64(mb * 1_048_576), url = e.url, dir = target.path
+        jobs.enqueue(title: "Rozdělit \(e.name)", work: { control, progress in
+            FileSplitter.split(url, partSize: size, into: dir, control: control, progress: progress)
+        }, onFinish: { [weak self] r in self?.finish(r, success: "Vytvořeno částí") })
+    }
+
+    func combineFiles() {
+        guard let e = source.targets.first, e.name.hasSuffix(".001") else { Dialogs.error("Spojit soubory", "Nastavte kurzor na první část (název.001)."); return }
+        let url = e.url, dir = target.path
+        guard Dialogs.confirm(title: "Spojit části", message: "Výsledek bude uložen do \(dir.path).", ok: "Spojit") else { return }
+        jobs.enqueue(title: "Spojit \(e.name)", work: { control, progress in
+            FileSplitter.combine(first: url, into: dir, control: control, progress: progress)
+        }, onFinish: { [weak self] r in self?.finish(r, success: "Spojeno") })
+    }
+
+    func makeLink(hard: Bool) {
+        guard let e = source.targets.first, source.targets.count == 1 else { return }
+        guard let name = Dialogs.prompt(title: hard ? "Pevný odkaz" : "Symbolický odkaz",
+                                        message: "Název odkazu v \(target.path.path):", initial: e.name + (hard ? " hardlink" : " alias"), ok: "Vytvořit") else { return }
+        let link = target.path.appendingPathComponent(name)
+        do {
+            if hard { try ops.makeHardlink(to: e.url, at: link) } else { try ops.makeSymlink(to: e.url.path, at: link) }
+            reloadAll()
+        } catch { Dialogs.error("Vytvoření odkazu selhalo", error.localizedDescription) }
     }
 
     // MARK: Příkazová řádka

@@ -54,11 +54,11 @@ Souborové operace | Operace na pozadí (UI nezamrzá) | D | 1 |
 Souborové operace | Okamžitá kopie na APFS (clonefile), zachování atributů a odkazů | D | 2 | kopírování po blocích jako záloha
 Souborové operace | Fronta operací s průběhem, rychlostí, pozastavením a zrušením | D | 2 | úlohy běží postupně; logika pokryta testy, pruh fronty v UI ověřen jen překladem
 Souborové operace | Ověření kopie (SHA-256) | D | 2 | volba v menu Soubor
-Souborové operace | Atributy, časy, oprávnění | T | 2 |
-Souborové operace | Vlastnosti (Alt+Enter) | T | 2 |
-Souborové operace | Symbolické a pevné odkazy | T | 2 |
-Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | P | 2 | výpočet hotový a otestovaný, dialog v UI přijde
-Souborové operace | Rozdělit a spojit soubory | T | 2 |
+Souborové operace | Atributy, časy, oprávnění | D | 2 | oprávnění osmičkově a datum změny (⌥↩); příznaky souboru zatím ne
+Souborové operace | Vlastnosti (Alt+Enter) | P | 2 | cesta, velikost, oprávnění, datum; bez karty s náhledem
+Souborové operace | Symbolické a pevné odkazy | D | 2 | menu Nástroje
+Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | D | 2 | menu Nástroje, uložení do .sha256/.md5…, ověření ze souboru
+Souborové operace | Rozdělit a spojit soubory | D | 2 | části .001, .002 …
 Souborové operace | Kódování UUE / XXE / MIME | T | 3 |
 
 Hledání | Hledání podle masky, velikosti a data (Alt+F7) | P | 2 | podadresáře, skryté, velikost od–do, změněno za N dní; podle atributů zatím ne

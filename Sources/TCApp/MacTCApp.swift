@@ -66,6 +66,18 @@ struct TCCommands: Commands {
             Divider()
             Toggle("Ověřovat kopie (SHA-256)", isOn: Binding(get: { model.verifyCopies }, set: { model.verifyCopies = $0 }))
         }
+        CommandMenu("Nástroje") {
+            Button("Vlastnosti…") { model.properties() }.keyboardShortcut(.return, modifiers: .option)
+            Divider()
+            Button("Kontrolní součty…") { model.checksums() }
+            Button("Ověřit kontrolní součty ze souboru") { model.verifyChecksums() }
+            Divider()
+            Button("Rozdělit soubor…") { model.splitFile() }
+            Button("Spojit soubory (.001)…") { model.combineFiles() }
+            Divider()
+            Button("Symbolický odkaz do druhého panelu…") { model.makeLink(hard: false) }
+            Button("Pevný odkaz do druhého panelu…") { model.makeLink(hard: true) }
+        }
         CommandMenu("Označit") {
             Button("Označit vše") { model.source.markAll() }.keyboardShortcut("a")
             Button("Zrušit označení") { model.source.unmarkAll() }.keyboardShortcut("a", modifiers: [.command, .shift])
