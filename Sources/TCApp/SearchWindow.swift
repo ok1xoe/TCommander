@@ -21,7 +21,7 @@ private final class HitCollector: @unchecked Sendable {
 final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
     private static var current: SearchWindow?
 
-    static func show(root: URL, goTo: @escaping (URL) -> Void) {
+    static func show(root: URL, goTo: @escaping (URL, String?) -> Void) {
         if let w = current { w.root.stringValue = root.path; w.window.makeKeyAndOrderFront(nil); return }
         let w = SearchWindow(root: root, goTo: goTo)
         current = w
@@ -29,12 +29,13 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     }
 
     private let window: NSWindow
-    private let goTo: (URL) -> Void
+    private let goTo: (URL, String?) -> Void
     private let masks = NSTextField(string: "*")
     private let root = NSTextField()
     private let text = NSTextField()
     private let subdirs = NSButton(checkboxWithTitle: "Podadresáře", target: nil, action: nil)
     private let hidden = NSButton(checkboxWithTitle: "Skryté soubory", target: nil, action: nil)
+    private let archives = NSButton(checkboxWithTitle: "V archivech", target: nil, action: nil)
     private let caseSens = NSButton(checkboxWithTitle: "Rozlišovat velikost písmen", target: nil, action: nil)
     private let regex = NSButton(checkboxWithTitle: "Regulární výraz", target: nil, action: nil)
     private let minKB = NSTextField(), maxKB = NSTextField(), days = NSTextField()
@@ -45,7 +46,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private var collector: HitCollector?
     private var timer: Timer?
 
-    private init(root rootURL: URL, goTo: @escaping (URL) -> Void) {
+    private init(root rootURL: URL, goTo: @escaping (URL, String?) -> Void) {
         self.goTo = goTo
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 620),
                           styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
@@ -71,7 +72,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             row("Hledat soubory:", [masks]),
             row("V adresáři:", [root]),
             row("Obsahující text:", [text]),
-            row("", [subdirs, hidden, caseSens, regex]),
+            row("", [subdirs, hidden, archives, caseSens, regex]),
             row("Velikost (KB):", [minKB, NSTextField(labelWithString: "až"), maxKB,
                                    NSTextField(labelWithString: "   změněno za posledních"), days, NSTextField(labelWithString: "dní")]),
         ])
@@ -119,6 +120,7 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         c.text = text.stringValue
         c.includeSubdirectories = subdirs.state == .on
         c.includeHidden = hidden.state == .on
+        c.searchInArchives = archives.state == .on
         c.caseSensitive = caseSens.state == .on
         c.useRegex = regex.state == .on
         if let v = Int64(minKB.stringValue) { c.minSize = v * 1024 }
@@ -164,8 +166,14 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     }
 
     private var selectedHit: SearchHit? { table.selectedRow >= 0 && table.selectedRow < results.count ? results[table.selectedRow] : nil }
-    @objc private func openSelected() { if let h = selectedHit { goTo(h.url) } }
-    @objc private func viewSelected() { if let h = selectedHit { ListerWindow.show(h.url) } }
+    @objc private func openSelected() { if let h = selectedHit { goTo(h.url, h.inner) } }
+    @objc private func viewSelected() {
+        guard let h = selectedHit else { return }
+        if let inner = h.inner {
+            guard let fs = try? ArchiveFileSystem(archiveURL: h.url), let tmp = try? fs.extractToTemporary("/" + inner) else { return }
+            ListerWindow.show(tmp)
+        } else { ListerWindow.show(h.url) }
+    }
 
     // MARK: Tabulka
 
@@ -178,8 +186,8 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             let f = NSTextField(labelWithString: ""); f.identifier = col.identifier; f.lineBreakMode = .byTruncatingMiddle; return f
         }()
         switch col.identifier.rawValue {
-        case "name": cell.stringValue = h.url.lastPathComponent
-        case "dir": cell.stringValue = h.url.deletingLastPathComponent().path
+        case "name": cell.stringValue = h.inner.map { ($0 as NSString).lastPathComponent } ?? h.url.lastPathComponent
+        case "dir": cell.stringValue = h.inner.map { h.url.path + " ▸ /" + ($0 as NSString).deletingLastPathComponent } ?? h.url.deletingLastPathComponent().path
         case "size": cell.stringValue = Fmt.bytes(h.size); cell.alignment = .right
         default: cell.stringValue = h.line.map { "\($0): \(h.snippet ?? "")" } ?? ""
         }

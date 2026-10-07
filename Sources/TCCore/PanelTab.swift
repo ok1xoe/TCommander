@@ -180,6 +180,19 @@ public final class PanelTab: Identifiable {
         return navigate(to: url, select: select)
     }
 
+    /// Znovu načte index archivu ze souboru (po úpravě archivu) a obnoví zobrazení.
+    public func refreshArchive() {
+        guard let url = archiveFile else { return }
+        do {
+            let afs = try ArchiveFileSystem(archiveURL: url)
+            fs = afs; archiveFS = afs
+            reload()
+        } catch {
+            self.error = "\(url.lastPathComponent): \(error.localizedDescription)"
+            revision &+= 1
+        }
+    }
+
     public func leaveArchive() {
         guard let archive = archiveFile, let s = saved else { return }
         fs = s.fs; archiveFS = nil; archiveFile = nil; saved = nil

@@ -17,8 +17,8 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | 0 – průzkum a návrh | start – 2026-10-07T09:44 | 9 | 18 | 39 530 | 533 596 | 9 064 | 582 208 |
 | 1 – panely a základní operace | 09:44 – 10:01:27 (sloučení PR #1) | 26 | 52 | 92 765 | 3 067 722 | 76 954 | 3 237 493 |
 | 2 – fronta, Lister, hledání, nástroje | 10:01:27 – 10:33:41 (sloučení PR #7) | 41 | 82 | 113 116 | 9 067 468 | 93 127 | 9 273 793 |
-| 3 – Multi-Rename, porovnání, sync, duplicity | 10:33:41 – otevření PR 3c | 13 | 26 | 53 713 | 3 926 612 | 50 938 | 4 031 289 |
-| 4 – archivy | | | | | | | |
+| 3 – Multi-Rename, porovnání, sync, duplicity | 10:33:41 – 10:46:33 (sloučení PR #10) | 14 | 28 | 54 582 | 4 257 286 | 52 593 | 4 364 489 |
+| 4 – archivy | 10:46:33 – otevření PR 4b | 22 | 44 | 67 457 | 7 975 992 | 64 308 | 8 107 801 |
 | 5 – síť | | | | | | | |
 | 6 – pluginy, button bar, nastavení | | | | | | | |
 
