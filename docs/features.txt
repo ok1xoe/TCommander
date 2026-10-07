@@ -80,6 +80,7 @@ Prohlížení a editace | Lister: text, hex a binární režim, soubory libovoln
 Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | D | 2 | UTF-8, UTF-16, Windows-1250 (automaticky)
 Prohlížení a editace | Lister: obrázky, PDF, HTML, multimédia | D | 2 | obrázky (přiblížení, oddálení, 100 %, přizpůsobení, otočení), PDF, HTML (s opravou kódování), přehrávač zvuku a videa; přepínání na další a předchozí soubor tlačítky nebo klávesami N a P; obrázek, PDF, HTML a zvuk ověřeny vizuálně, video ne
 Prohlížení a editace | Lister: hledání v obsahu | D | 2 | text přes ⌘F, hex režim hledá text i bajty (např. 4D 5A) od vybraného řádku, cyklicky
+Prohlížení a editace | Zvýrazňování syntaxe v Listeru a editoru | D | 8 | Swift, C/C++/Obj-C, Java/C#, Kotlin, JavaScript/TypeScript, Python, Ruby, shell, Go, Rust, PHP, SQL, JSON, YAML, TOML, CSS, HTML/XML, Lua, Makefile podle přípony; klíčová slova, řetězce, komentáře, čísla, typy, direktivy, značky; světlý i tmavý vzhled; v editoru se přebarvuje při psaní; ověřeno vizuálně v Listeru
 Prohlížení a editace | Editace (F4) podle typu souboru | D | 1 | text a zdrojové soubory ve zvoleném editoru, ostatní typy v jejich výchozí aplikaci, vlastní příkaz podle přípony v Nastavení › Přidružení
 Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | D | 6 | volba externího editoru i vestavěný editor (zachová kódování, hlídá neuložené změny, u souborů z archivu a serveru ukládá zpět); okno editoru ověřeno jen překladem
 

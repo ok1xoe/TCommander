@@ -22,10 +22,13 @@ final class EditorWindow: NSObject, NSWindowDelegate, NSTextViewDelegate {
     private var encoding: String
     private let window: NSWindow
     private let textView = NSTextView()
+    private let language: String?
+    private var highlightWork: DispatchWorkItem?
     private let status = NSTextField(labelWithString: "")
 
     private init(url: URL, data: Data, saveBack: ((URL) -> Void)?) {
         self.url = url; self.saveBack = saveBack
+        language = SyntaxHighlighter.language(forFileName: url.lastPathComponent)
         let decoded = TextDecoding.decode(data)
         encoding = decoded.encoding
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
@@ -64,9 +67,22 @@ final class EditorWindow: NSObject, NSWindowDelegate, NSTextViewDelegate {
             bar.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -8),
         ])
         window.makeFirstResponder(textView)
+        highlight()
     }
 
-    func textDidChange(_ notification: Notification) { window.isDocumentEdited = true }
+    private func highlight() {
+        guard let language, let storage = textView.textStorage else { return }
+        SyntaxStyle.apply(to: storage, language: language, baseFont: textView.font ?? .monospacedSystemFont(ofSize: 12.5, weight: .regular))
+    }
+
+    func textDidChange(_ notification: Notification) {
+        window.isDocumentEdited = true
+        guard language != nil else { return }
+        highlightWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in self?.highlight() }
+        highlightWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: w)
+    }
 
     @objc private func saveAction() { _ = save() }
 
