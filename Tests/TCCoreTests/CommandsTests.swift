@@ -140,6 +140,7 @@ import Foundation
             let text = try String(contentsOf: dir.appendingPathComponent(f), encoding: .utf8)
             for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
                 let key = (text as NSString).substring(with: m.range(at: 1))
+                if key.contains("\\(") { continue }                       // složené texty překládají fráze
                 if Localization.en[key] == nil && !Localization.untranslated.contains(key) { missing.append("\(f): \(key)") }
             }
         }
@@ -177,5 +178,36 @@ import Foundation
         let json = #"[{"id":"\#(UUID().uuidString)","extensions":["md"],"command":"typora","parameters":""}]"#
         let list = try JSONDecoder().decode([FileAssociation].self, from: Data(json.utf8))
         #expect(list.count == 1 && list[0].viewCommand.isEmpty && list[0].editCommand.isEmpty && list[0].command == "typora")
+    }
+}
+
+@Suite struct PhraseTranslationTests {
+    func en(_ s: String) -> String { Localization.translate(s, language: "en") }
+
+    @Test func allPhrasePatternsCompile() {
+        #expect(Localization.phrases.count > 100)
+        for p in Localization.phrases { #expect((try? NSRegularExpression(pattern: p.pattern)) != nil, "\(p.pattern)") }
+    }
+
+    @Test func translatesStaticAndCompositeTexts() {
+        #expect(en("Zrušit") == "Cancel" && en("Přesunout do koše?") == "Move to Trash?" && en("Soubor nelze otevřít") == "The file cannot be opened")
+        #expect(en("37 souborů, 42 adresářů · 1,1 MB") == "37 files, 42 folders · 1,1 MB")
+        #expect(en("Označeno 3 z 40 · 12 KB") == "Marked 3 of 40 · 12 KB")
+        #expect(en("„report.pdf“ bude trvale odstraněno (nelze vrátit).") == "“report.pdf” will be permanently removed (cannot be undone).")
+        #expect(en("Kopírovat 5 položek") == "Copy 5 items" && en("Přesunout „a.txt“") == "Move “a.txt”")
+        #expect(en("Archiv je v pořádku (12 souborů).") == "The archive is OK (12 files).")
+        #expect(en("Rozdílů: 4 · k provedení: 3 (kopií: 2, smazání: 1)") == "Differences: 4 · to perform: 3 (copies: 2, deletions: 1)")
+        #expect(en("Připojuji k ftp.example.com…") == "Connecting to ftp.example.com…")
+        #expect(en("Offset je mimo soubor (velikost 100 bajtů)") == "Offset is outside the file (size 100 bytes)")
+        #expect(en("Část 2 z 5 (bajty 100–200)") == "Part 2 of 5 (bytes 100–200)")
+        #expect(Localization.translate("Zrušit", language: "cs") == "Zrušit")            // čeština se nemění
+        #expect(en("report-final.pdf") == "report-final.pdf")                               // názvy souborů zůstávají
+    }
+
+    @Test func translationsContainNoCzechLettersExceptTheLanguageName() {
+        for (cs, t) in Localization.enMore where cs != "Čeština" {
+            #expect(!t.isEmpty, "\(cs)")
+            #expect(!t.contains(where: { "ěščřžýáíéúůťďňĚŠČŘŽÝÁÍÉÚŮŤĎŇ".contains($0) }), "\(cs) → \(t)")
+        }
     }
 }

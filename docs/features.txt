@@ -112,7 +112,7 @@ Přizpůsobení | Button bar a Start menu | D | 6 | upravitelné v Nastavení (n
 Přizpůsobení | Uživatelské příkazy (em_*) s parametry %P %N %S %T %F %L | D | 6 | spuštění i v Terminálu; parametry se ošetří proti injekci (testováno)
 Přizpůsobení | Interní příkazy (cm_*) a jejich registr | D | 6 | 60 příkazů, použitelné ze zkratek, tlačítek i uživatelských příkazů
 Přizpůsobení | Nastavení (dialog), barvy, fonty | D | 6 | editor, terminál, písmo, výška řádku, barvy
-Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 6 | menu, tlačítková lišta, lišta F-kláves, názvy záložek Nastavení a výchozí tlačítka; přepínač v Nastavení › Obecné | Překlad dialogů, chybových hlášek, stavových zpráv, oken Hledání, Synchronizace a Multi-Rename a obsahu záložek Nastavení.
+Přizpůsobení | Čeština a angličtina, přepínání jazyků | D | 6 | menu, lišty, okna, dialogy i stavové texty; automatický překlad prvků oken podle překladové tabulky (přes 450 textů a 150 frází pro složené zprávy); ověřeno vizuálně na Nastavení | 
 Přizpůsobení | Import nastavení z `wincmd.ini` | D | 6 | tlačítka, uživatelské příkazy (usercmd.ini), zkratky a oblíbené adresáře; Windows programy a cesty se přeskočí a vypíšou; menu Nástroje; dialog ručně neověřen
 Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | D | 6 | složka s plugin.json a spustitelným souborem, JSON přes standardní vstup/výstup (viz docs/plugins.md); sloupce, prohlížeče, archivy (jen čtení přes rozbalení), souborové systémy; ověřeno testy s ukázkovými pluginy
 Přizpůsobení | Vestavěné obsahové sloupce (rozměry obrázku, délka audia/videa, strany PDF, řádky textu) | D | 6 | sada sloupců Média; rozměry ověřeny vizuálně
