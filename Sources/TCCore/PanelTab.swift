@@ -37,7 +37,7 @@ public final class PanelTab: Identifiable {
     @ObservationIgnored private var fs: any VirtualFileSystem
     @ObservationIgnored private var saved: SavedLocation?
     /// Server (FTP), do kterého panel právě vstoupil.
-    public private(set) var remote: RemoteFileSystem?
+    public private(set) var remote: (any RemoteFileSystemProtocol)?
     public private(set) var isLoading = false
     @ObservationIgnored private var loadGeneration = 0
     /// Archiv, do kterého panel právě vstoupil (cesty uvnitř jsou cesty v archivu).
@@ -62,7 +62,7 @@ public final class PanelTab: Identifiable {
 
     /// Cesta pro zobrazení v adresním řádku.
     public var displayPath: String {
-        if let r = remote { return r.connection.displayName + path.path }
+        if let r = remote { return r.displayName + path.path }
         return archiveFile.map { $0.path + " ▸ " + path.path } ?? path.path
     }
 
@@ -236,7 +236,7 @@ public final class PanelTab: Identifiable {
     }
 
     /// Vstoupí na server; první výpis (`items`) zajistil volající (ověření přihlášení před přepnutím panelu).
-    public func attachRemote(_ rfs: RemoteFileSystem, path remotePath: String, items: [FileEntry]) {
+    public func attachRemote(_ rfs: any RemoteFileSystemProtocol, path remotePath: String, items: [FileEntry]) {
         if isVirtual { leaveVirtual() }
         saved = SavedLocation(fs: fs, path: path, back: backStack, forward: forwardStack)
         fs = rfs; remote = rfs
@@ -251,7 +251,9 @@ public final class PanelTab: Identifiable {
     public func leaveRemote() {
         guard remote != nil, let s = saved else { return }
         loadGeneration += 1; isLoading = false
+        let old = remote
         fs = s.fs; remote = nil; saved = nil
+        Task.detached { old?.close() }
         backStack = s.back; forwardStack = s.forward; marked.removeAll(); quickFilter = ""
         navigate(to: s.path, recordHistory: false)
     }

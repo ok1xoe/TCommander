@@ -12,9 +12,12 @@ public struct RemoteConnection: Sendable, Equatable {
     public var security: Security
     public var allowSelfSigned: Bool
     public var initialPath: String
+    /// SOCKS/HTTP proxy, např. "socks5h://127.0.0.1:1080"; prázdné = bez proxy.
+    public var proxy: String
 
     public init(host: String, port: Int? = nil, user: String = "anonymous", password: String = "anonymous@",
-                security: Security = .none, allowSelfSigned: Bool = false, initialPath: String = "/") {
+                security: Security = .none, allowSelfSigned: Bool = false, initialPath: String = "/", proxy: String = "") {
+        self.proxy = proxy
         self.host = host; self.port = port; self.user = user; self.password = password
         self.security = security; self.allowSelfSigned = allowSelfSigned; self.initialPath = initialPath
     }
@@ -39,11 +42,11 @@ public struct ParsedListEntry: Equatable, Sendable {
 }
 
 public enum FTPListParser {
-    public static func parse(_ text: String, mlsd: Bool, now: Date = Date()) -> [ParsedListEntry] {
+    public static func parse(_ text: String, mlsd: Bool, now: Date = Date(), timeZone: TimeZone = TimeZone(identifier: "UTC")!) -> [ParsedListEntry] {
         text.split(whereSeparator: \.isNewline).compactMap { raw in
             let line = String(raw).trimmingCharacters(in: CharacterSet(charactersIn: "\r"))
             guard !line.isEmpty else { return nil }
-            let e = mlsd ? parseMLSD(line) : (parseUnix(line, now: now) ?? parseDOS(line))
+            let e = mlsd ? parseMLSD(line) : (parseUnix(line, now: now, timeZone: timeZone) ?? parseDOS(line))
             guard let e, e.name != ".", e.name != "..", !e.name.isEmpty else { return nil }
             return e
         }
@@ -78,9 +81,9 @@ public enum FTPListParser {
     }
 
     private static let unixRegex = try! NSRegularExpression(
-        pattern: #"^([\-dlbcps])([rwxsStT\-]{9})[+@.]?\s+\d+\s+(?:\S+\s+){1,2}?(\d+)\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4}|\d{1,2}:\d{2})\s+(.+)$"#)
+        pattern: #"^([\-dlbcps])([rwxsStT\-]{9})[+@.]?\s+(?:\d+|\?)\s+(?:\S+\s+){1,2}?(\d+)\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4}|\d{1,2}:\d{2})\s+(.+)$"#)
 
-    static func parseUnix(_ line: String, now: Date) -> ParsedListEntry? {
+    static func parseUnix(_ line: String, now: Date, timeZone: TimeZone = TimeZone(identifier: "UTC")!) -> ParsedListEntry? {
         let ns = line as NSString
         guard let m = unixRegex.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else { return nil }
         func g(_ i: Int) -> String { ns.substring(with: m.range(at: i)) }
@@ -88,16 +91,17 @@ public enum FTPListParser {
         var name = g(7)
         let isLink = type == "l"
         if isLink, let r = name.range(of: " -> ") { name = String(name[..<r.lowerBound]) }
+        if name.contains("/") { name = (name as NSString).lastPathComponent }      // sftp vypisuje celé cesty
         var perm: UInt16 = 0
         for (i, c) in g(2).enumerated() where c != "-" && c != "S" && c != "T" { perm |= 1 << UInt16(8 - i) }
         return ParsedListEntry(name: name, isDirectory: type == "d", isSymlink: isLink, size: Int64(g(3)) ?? 0,
-                               modified: unixDate(month: g(4), day: g(5), yearOrTime: g(6), now: now), permissions: perm)
+                               modified: unixDate(month: g(4), day: g(5), yearOrTime: g(6), now: now, timeZone: timeZone), permissions: perm)
     }
 
-    static func unixDate(month: String, day: String, yearOrTime: String, now: Date) -> Date? {
+    static func unixDate(month: String, day: String, yearOrTime: String, now: Date, timeZone: TimeZone = TimeZone(identifier: "UTC")!) -> Date? {
         let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
         guard let mi = months.firstIndex(of: month.lowercased()), let d = Int(day) else { return nil }
-        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "UTC")!
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = timeZone
         var comps = DateComponents(); comps.month = mi + 1; comps.day = d
         if yearOrTime.contains(":") {
             let hm = yearOrTime.split(separator: ":"); comps.hour = Int(hm[0]); comps.minute = Int(hm[1])
@@ -123,8 +127,29 @@ public enum FTPListParser {
     }
 }
 
+/// Společné rozhraní serverových souborových systémů (FTP, SFTP) pro panely a přenosy.
+public protocol RemoteFileSystemProtocol: VirtualFileSystem, AnyObject {
+    /// Popis připojení pro adresní řádek, např. "ftp://user@host".
+    var displayName: String { get }
+    func downloadFile(remotePath: String, local: URL, resumeFrom: Int64, progress: ((Int64, Int64) -> Bool)?) throws
+    func uploadFile(local: URL, remotePath: String, progress: ((Int64, Int64) -> Bool)?) throws
+    func scan(_ path: String) -> (files: Int, bytes: Int64)
+    /// Pokud přenos sám zachová přesné časy souborů, výsledek se nepřepisuje méně přesným časem z výpisu.
+    var preservesTimesOnDownload: Bool { get }
+    /// Ukončí případné sdílené spojení.
+    func close()
+}
+
+public extension RemoteFileSystemProtocol {
+    var preservesTimesOnDownload: Bool { false }
+    func close() {}
+}
+
+public enum RemoteAbort { public static let code: Int32 = 42 }
+
 /// FTP/FTPS souborový systém přes libcurl. Cesty jsou relativní k přihlašovacímu adresáři ("/" = domovský adresář).
-public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
+public final class RemoteFileSystem: RemoteFileSystemProtocol, @unchecked Sendable {
+    public var displayName: String { connection.displayName }
     public let connection: RemoteConnection
     private let lock = NSLock()
     private var mlsdSupported = true
@@ -157,9 +182,11 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
     private func withOpts<T>(timeout: Long = 0, _ body: (UnsafePointer<mc_opts>) -> T) -> T {
         connection.user.withCString { u in
             connection.password.withCString { p in
-                var o = mc_opts(user: u, password: p, tls: connection.security == .none ? 0 : 1,
-                                insecure: connection.allowSelfSigned ? 1 : 0, connect_timeout: 15, low_speed_timeout: timeout)
-                return withUnsafePointer(to: &o) { body($0) }
+                connection.proxy.withCString { px in
+                    var o = mc_opts(user: u, password: p, tls: connection.security == .none ? 0 : 1,
+                                    insecure: connection.allowSelfSigned ? 1 : 0, connect_timeout: 15, low_speed_timeout: timeout, proxy: px)
+                    return withUnsafePointer(to: &o) { body($0) }
+                }
             }
         }
     }
@@ -273,7 +300,7 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
         return Unmanaged<ProgressBox>.fromOpaque(ctx).takeUnretainedValue().handler(now, total) ? 0 : 1
     }
 
-    public func downloadFile(remotePath: String, local: URL, resumeFrom: Int64 = 0, progress: ((Int64, Int64) -> Bool)? = nil) throws {
+    public func downloadFile(remotePath: String, local: URL, resumeFrom: Int64, progress: ((Int64, Int64) -> Bool)?) throws {
         var err = [CChar](repeating: 0, count: 256)
         let box = ProgressBox(progress ?? { _, _ in true })
         let rc: Int32 = urlString(remotePath, directory: false).withCString { url in
@@ -281,10 +308,10 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
                 withOpts(timeout: 60) { mc_download($0, url, lp, resumeFrom, Self.progressCallback, Unmanaged.passUnretained(box).toOpaque(), &err, err.count) }
             }
         }
-        if rc != 0 { throw RemoteError(code: rc, message: rc == Int32(MC_ABORTED) ? "Přerušeno" : (errorString(err).isEmpty ? "Chyba FTP (\(rc))" : errorString(err))) }
+        if rc != 0 { throw RemoteError(code: rc, message: rc == RemoteAbort.code ? "Přerušeno" : (errorString(err).isEmpty ? "Chyba FTP (\(rc))" : errorString(err))) }
     }
 
-    public func uploadFile(local: URL, remotePath: String, progress: ((Int64, Int64) -> Bool)? = nil) throws {
+    public func uploadFile(local: URL, remotePath: String, progress: ((Int64, Int64) -> Bool)?) throws {
         var err = [CChar](repeating: 0, count: 256)
         let box = ProgressBox(progress ?? { _, _ in true })
         let rc: Int32 = urlString(remotePath, directory: false).withCString { url in
@@ -292,7 +319,7 @@ public final class RemoteFileSystem: VirtualFileSystem, @unchecked Sendable {
                 withOpts(timeout: 60) { mc_upload($0, url, lp, Self.progressCallback, Unmanaged.passUnretained(box).toOpaque(), &err, err.count) }
             }
         }
-        if rc != 0 { throw RemoteError(code: rc, message: rc == Int32(MC_ABORTED) ? "Přerušeno" : (errorString(err).isEmpty ? "Chyba FTP (\(rc))" : errorString(err))) }
+        if rc != 0 { throw RemoteError(code: rc, message: rc == RemoteAbort.code ? "Přerušeno" : (errorString(err).isEmpty ? "Chyba FTP (\(rc))" : errorString(err))) }
     }
 
     /// Soubory a bajty ve stromu na serveru.
@@ -311,7 +338,7 @@ public enum RemoteTransfer {
     private static let partSuffix = ".macTCpart"
 
     /// Stáhne položky ze serveru do `dest` (adresáře); rozpracované soubory `.macTCpart` se příště obnoví.
-    public static func download(_ fs: RemoteFileSystem, _ paths: [String], to dest: URL, policy: ConflictPolicy = .overwrite,
+    public static func download(_ fs: any RemoteFileSystemProtocol, _ paths: [String], to dest: URL, policy: ConflictPolicy = .overwrite,
                                 control: OperationControl = OperationControl(),
                                 progress: (@Sendable (TransferProgress) -> Void)? = nil) -> OperationReport {
         var report = OperationReport()
@@ -329,7 +356,7 @@ public enum RemoteTransfer {
             if e.isDirectory && !e.isSymlink {
                 try fm.createDirectory(at: local, withIntermediateDirectories: true)
                 for c in try fs.list(remote, includeHidden: true) { try fetch(c.url, into: local, top: false) }
-                if let m = e.modified { try? fm.setAttributes([.modificationDate: m], ofItemAtPath: local.path) }
+                if let m = e.modified, !fs.preservesTimesOnDownload { try? fm.setAttributes([.modificationDate: m], ofItemAtPath: local.path) }
                 if top { report.succeeded += 1 }
                 return
             }
@@ -353,13 +380,13 @@ public enum RemoteTransfer {
             p.current = e.name
             p.bytesDone = base
             do {
-                try fs.downloadFile(remotePath: remote.path, local: part, resumeFrom: resume) { now, _ in
+                try fs.downloadFile(remotePath: remote.path, local: part, resumeFrom: resume, progress: { now, _ in
                     p.bytesDone = base + now; emit()
                     return control.checkpoint()
-                }
-            } catch let err as RemoteError where err.code == Int32(MC_ABORTED) { throw CancellationError() }
+                })
+            } catch let err as RemoteError where err.code == RemoteAbort.code { throw CancellationError() }
             try fm.moveItem(at: part, to: local)
-            if let m = e.modified { try? fm.setAttributes([.modificationDate: m], ofItemAtPath: local.path) }
+            if let m = e.modified, !fs.preservesTimesOnDownload { try? fm.setAttributes([.modificationDate: m], ofItemAtPath: local.path) }
             p.bytesDone = base - resume + e.size
             p.filesDone += 1; emit()
             if top { report.succeeded += 1 }
@@ -374,7 +401,7 @@ public enum RemoteTransfer {
     }
 
     /// Nahraje místní soubory a složky do adresáře `remoteDir` na serveru.
-    public static func upload(_ fs: RemoteFileSystem, _ locals: [URL], into remoteDir: String, policy: ConflictPolicy = .overwrite,
+    public static func upload(_ fs: any RemoteFileSystemProtocol, _ locals: [URL], into remoteDir: String, policy: ConflictPolicy = .overwrite,
                               control: OperationControl = OperationControl(),
                               progress: (@Sendable (TransferProgress) -> Void)? = nil) -> OperationReport {
         var report = OperationReport()
@@ -419,11 +446,11 @@ public enum RemoteTransfer {
             p.current = name
             let base = p.bytesDone
             do {
-                try fs.uploadFile(local: url, remotePath: (dir == "/" ? "" : dir) + "/" + name) { now, _ in
+                try fs.uploadFile(local: url, remotePath: (dir == "/" ? "" : dir) + "/" + name, progress: { now, _ in
                     p.bytesDone = base + now; emit()
                     return control.checkpoint()
-                }
-            } catch let err as RemoteError where err.code == Int32(MC_ABORTED) { throw CancellationError() }
+                })
+            } catch let err as RemoteError where err.code == RemoteAbort.code { throw CancellationError() }
             listings[dir] = nil
             p.bytesDone = base + info.size
             p.filesDone += 1; emit()

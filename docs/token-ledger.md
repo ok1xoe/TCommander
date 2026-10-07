@@ -18,8 +18,8 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | 1 – panely a základní operace | 09:44 – 10:01:27 (sloučení PR #1) | 26 | 52 | 92 765 | 3 067 722 | 76 954 | 3 237 493 |
 | 2 – fronta, Lister, hledání, nástroje | 10:01:27 – 10:33:41 (sloučení PR #7) | 41 | 82 | 113 116 | 9 067 468 | 93 127 | 9 273 793 |
 | 3 – Multi-Rename, porovnání, sync, duplicity | 10:33:41 – 10:46:33 (sloučení PR #10) | 14 | 28 | 54 582 | 4 257 286 | 52 593 | 4 364 489 |
-| 4 – archivy | 10:46:33 – otevření PR 4b | 22 | 44 | 67 457 | 7 975 992 | 64 308 | 8 107 801 |
-| 5 – síť | | | | | | | |
+| 4 – archivy | 10:46:33 – 11:06:56 (sloučení PR #12) | 24 | 48 | 73 697 | 8 779 513 | 66 180 | 8 919 438 |
+| 5 – síť | 11:06:56 – otevření PR 5c | 29 | 58 | 121 350 | 13 707 198 | 110 477 | 13 939 083 |
 | 6 – pluginy, button bar, nastavení | | | | | | | |
 
 Poznámka: hodnoty fází 1 a 2 byly původně změřeny před kroky PR/sloučení a jsou opraveny na celé okno fáze (konec = sloučení posledního PR fáze). Původní hodnota fáze 1 (2 747 398) byla změřena před kroky PR/sloučení; zde je opravená hodnota za celé okno fáze.
