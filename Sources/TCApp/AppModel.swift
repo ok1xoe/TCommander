@@ -26,10 +26,32 @@ final class AppModel {
     let connections = SavedConnections(file: SavedConnections.defaultFile())
     /// Zobrazený rychlý filtr v panelech (klíč: levý = true).
     var filterVisible: [Bool: Bool] = [:]
-    var verifyCopies = false { didSet { defaults.set(verifyCopies, forKey: "verifyCopies") } }
     var status: String?
-    var deleteToTrash = true
-    var showHidden = false { didSet { for t in left.tabs + right.tabs { t.showHidden = showHidden } } }
+
+    // MARK: Nastavení a přizpůsobení (ukládá se do Application Support)
+    @ObservationIgnored let settingsStore = JSONStore<AppSettings>(name: "settings")
+    @ObservationIgnored let keymapStore = JSONStore<Keymap>(name: "keymap")
+    @ObservationIgnored let userCommandsStore = JSONStore<[UserCommand]>(name: "usercommands")
+    @ObservationIgnored let buttonBarStore = JSONStore<[ButtonBarItem]>(name: "buttonbar")
+    @ObservationIgnored let startMenuStore = JSONStore<[ButtonBarItem]>(name: "startmenu")
+    @ObservationIgnored let associationsStore = JSONStore<[FileAssociation]>(name: "associations")
+
+    var settings: AppSettings { didSet { if settings != oldValue { applySettings(oldValue); settingsStore.save(settings) } } }
+    var keymap: Keymap { didSet { keymapStore.save(keymap) } }
+    var userCommands: [UserCommand] { didSet { userCommandsStore.save(userCommands) } }
+    var buttonBar: [ButtonBarItem] { didSet { buttonBarStore.save(buttonBar) } }
+    var startMenu: [ButtonBarItem] { didSet { startMenuStore.save(startMenu) } }
+    var associations: [FileAssociation] { didSet { associationsStore.save(associations) } }
+
+    var verifyCopies: Bool { get { settings.verifyCopies } set { settings.verifyCopies = newValue } }
+    var deleteToTrash: Bool { get { settings.deleteToTrash } set { settings.deleteToTrash = newValue } }
+    var showHidden: Bool { get { settings.showHidden } set { settings.showHidden = newValue } }
+
+    var panelStyle: PanelStyle { PanelStyle(fontSize: settings.fontSize, rowHeight: settings.rowHeight, colorRules: settings.colorRules) }
+
+    private func applySettings(_ old: AppSettings) {
+        if settings.showHidden != old.showHidden { for t in left.tabs + right.tabs { t.showHidden = settings.showHidden } }
+    }
 
     @ObservationIgnored let ops = FileOperations()
     @ObservationIgnored private let defaults = UserDefaults.standard
@@ -46,9 +68,18 @@ final class AppModel {
         func defaults(_ key: String) -> [String]? { UserDefaults.standard.stringArray(forKey: key) }
         left = restore("tabs.left")
         right = restore("tabs.right")
-        showHidden = UserDefaults.standard.bool(forKey: "showHidden")
-        verifyCopies = UserDefaults.standard.bool(forKey: "verifyCopies")
-        for t in left.tabs + right.tabs { t.showHidden = showHidden }
+        var initial = AppSettings()
+        if !FileManager.default.fileExists(atPath: settingsStore.file.path) {          // převzetí starších hodnot
+            initial.showHidden = UserDefaults.standard.bool(forKey: "showHidden")
+            initial.verifyCopies = UserDefaults.standard.bool(forKey: "verifyCopies")
+        }
+        settings = settingsStore.load(default: initial)
+        keymap = keymapStore.load(default: Keymap())
+        userCommands = userCommandsStore.load(default: [])
+        buttonBar = buttonBarStore.load(default: DefaultCustomization.buttonBar)
+        startMenu = startMenuStore.load(default: DefaultCustomization.startMenu)
+        associations = associationsStore.load(default: [])
+        for t in left.tabs + right.tabs { t.showHidden = settings.showHidden }
         ArchiveFileSystem.cleanTemporary()
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.save(); ArchiveFileSystem.cleanTemporary() }
@@ -61,7 +92,6 @@ final class AppModel {
     func save() {
         defaults.set(left.tabs.map(\.persistentPath.path), forKey: "tabs.left"); defaults.set(left.activeIndex, forKey: "tabs.left.active")
         defaults.set(right.tabs.map(\.persistentPath.path), forKey: "tabs.right"); defaults.set(right.activeIndex, forKey: "tabs.right.active")
-        defaults.set(showHidden, forKey: "showHidden")
     }
 
     func group(_ side: Side) -> PanelGroup { side == .left ? left : right }
@@ -72,44 +102,32 @@ final class AppModel {
 
     // MARK: Klávesnice
 
+    /// Zkratka z události klávesnice (nil pro znaky, které nelze zapsat).
+    static func shortcut(from e: NSEvent) -> Shortcut? {
+        var mods = Set<Shortcut.Modifier>()
+        let f = e.modifierFlags
+        if f.contains(.control) { mods.insert(.ctrl) }
+        if f.contains(.option) { mods.insert(.alt) }
+        if f.contains(.shift) { mods.insert(.shift) }
+        if f.contains(.command) { mods.insert(.cmd) }
+        if let k = Shortcut.macKeyCodes[e.keyCode] { return Shortcut(key: k, modifiers: mods) }
+        guard let c = e.charactersIgnoringModifiers?.lowercased(), c.count == 1 else { return nil }
+        return Shortcut(key: c, modifiers: mods)
+    }
+
     func handleKey(_ e: NSEvent, side: Side) -> Bool {
         activeSide = side
+        if let sc = Self.shortcut(from: e), let id = keymap.command(for: sc) { perform(id); return true }
+        // pevné klávesy mimo konfigurovatelné příkazy
         let m = e.modifierFlags.intersection([.command, .option, .control, .shift])
         switch e.keyCode {
-        case 48: // Tab
-            if m == .control { group(side).nextTab() } else if m == [.control, .shift] { group(side).previousTab() }
-            else if !quickViewOn { activeSide = side.other }
-            return true
-        case 36, 76: // Return
-            if m == .option { properties(); return true }
-            if m == .control { insertNameIntoCommandLine(); return true }
-            if m == [] { open(); return true }
-        case 51: // Backspace
-            if m == [] { source.goUp(); return true }
-            if m == .command { delete(permanent: false); return true }
-        case 117: if m == [] { delete(permanent: false); return true }
-                  if m == .shift { delete(permanent: true); return true }
+        case 51: if m == .command { delete(permanent: false); return true }        // ⌘⌫ jako ve Finderu
         case 49: if m == [] { spaceKey(); return true }
-        case 114: if m == [] { source.toggleMarkAndAdvance(); return true }
-        case 69: if m == [] { markByMask(on: true); return true }
-        case 78: if m == [] { markByMask(on: false); return true }
-        case 67: if m == [] { source.invertMarks(); return true }
-        case 11: if m == .control { toggleBranchView(); return true }   // Ctrl+B
-        case 46: if m == .control { multiRename(); return true }        // Ctrl+M
-        case 1: if m == .control { toggleFilter(); return true }        // Ctrl+S
-        case 12: if m == .control { quickViewOn.toggle(); return true } // Ctrl+Q
+        case 114: if m == [] { source.toggleMarkAndAdvance(); return true }         // Insert
         case 53: // Esc
             if filterVisible[side.key] == true { filterVisible[side.key] = false; source.quickFilter = ""; return true }
             if !source.quickFilter.isEmpty { source.quickFilter = "" } else { commandLine = ""; source.marked.isEmpty ? () : source.unmarkAll() }
             return true
-        case 120: rename(); return true                                  // F2
-        case 99: view(); return true                                     // F3
-        case 118: if m == .shift { newFile() } else { edit() }; return true // F4
-        case 96: if m == .option { packFiles() } else { transfer(.copy) }; return true   // F5, Alt+F5
-        case 97: if m == .shift { rename() } else { transfer(.move) }; return true // F6
-        case 98: if m == .option { search() } else { makeDirectory() }; return true // F7
-        case 100: delete(permanent: m == .shift); return true            // F8
-        case 101: if m == .option { unpackArchives(); return true }       // Alt+F9
         default: break
         }
         return false
@@ -121,7 +139,9 @@ final class AppModel {
         guard let url = source.activateCursor() else { return }
         if source.insideArchive, let tmp = extractToTemp(url) { NSWorkspace.shared.open(tmp) }
         else if source.remote != nil, let e = source.entries.first(where: { $0.url == url }) { withRemoteFile(e) { NSWorkspace.shared.open($0) } }
-        else if !source.isVirtual { NSWorkspace.shared.open(url) }
+        else if !source.isVirtual {
+            if let a = Associations.match(url.lastPathComponent, in: associations) { runAssociation(a) } else { NSWorkspace.shared.open(url) }
+        }
     }
 
     /// Soubor z archivu se rozbalí do dočasného adresáře (ten se maže při startu a ukončení).
@@ -560,8 +580,8 @@ final class AppModel {
     }
 
     func openInEditor(_ url: URL) {
-        let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
-        NSWorkspace.shared.open([url], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
+        let editor = URL(fileURLWithPath: settings.editorApp)
+        NSWorkspace.shared.open([url], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration())
     }
 
     // MARK: Porovnání a synchronizace
