@@ -6,9 +6,21 @@ import UniformTypeIdentifiers
 final class KeyTableView: NSTableView {
     var keyHandler: ((NSEvent) -> Bool)?
     var focusHandler: (() -> Void)?
+    /// PageUp/PageDown/Home/End: posun kurzoru (o `delta` řádků, nebo na začátek či konec při `toEnd`).
+    var cursorMove: ((_ delta: Int, _ toEnd: Bool) -> Void)?
 
     override func keyDown(with event: NSEvent) {
         if keyHandler?(event) == true { return }
+        if event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+            let page = max(1, Int(visibleRect.height / max(1, rowHeight + intercellSpacing.height)) - 1)
+            switch event.keyCode {
+            case 116: cursorMove?(-page, false); return        // PageUp
+            case 121: cursorMove?(page, false); return         // PageDown
+            case 115: cursorMove?(-1, true); return            // Home
+            case 119: cursorMove?(1, true); return             // End
+            default: break
+            }
+        }
         super.keyDown(with: event)
     }
 
@@ -118,6 +130,10 @@ struct FileTableView: NSViewRepresentable {
         table.doubleAction = #selector(Coordinator.doubleClicked)
         table.keyHandler = { [weak c] e in c?.parent.onKey(e) ?? false }
         table.focusHandler = { [weak c] in c?.parent.onFocus() }
+        table.cursorMove = { [weak c] delta, toEnd in
+            guard let tab = c?.parent.tab else { return }
+            tab.moveCursor(to: toEnd ? (delta < 0 ? 0 : tab.entries.count - 1) : tab.cursor + delta)
+        }
         c.table = table
 
         let scroll = NSScrollView()
