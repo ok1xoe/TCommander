@@ -48,7 +48,7 @@ public struct LocalFileSystem: VirtualFileSystem {
         func time(_ t: timespec) -> Date? { t.tv_sec > 0 ? Date(timeIntervalSince1970: TimeInterval(t.tv_sec) + TimeInterval(t.tv_nsec) / 1e9) : nil }
         return FileEntry(url: url, name: name, isDirectory: isDir, isSymlink: isLink, isHidden: hidden,
                          size: isDir ? 0 : size, modified: date, permissions: UInt16(st.st_mode & 0o777),
-                         created: time(st.st_birthtimespec), accessed: time(st.st_atimespec), ownerID: UInt32(st.st_uid))
+                         created: time(st.st_birthtimespec), accessed: time(st.st_atimespec), ownerID: UInt32(st.st_uid), groupID: UInt32(st.st_gid))
     }
 
     public func exists(_ url: URL) -> Bool {

@@ -34,6 +34,11 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private var textArea: NSTextView?
     private var pageLabel = NSTextField(labelWithString: "")
     private let hexSearch = NSSearchField()
+    private let gotoOffset = NSTextField()
+    private let encodingPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let wrapBox = NSButton(checkboxWithTitle: "Zalamovat řádky", target: nil, action: nil)
+    private var forcedEncoding = "Automaticky"
+    private var wrap = true
     private var player: AVPlayer?
 
     private init?(url: URL) {
@@ -120,17 +125,26 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         tv.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         tv.autoresizingMask = [.width]
         tv.isVerticallyResizable = true
-        tv.textContainer?.widthTracksTextView = true
         scroll.documentView = tv
         textArea = tv
+        applyWrap(scroll)
         let pages = TextPager.count(of: data.count, size: Self.textLimit)
         showTextPage(min(textPage, pages - 1))
-        guard pages > 1 else { return scroll }
-        // velký soubor: stránkování po 16 MB (části končí na konci řádku)
-        let prev = NSButton(title: "◀︎ Předchozí část", target: self, action: #selector(prevPage))
-        let next = NSButton(title: "Další část ▶︎", target: self, action: #selector(nextPage))
-        pageLabel.font = .systemFont(ofSize: 11); pageLabel.textColor = .secondaryLabelColor
-        let bar = NSStackView(views: [prev, next, pageLabel, NSView()]); bar.spacing = 8
+
+        // lišta: kódování, zalamování a (u velkých souborů) stránkování po 16 MB
+        if encodingPopup.numberOfItems == 0 { encodingPopup.addItems(withTitles: TextDecoding.selectableEncodings) }
+        encodingPopup.selectItem(withTitle: forcedEncoding)
+        encodingPopup.target = self; encodingPopup.action = #selector(encodingChanged)
+        wrapBox.state = wrap ? .on : .off
+        wrapBox.target = self; wrapBox.action = #selector(wrapChanged)
+        var items: [NSView] = [NSTextField(labelWithString: "Kódování:"), encodingPopup, wrapBox]
+        if pages > 1 {
+            let prev = NSButton(title: "◀︎ Předchozí část", target: self, action: #selector(prevPage))
+            let next = NSButton(title: "Další část ▶︎", target: self, action: #selector(nextPage))
+            pageLabel.font = .systemFont(ofSize: 11); pageLabel.textColor = .secondaryLabelColor
+            items += [prev, next, pageLabel]
+        }
+        let bar = NSStackView(views: items + [NSView()]); bar.spacing = 8
         bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
         let box = NSStackView(views: [bar, scroll]); box.orientation = .vertical; box.spacing = 0; box.alignment = .leading
         scroll.translatesAutoresizingMaskIntoConstraints = false
@@ -139,13 +153,31 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         return box
     }
 
+    private func applyWrap(_ scroll: NSScrollView? = nil) {
+        guard let tv = textArea else { return }
+        let sv = scroll ?? tv.enclosingScrollView
+        tv.isHorizontallyResizable = !wrap
+        tv.textContainer?.widthTracksTextView = wrap
+        tv.textContainer?.containerSize = NSSize(width: wrap ? max(100, (sv?.contentSize.width ?? 800)) : 1_000_000, height: CGFloat.greatestFiniteMagnitude)
+        sv?.hasHorizontalScroller = !wrap
+        tv.sizeToFit()
+    }
+
+    @objc private func wrapChanged() { wrap = wrapBox.state == .on; applyWrap() }
+
+    @objc private func encodingChanged() {
+        forcedEncoding = encodingPopup.titleOfSelectedItem ?? "Automaticky"
+        showTextPage(textPage)
+    }
+
     private func showTextPage(_ i: Int) {
         let pages = TextPager.count(of: data.count, size: Self.textLimit)
         textPage = max(0, min(i, pages - 1))
         let r = TextPager.range(in: data, index: textPage, size: Self.textLimit)
-        let decoded = TextDecoding.decode(Data(data[data.startIndex + r.lowerBound..<data.startIndex + r.upperBound]))
-        encodingName = decoded.encoding + (pages > 1 ? " · část \(textPage + 1) z \(pages)" : "")
-        textArea?.string = decoded.text
+        let chunk = Data(data[data.startIndex + r.lowerBound..<data.startIndex + r.upperBound])
+        let decoded = forcedEncoding == "Automaticky" ? TextDecoding.decode(chunk) : (TextDecoding.decode(chunk, forced: forcedEncoding), forcedEncoding + " (ručně)")
+        encodingName = decoded.1 + (pages > 1 ? " · část \(textPage + 1) z \(pages)" : "")
+        textArea?.string = decoded.0
         textArea?.scrollToBeginningOfDocument(nil)
         pageLabel.stringValue = pages > 1 ? "Část \(textPage + 1) z \(pages) (bajty \(r.lowerBound)–\(r.upperBound))" : ""
         info.stringValue = [ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file), encodingName].joined(separator: " · ")
@@ -172,12 +204,26 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         hexSearch.target = self; hexSearch.action = #selector(searchHex)
         hexSearch.translatesAutoresizingMaskIntoConstraints = false
         hexSearch.widthAnchor.constraint(equalToConstant: 320).isActive = true
-        let bar = NSStackView(views: [hexSearch, NSView()]); bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        gotoOffset.placeholderString = "Offset: 0x1F40 nebo 8000"
+        gotoOffset.target = self; gotoOffset.action = #selector(gotoOffsetAction)
+        gotoOffset.translatesAutoresizingMaskIntoConstraints = false
+        gotoOffset.widthAnchor.constraint(equalToConstant: 190).isActive = true
+        let bar = NSStackView(views: [hexSearch, NSTextField(labelWithString: "Přejít na:"), gotoOffset, NSView()]); bar.spacing = 8
+        bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
         let box = NSStackView(views: [bar, scroll]); box.orientation = .vertical; box.spacing = 0; box.alignment = .leading
         scroll.translatesAutoresizingMaskIntoConstraints = false
         scroll.widthAnchor.constraint(equalTo: box.widthAnchor).isActive = true
         scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
         return box
+    }
+
+    @objc private func gotoOffsetAction() {
+        guard let t = hexTable, let off = TextDecoding.parseOffset(gotoOffset.stringValue) else { NSSound.beep(); return }
+        guard off >= 0, off < data.count else { info.stringValue = "Offset je mimo soubor (velikost \(data.count) bajtů)"; NSSound.beep(); return }
+        let row = off / HexDump.width
+        t.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        t.scrollRowToVisible(row)
+        info.stringValue = String(format: "Offset 0x%X (%d)", off, off)
     }
 
     /// Enter v poli hledání: najde další výskyt od vybraného řádku (na konci se vrací na začátek).

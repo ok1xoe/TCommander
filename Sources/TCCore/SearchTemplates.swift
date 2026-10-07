@@ -15,14 +15,31 @@ public struct SearchTemplate: Codable, Hashable, Identifiable, Sendable {
     public var minKB: String
     public var maxKB: String
     public var days: String
+    /// Soubory starší než N dní.
+    public var olderDays: String
     public var attributes: AttributeFilter
 
     public init(name: String, masks: String = "*", excludeMasks: String = "", text: String = "", subdirectories: Bool = true, hidden: Bool = false,
-                archives: Bool = false, caseSensitive: Bool = false, regex: Bool = false, minKB: String = "", maxKB: String = "", days: String = "",
+                archives: Bool = false, caseSensitive: Bool = false, regex: Bool = false, minKB: String = "", maxKB: String = "", days: String = "", olderDays: String = "",
                 attributes: AttributeFilter = .any) {
         self.name = name; self.masks = masks; self.excludeMasks = excludeMasks; self.text = text; self.subdirectories = subdirectories
         self.hidden = hidden; self.archives = archives; self.caseSensitive = caseSensitive; self.regex = regex
-        self.minKB = minKB; self.maxKB = maxKB; self.days = days; self.attributes = attributes
+        self.minKB = minKB; self.maxKB = maxKB; self.days = days; self.olderDays = olderDays; self.attributes = attributes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name); masks = try c.decode(String.self, forKey: .masks)
+        excludeMasks = try c.decodeIfPresent(String.self, forKey: .excludeMasks) ?? ""
+        text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
+        subdirectories = try c.decodeIfPresent(Bool.self, forKey: .subdirectories) ?? true
+        hidden = try c.decodeIfPresent(Bool.self, forKey: .hidden) ?? false
+        archives = try c.decodeIfPresent(Bool.self, forKey: .archives) ?? false
+        caseSensitive = try c.decodeIfPresent(Bool.self, forKey: .caseSensitive) ?? false
+        regex = try c.decodeIfPresent(Bool.self, forKey: .regex) ?? false
+        minKB = try c.decodeIfPresent(String.self, forKey: .minKB) ?? ""; maxKB = try c.decodeIfPresent(String.self, forKey: .maxKB) ?? ""
+        days = try c.decodeIfPresent(String.self, forKey: .days) ?? ""; olderDays = try c.decodeIfPresent(String.self, forKey: .olderDays) ?? ""
+        attributes = try c.decodeIfPresent(AttributeFilter.self, forKey: .attributes) ?? .any
     }
 
     /// Převod na kritéria hledání v daném adresáři.
@@ -36,6 +53,7 @@ public struct SearchTemplate: Codable, Hashable, Identifiable, Sendable {
         if let v = Int64(minKB) { c.minSize = v * 1024 }
         if let v = Int64(maxKB) { c.maxSize = v * 1024 }
         if let d = Double(days) { c.modifiedAfter = now.addingTimeInterval(-d * 86_400) }
+        if let d = Double(olderDays) { c.modifiedBefore = now.addingTimeInterval(-d * 86_400) }
         return c
     }
 }

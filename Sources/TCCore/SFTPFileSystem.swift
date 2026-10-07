@@ -13,16 +13,33 @@ public struct SFTPConnection: Sendable, Equatable {
     public var strictHostKeyChecking: String
     public var initialPath: String
     public var multiplex: Bool
+    /// Proxy: socks5://host:port, socks4://host:port nebo http://host:port (přes nc); prázdné = bez proxy.
+    public var proxy: String
 
     public init(host: String, port: Int? = nil, user: String, password: String = "", identityFile: String = "",
                 knownHostsFile: String? = nil, strictHostKeyChecking: String = "accept-new", initialPath: String = "",
-                multiplex: Bool = true) {
+                multiplex: Bool = true, proxy: String = "") {
+        self.proxy = proxy
         self.host = host; self.port = port; self.user = user; self.password = password; self.identityFile = identityFile
         self.knownHostsFile = knownHostsFile; self.strictHostKeyChecking = strictHostKeyChecking
         self.initialPath = initialPath; self.multiplex = multiplex
     }
 
     public var displayName: String { "sftp://\(user.isEmpty ? "" : user + "@")\(host)\(port.map { ":\($0)" } ?? "")" }
+
+    /// ProxyCommand pro ssh podle adresy proxy (socks5://, socks4://, http://); nil pro prázdnou nebo neplatnou adresu.
+    public static func proxyCommand(from proxy: String) -> String? {
+        guard let c = URLComponents(string: proxy.trimmingCharacters(in: .whitespaces)), let host = c.host, !host.isEmpty, let port = c.port,
+              let scheme = c.scheme?.lowercased() else { return nil }
+        let kind: String
+        switch scheme {
+        case "socks5", "socks5h", "socks": kind = "5"
+        case "socks4", "socks4a": kind = "4"
+        case "http", "https": kind = "connect"
+        default: return nil
+        }
+        return "/usr/bin/nc -X \(kind) -x \(host):\(port) %h %p"
+    }
 }
 
 /// SFTP přes systémový `sftp` (OpenSSH). Cesty jsou absolutní cesty na serveru.
@@ -60,6 +77,7 @@ public final class SFTPFileSystem: RemoteFileSystemProtocol, @unchecked Sendable
         if !connection.password.isEmpty {
             a += ["-o", "BatchMode=no", "-o", "PreferredAuthentications=password,keyboard-interactive", "-o", "NumberOfPasswordPrompts=1"]
         }
+        if let pc = SFTPConnection.proxyCommand(from: connection.proxy) { a += ["-o", "ProxyCommand=\(pc)"] }
         if connection.multiplex {
             a += ["-o", "ControlMaster=auto", "-o", "ControlPath=\(controlDir.path)/%C", "-o", "ControlPersist=120"]
         }

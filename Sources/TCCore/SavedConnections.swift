@@ -55,7 +55,7 @@ public struct SavedConnection: Codable, Hashable, Identifiable, Sendable {
 
     public func sftpConnection(password: String) -> SFTPConnection {
         SFTPConnection(host: host, port: port, user: user.isEmpty ? NSUserName() : user, password: password,
-                       identityFile: (identityFile as NSString).expandingTildeInPath, initialPath: path)
+                       identityFile: (identityFile as NSString).expandingTildeInPath, initialPath: path, proxy: proxy)
     }
 
     /// URL pro připojení svazku (SMB, WebDAV); heslo se nikdy nevkládá do URL.

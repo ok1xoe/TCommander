@@ -93,6 +93,7 @@ final class MultiRenameWindow: NSObject, NSWindowDelegate, NSTableViewDataSource
             bottom.leadingAnchor.constraint(equalTo: c.leadingAnchor, constant: 14), bottom.trailingAnchor.constraint(equalTo: c.trailingAnchor, constant: -14),
             bottom.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -12),
         ])
+        Dialogs.fitWindow(window, form: form)
         refresh()
     }
 

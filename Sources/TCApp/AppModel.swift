@@ -685,28 +685,19 @@ final class AppModel {
         guard requireLocal() else { return }
         let t = source.targets
         guard !t.isEmpty else { return }
-        let single = t.count == 1 ? t[0] : nil
-        let df = DateFormatter(); df.dateFormat = "dd.MM.yyyy HH:mm:ss"
-        var info = single.map { "\($0.url.path)\n\($0.isDirectory ? "Adresář" : Fmt.bytes($0.size) + " bajtů")" } ?? "\(t.count) vybraných položek"
-        if let e = single, e.isDirectory, let size = source.dirSizes[e.url] { info += " · \(Fmt.bytes(size)) bajtů" }
-        guard let r = Dialogs.properties(title: "Vlastnosti", info: info,
-                                         permissions: single.map { String($0.permissions, radix: 8) } ?? "",
-                                         modified: single?.modified.map { df.string(from: $0) } ?? "") else { return }
-        var perms: UInt16?, date: Date?
-        if !r.permissions.trimmingCharacters(in: .whitespaces).isEmpty {
-            guard let p = FileAttributes.parseOctal(r.permissions) else { Dialogs.error("Neplatná oprávnění", "Zadejte osmičkově, např. 644."); return }
-            perms = p
+        guard let r = PropertiesDialog(entries: t).run() else { return }
+        guard r.permissions != nil || r.modified != nil || !r.setFlags.isEmpty || !r.clearFlags.isEmpty else { return }
+        busy = "Mění vlastnosti…"
+        Task {
+            let errors = await Task.detached { () -> [(URL, String)] in
+                t.flatMap { FileAttributes.applyRecursively($0.url, permissions: r.permissions, modified: r.modified, setFlags: r.setFlags, clearFlags: r.clearFlags, recursive: r.recursive) }
+            }.value
+            self.busy = nil
+            self.reloadAll()
+            if !errors.isEmpty {
+                Dialogs.error("Některé změny se nepodařily", errors.prefix(10).map { "\($0.0.lastPathComponent): \($0.1)" }.joined(separator: "\n") + (errors.count > 10 ? "\n… a \(errors.count - 10) dalších" : ""))
+            }
         }
-        if !r.modified.trimmingCharacters(in: .whitespaces).isEmpty {
-            guard let d = df.date(from: r.modified) else { Dialogs.error("Neplatné datum", "Formát: dd.MM.yyyy HH:mm:ss"); return }
-            date = d
-        }
-        var errors: [String] = []
-        for e in t {
-            do { try FileAttributes.apply(e.url, permissions: perms, modified: date) } catch { errors.append("\(e.name): \(error.localizedDescription)") }
-        }
-        reloadAll()
-        if !errors.isEmpty { Dialogs.error("Některé změny se nepodařily", errors.prefix(10).joined(separator: "\n")) }
     }
 
     private final class LineBox: @unchecked Sendable { var lines: [ChecksumFile.Line] = [] }

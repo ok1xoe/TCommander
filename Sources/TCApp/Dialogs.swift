@@ -3,6 +3,32 @@ import TCCore
 
 @MainActor
 enum Dialogs {
+    /// Přizpůsobí obsah dialogu jeho skutečné velikosti; když by přesáhl obrazovku, vloží ho do posuvníku.
+    static func fit(_ stack: NSStackView, minWidth: CGFloat = 360) -> NSView {
+        stack.layoutSubtreeIfNeeded()
+        var size = stack.fittingSize
+        size.width = max(size.width, minWidth)
+        let screen = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
+        let maxW = screen.width - 120, maxH = screen.height - 280
+        stack.frame = NSRect(origin: .zero, size: size)
+        guard size.width > maxW || size.height > maxH else { return stack }
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: min(size.width, maxW), height: min(size.height, maxH)))
+        scroll.documentView = stack
+        scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = size.width > maxW
+        scroll.drawsBackground = false
+        return scroll
+    }
+
+    /// Okno s formulářem nesmí být menší, než formulář potřebuje (pokud se vejde na obrazovku).
+    static func fitWindow(_ window: NSWindow, form: NSView, padding: CGSize = CGSize(width: 28, height: 0)) {
+        form.layoutSubtreeIfNeeded()
+        let screen = window.screen?.visibleFrame.size ?? NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)
+        let needW = min(form.fittingSize.width + padding.width, screen.width - 40)
+        let current = window.contentView?.frame.size ?? .zero
+        window.contentMinSize = NSSize(width: needW, height: window.contentMinSize.height)
+        if current.width < needW { window.setContentSize(NSSize(width: needW, height: current.height)); window.center() }
+    }
+
     static func prompt(title: String, message: String, initial: String, ok: String = "OK", secure: Bool = false) -> String? {
         let alert = NSAlert()
         alert.messageText = title
