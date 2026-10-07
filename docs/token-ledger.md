@@ -15,7 +15,7 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | Fáze | Okno (UTC) | Volání | input | cache zápis | cache čtení | output | CELKEM |
 |---|---|---:|---:|---:|---:|---:|---:|
 | 0 – průzkum a návrh | start – 2026-10-07T09:44 | 9 | 18 | 39 530 | 533 596 | 9 064 | 582 208 |
-| 1 – panely a základní operace | 09:44 – (doplní se) | | | | | | |
+| 1 – panely a základní operace | 09:44 – PR (stav k otevření PR) | 23 | 46 | 79 567 | 2 592 754 | 75 031 | 2 747 398 |
 | 2 – fronta, Lister, hledání | | | | | | | |
 | 3 – Multi-Rename, porovnání, sync | | | | | | | |
 | 4 – archivy | | | | | | | |

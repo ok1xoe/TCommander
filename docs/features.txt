@@ -1,0 +1,115 @@
+# Zdroj pravdy pro docs/index.html. Upravit stav a spustit: python3 scripts/build_docs.py
+# Stavy: D = hotovo, P = částečně, T = plánováno, X = nepřenáší se (nemá smysl na macOS)
+# Formát fází:     @phase | číslo | název | stav (hotovo/probíhá/plán) | tokeny (nebo -)
+# Formát funkcí:   kategorie | funkce | stav | fáze | poznámka
+@phase | 0 | Průzkum TC a návrh | hotovo | 582 208 (cache čtení 533 596, output 9 064)
+@phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 2 747 398 (cache čtení 2 592 754, output 75 031), stav k PR
+@phase | 2 | Fronta operací, Lister, hledání, hotlist, kontrolní součty | plán | -
+@phase | 3 | Multi-Rename, porovnání, synchronizace | plán | -
+@phase | 4 | Archivy jako adresáře | plán | -
+@phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | plán | -
+@phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | plán | -
+
+Panely a zobrazení | Dva panely vedle sebe | D | 1 |
+Panely a zobrazení | Panely nad sebou | T | 6 |
+Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |
+Panely a zobrazení | Zamykání karet, uložené sady karet (Favorite tabs) | T | 6 |
+Panely a zobrazení | Režim Plný (název, přípona, velikost, datum, atributy) | D | 1 |
+Panely a zobrazení | Režim Stručný (Brief) | T | 2 |
+Panely a zobrazení | Strom adresářů (Tree) | T | 2 |
+Panely a zobrazení | Náhledy obrázků (Thumbnails) | T | 2 |
+Panely a zobrazení | Vlastní sloupce a pohledy | T | 6 |
+Panely a zobrazení | Řazení podle názvu / přípony / velikosti / data (klik na hlavičku) | D | 1 |
+Panely a zobrazení | Rychlé hledání psaním (type-ahead) | D | 1 | vestavěné v tabulce
+Panely a zobrazení | Rychlý filtr (Ctrl+S) | P | 2 | model hotový a otestovaný, chybí vstupní pole v UI
+Panely a zobrazení | Skryté soubory (⇧⌘.) | D | 1 |
+Panely a zobrazení | Quick View panel (Ctrl+Q) | T | 2 |
+Panely a zobrazení | Barvy podle typu souboru | T | 6 |
+Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků; tlačítková lišta disků ve fázi 6
+Panely a zobrazení | Historie adresářů (zpět / vpřed) | D | 1 | ⌘[ ⌘]
+Panely a zobrazení | Seznam historie a Directory hotlist (Ctrl+D) | T | 2 |
+Panely a zobrazení | Branch view (Ctrl+B, všechny soubory podadresářů) | T | 2 |
+Panely a zobrazení | Cíl = zdroj, prohození panelů | D | 1 | ⌘=  ⌘U
+Panely a zobrazení | Stavový řádek (označeno, počty, volné místo) | D | 1 |
+Panely a zobrazení | Obnovení karet a nastavení po spuštění | D | 1 |
+Panely a zobrazení | Drag & drop mezi panely a Finderem | T | 2 |
+Panely a zobrazení | Automatická aktualizace při změně na disku | P | 2 | nyní při aktivaci aplikace a po operacích; FSEvents ve fázi 2
+
+Označování | Označit mezerníkem / Insert | D | 1 | mezerník u adresáře spočte jeho velikost
+Označování | Označit vše, zrušit, invertovat | D | 1 |
+Označování | Označit / odznačit podle masky (Num+ / Num−) | D | 1 | masky `*.txt;*.doc`
+Označování | Označit stejnou příponu, uložit / obnovit výběr | T | 2 |
+Označování | Spočítat velikosti všech adresářů | D | 1 |
+
+Souborové operace | Kopírovat (F5) | D | 1 | i pod novým názvem
+Souborové operace | Přesunout (F6) | D | 1 |
+Souborové operace | Přejmenovat (F2 / ⇧F6) | P | 1 | dialog; přejmenování přímo v seznamu později
+Souborové operace | Nový adresář (F7), i vnořený a/b/c | D | 1 |
+Souborové operace | Nový soubor (⇧F4) | D | 1 |
+Souborové operace | Smazat (F8) do koše nebo trvale (⇧F8) | D | 1 |
+Souborové operace | Slučování adresářů při kopii a přesunu | D | 1 |
+Souborové operace | Řešení konfliktů (přepsat / starší / přeskočit / ponechat obě) | D | 1 |
+Souborové operace | Ochrana: kopie do sebe sama, přepsání zdroje sebou samým | D | 1 |
+Souborové operace | Operace na pozadí (UI nezamrzá) | D | 1 |
+Souborové operace | Fronta operací s průběhem, pozastavení a zrušením | T | 2 |
+Souborové operace | Ověření kopie | T | 2 |
+Souborové operace | Atributy, časy, oprávnění | T | 2 |
+Souborové operace | Vlastnosti (Alt+Enter) | T | 2 |
+Souborové operace | Symbolické a pevné odkazy | T | 2 |
+Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit | T | 2 |
+Souborové operace | Rozdělit a spojit soubory | T | 2 |
+Souborové operace | Kódování UUE / XXE / MIME | T | 3 |
+
+Hledání | Hledání podle masky, velikosti, data, atributů (Alt+F7) | T | 2 |
+Hledání | Hledání textu v souborech (regex, kódování) | T | 2 |
+Hledání | Hledání uvnitř archivů | T | 4 |
+Hledání | Výsledky jako panel, uložené šablony hledání | T | 2 |
+Hledání | Hledání duplicitních souborů | T | 3 |
+
+Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | T | 3 |
+Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | T | 3 |
+Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | T | 3 |
+
+Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | T | 3 |
+Porovnání a synchronizace | Porovnání adresářů | T | 3 |
+Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | T | 3 |
+Porovnání a synchronizace | Synchronizace s ZIP | T | 4 |
+
+Prohlížení a editace | Zobrazit (F3) | P | 2 | zatím Quick Look; vlastní Lister ve fázi 2
+Prohlížení a editace | Lister: text, hex a binární režim, soubory libovolné velikosti | T | 2 |
+Prohlížení a editace | Lister: Unicode / UTF-8 a kódování | T | 2 |
+Prohlížení a editace | Lister: obrázky, HTML / Markdown, multimédia | T | 2 |
+Prohlížení a editace | Lister: hledání v obsahu | T | 2 |
+Prohlížení a editace | Editace (F4) v externím editoru | D | 1 | TextEdit
+Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | T | 6 |
+
+Archivy | Prohlížení archivu jako adresáře (ZIP, TAR, GZ, 7z, RAR…) | T | 4 |
+Archivy | Balení (Alt+F5) a rozbalení (Alt+F9), na pozadí | T | 4 |
+Archivy | Test archivu, kopie archiv → archiv | T | 4 |
+
+Síť | FTP a FTPS (obnovení stahování, fronta) | T | 5 |
+Síť | SFTP | T | 5 |
+Síť | SMB (sdílené složky) | T | 5 |
+Síť | WebDAV | T | 5 |
+Síť | FXP (server → server), proxy SOCKS / HTTP | T | 5 |
+Síť | Správce spojení | T | 5 |
+Síť | Přenos paralelním portem | X | - | zastaralé, na macOS nemá smysl
+
+Příkazová řádka | Spuštění příkazu v aktuálním adresáři (zsh), s časovým limitem | D | 1 |
+Příkazová řádka | Příkaz `cd` | D | 1 |
+Příkazová řádka | Vložit název souboru do příkazové řádky (Ctrl+Enter) | D | 1 |
+Příkazová řádka | Otevření souboru přidruženým programem (Enter) | D | 1 |
+Příkazová řádka | Historie příkazů | T | 2 |
+Příkazová řádka | Vestavěný terminál | T | 6 |
+Příkazová řádka | Vlastní přidružení souborů k programům | T | 6 |
+
+Přizpůsobení | Konfigurovatelné klávesové zkratky | T | 6 |
+Přizpůsobení | Button bar a Start menu | T | 6 |
+Přizpůsobení | Konfigurovatelné hlavní menu, uživatelské příkazy | T | 6 |
+Přizpůsobení | Interní příkazy (cm_*) a jejich registr | T | 6 |
+Přizpůsobení | Nastavení (dialog), barvy, fonty | T | 6 |
+Přizpůsobení | Čeština (hotovo), angličtina a přepínání jazyků | P | 6 | UI je nyní jen česky
+Přizpůsobení | Import nastavení z `wincmd.ini` | T | 6 |
+Přizpůsobení | Plugin API (náhrada WCX / WFX / WLX / WDX) | T | 6 |
+Přizpůsobení | Windows pluginy (.wcx, .wfx, .wlx, .wdx) | X | - | binárně nekompatibilní s macOS
+Přizpůsobení | Windows UAC a integrace s Průzkumníkem | X | - | nahrazeno oprávněními macOS a Finderem
