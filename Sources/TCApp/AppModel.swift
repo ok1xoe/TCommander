@@ -292,6 +292,32 @@ final class AppModel {
         NSWorkspace.shared.open([url], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
     }
 
+    // MARK: Porovnání a synchronizace
+
+    /// Porovnání souborů podle obsahu: dva označené soubory v panelu, jinak soubory pod kurzory obou panelů.
+    func compareFiles() {
+        let t = source.targets.filter { !$0.isDirectory }
+        if t.count == 2 { FileCompareWindow.show(t[0].url, t[1].url); return }
+        guard let a = source.cursorEntry, let b = target.cursorEntry, !a.isDirectory, !b.isDirectory, !a.isParentLink, !b.isParentLink else {
+            Dialogs.error("Porovnat soubory", "Označte dva soubory, nebo nastavte kurzory na soubor v každém panelu."); return
+        }
+        FileCompareWindow.show(a.url, b.url)
+    }
+
+    /// Porovná adresáře obou panelů (bez podadresářů) a označí odlišné soubory.
+    func compareDirectories() {
+        var o = SyncOptions(); o.recursive = false; o.includeHidden = showHidden
+        let l = left.active, r = right.active
+        let items = DirectoryComparer.compare(left: l.path, right: r.path, options: o)
+        l.setMarks(Set(items.filter { $0.state == .onlyLeft || $0.state == .leftNewer || $0.state == .different }.compactMap { $0.left?.url }))
+        r.setMarks(Set(items.filter { $0.state == .onlyRight || $0.state == .rightNewer || $0.state == .different }.compactMap { $0.right?.url }))
+        status = "Porovnání adresářů: \(items.filter { $0.state != .same }.count) rozdílů"
+    }
+
+    func synchronize() {
+        SyncWindow.show(left: left.active.path, right: right.active.path, jobs: jobs) { [weak self] in self?.reloadAll() }
+    }
+
     // MARK: Nástroje
 
     func multiRename() {
