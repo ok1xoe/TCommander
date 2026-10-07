@@ -2,6 +2,8 @@ import AppKit
 import Observation
 import TCCore
 
+extension Notification.Name { static let macTCBeginRename = Notification.Name("macTC.beginRename") }
+
 enum Side { case left, right
     var other: Side { self == .left ? .right : .left }
     var key: Bool { self == .left }
@@ -265,7 +267,7 @@ final class AppModel {
     }
 
     /// Spustí úpravu archivu jako úlohu ve frontě a po dokončení obnoví všechny panely zobrazující tento archiv.
-    private func modifyArchive(_ fs: ArchiveFileSystem, title: String, changes: ArchiveFileSystem.Changes,
+    func modifyArchive(_ fs: ArchiveFileSystem, title: String, changes: ArchiveFileSystem.Changes,
                                after: @escaping @Sendable () -> Void = {}, success: String) {
         let url = fs.archiveURL
         jobs.enqueue(title: title, work: { control, progress in
@@ -528,10 +530,19 @@ final class AppModel {
     func rename() {
         if source.insideArchive { renameInArchive(); return }
         if source.remote != nil { renameOnRemote(); return }
+        if source.viewMode == .full, let e = source.cursorEntry, !e.isParentLink {            // přímo v seznamu
+            NotificationCenter.default.post(name: .macTCBeginRename, object: source)
+            return
+        }
         guard let e = source.targets.first, source.targets.count == 1 else { return }
         guard let name = Dialogs.prompt(title: "Přejmenovat", message: "Nový název:", initial: e.name, ok: "Přejmenovat") else { return }
         do { let new = try ops.rename(e.url, to: name); source.unmarkAll(); reloadAll(); source.reload(select: new) }
         catch { Dialogs.error("Přejmenování selhalo", error.localizedDescription) }
+    }
+
+    func performInlineRename(_ e: FileEntry, newName: String) {
+        do { let new = try ops.rename(e.url, to: newName); source.unmarkAll(); reloadAll(); source.reload(select: new) }
+        catch { Dialogs.error("Přejmenování selhalo", error.localizedDescription); source.reload() }
     }
 
     func makeDirectory() {

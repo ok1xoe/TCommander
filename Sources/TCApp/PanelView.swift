@@ -25,6 +25,7 @@ struct PanelView: View {
             }
             .buttonStyle(.borderless)
             .padding(6)
+            DriveBar(current: tab.persistentPath) { tab.navigateLocal($0); model.activeSide = side }
             TabBar(group: group, onSelect: { group.select($0); model.activeSide = side })
             if model.filterVisible[side.key] == true {
                 HStack(spacing: 6) {
@@ -70,7 +71,8 @@ struct PanelView: View {
             onFocus: { if model.activeSide != side { model.activeSide = side } },
             onKey: { model.handleKey($0, side: side) },
             onOpen: { model.activeSide = side; model.open() },
-            onDrop: { urls, dest, move in model.drop(urls, into: dest, move: move) })
+            onDrop: { urls, dest, move in model.drop(urls, into: dest, move: move) },
+            onRename: { entry, name in model.performInlineRename(entry, newName: name) })
     }
 
     private func navigateToText(_ tab: PanelTab) {
@@ -155,5 +157,41 @@ struct VolumeMenu: View {
             }
         } label: { Image(systemName: "externaldrive") }
         .menuStyle(.borderlessButton).fixedSize()
+    }
+}
+
+/// Tlačítka disků a oblíbených míst (jedno kliknutí), jako lišta disků v TC.
+struct DriveBar: View {
+    let current: URL
+    let go: (URL) -> Void
+
+    private var places: [(title: String, url: URL, icon: String)] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var list: [(String, URL, String)] = [(L("Domů"), home, "house"), ("Desktop", home.appendingPathComponent("Desktop"), "menubar.dock.rectangle"),
+                                             ("Downloads", home.appendingPathComponent("Downloads"), "arrow.down.circle"), (L("Aplikace"), URL(fileURLWithPath: "/Applications"), "app.badge")]
+        let vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []
+        for v in vols {
+            let name = v.path == "/" ? "Macintosh HD" : ((try? v.resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? v.lastPathComponent)
+            list.append((name, v, "externaldrive"))
+        }
+        return list
+    }
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 3) {
+                ForEach(Array(places.enumerated()), id: \.offset) { _, p in
+                    let active = current.path == p.url.path || (p.url.path != "/" && current.path.hasPrefix(p.url.path + "/"))
+                    Button { go(p.url) } label: {
+                        Label(p.title, systemImage: p.icon).font(.system(size: 11)).lineLimit(1)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(active ? Color.accentColor.opacity(0.22) : Color.secondary.opacity(0.10))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 6).padding(.bottom, 3)
+        }
     }
 }

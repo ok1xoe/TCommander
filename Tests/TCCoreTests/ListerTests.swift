@@ -54,3 +54,25 @@ import Foundation
         #expect(Checksum.hash(d.appendingPathComponent("missing"), .md5) == nil)
     }
 }
+
+@Suite struct TextEncodingRoundTripTests {
+    @Test func savesInTheOriginalEncoding() {
+        let cases: [(Data, String)] = [
+            (Data("Příliš žluťoučký kůň".utf8), "UTF-8"),
+            (Data([0xEF, 0xBB, 0xBF]) + Data("ahoj".utf8), "UTF-8 (BOM)"),
+            (Data([0xFF, 0xFE]) + "ab".data(using: .utf16LittleEndian)!, "UTF-16 LE"),
+            (Data([0xFE, 0xFF]) + "ab".data(using: .utf16BigEndian)!, "UTF-16 BE"),
+            (Data([0x50, 0xF8, 0xED, 0x6C, 0x69, 0x9A]), "Windows-1250"),
+        ]
+        for (data, name) in cases {
+            let d = TextDecoding.decode(data)
+            #expect(d.encoding == name)
+            #expect(TextDecoding.encode(d.text, as: d.encoding) == data, "\(name)")      // beze změny = bajt po bajtu stejné
+        }
+    }
+
+    @Test func refusesToLoseCharacters() {
+        #expect(TextDecoding.encode("čeština 🐎", as: "Windows-1250") == nil)              // emoji v Windows-1250 nelze
+        #expect(TextDecoding.encode("čeština 🐎", as: "UTF-8") != nil)
+    }
+}

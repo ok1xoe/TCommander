@@ -316,6 +316,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var fontSize = 12.0
     public var language = "cs"
     public var panelsStacked = false
+    /// F4 otevře textové soubory ve vestavěném editoru (jinak v aplikaci `editorApp`).
+    public var useBuiltinEditor = false
     public var colorRules: [ColorRule] = ColorRule.defaults
     public var columnSets: [ColumnSet] = ColumnSet.defaults
     public init() {}
@@ -333,6 +335,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? fontSize
         language = try c.decodeIfPresent(String.self, forKey: .language) ?? language
         panelsStacked = try c.decodeIfPresent(Bool.self, forKey: .panelsStacked) ?? panelsStacked
+        useBuiltinEditor = try c.decodeIfPresent(Bool.self, forKey: .useBuiltinEditor) ?? useBuiltinEditor
         colorRules = try c.decodeIfPresent([ColorRule].self, forKey: .colorRules) ?? colorRules
         columnSets = try c.decodeIfPresent([ColumnSet].self, forKey: .columnSets) ?? columnSets
     }

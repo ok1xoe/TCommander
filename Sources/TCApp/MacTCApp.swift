@@ -59,6 +59,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let i = CommandLine.arguments.firstIndex(of: "--lang"), i + 1 < CommandLine.arguments.count {         // ladění: jazyk (ukládá se do nastavení)
             AppModel.shared.settings.language = CommandLine.arguments[i + 1]
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--terminal-selftest"), i + 1 < CommandLine.arguments.count {   // ladění: příkaz v terminálu
+            let out = CommandLine.arguments[i + 1]
+            TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                TerminalWindow.latest?.sendDebug("echo mactc-pty-$((20+22)); pwd; tty\r")
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                try? (TerminalWindow.latest?.transcript ?? "(žádné okno)").write(toFile: out, atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            }
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--rename-demo"), i + 1 < CommandLine.arguments.count {   // ladění: F2 v adresáři
+            let m = AppModel.shared
+            m.source.navigate(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { m.source.moveCursor(to: 1) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { m.rename() }
+        }
         if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
@@ -132,6 +149,7 @@ struct TCCommands: Commands {
         }
         CommandMenu(L("Nástroje")) {
             Button(L("Nastavení…")) { model.perform("cm_settings") }.keyboardShortcut(",")
+            Button(L("Terminál")) { model.perform("cm_terminal") }.keyboardShortcut("t", modifiers: [.command, .option])
             Button(L("Importovat nastavení z Total Commanderu…")) { model.importFromTotalCommander() }
             Divider()
             Button(L("Hromadné přejmenování…")) { model.multiRename() }.keyboardShortcut("m", modifiers: .control)

@@ -1,0 +1,174 @@
+import AppKit
+import Darwin
+import TCCore
+
+/// Shell na pseudoterminálu (posix_spawn se samostatnou relací, aby měl řídicí terminál a fungovalo Ctrl+C).
+final class PTYShell: @unchecked Sendable {
+    let master: Int32
+    private(set) var pid: pid_t = 0
+    private var source: DispatchSourceRead?
+    var onOutput: ((Data) -> Void)?
+    var onExit: (() -> Void)?
+
+    init?(directory: String, shell: String = "/bin/zsh") {
+        let m = posix_openpt(O_RDWR | O_NOCTTY)
+        guard m >= 0, grantpt(m) == 0, unlockpt(m) == 0, let name = ptsname(m) else { return nil }
+        master = m
+        let slavePath = String(cString: name)
+
+        var fa: posix_spawn_file_actions_t? = nil
+        posix_spawn_file_actions_init(&fa)
+        defer { posix_spawn_file_actions_destroy(&fa) }
+        posix_spawn_file_actions_addopen(&fa, 0, slavePath, O_RDWR, 0)
+        posix_spawn_file_actions_adddup2(&fa, 0, 1)
+        posix_spawn_file_actions_adddup2(&fa, 0, 2)
+        posix_spawn_file_actions_addchdir_np(&fa, directory)
+
+        var attr: posix_spawnattr_t? = nil
+        posix_spawnattr_init(&attr)
+        defer { posix_spawnattr_destroy(&attr) }
+        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSID))
+
+        var env = ProcessInfo.processInfo.environment
+        env["TERM"] = "dumb"
+        env["PROMPT_EOL_MARK"] = ""
+        env["LC_ALL"] = env["LC_ALL"] ?? "en_US.UTF-8"
+        let envp = env.map { strdup("\($0.key)=\($0.value)") } + [nil]
+        let argv = [strdup(shell), strdup("-i"), strdup("-l"), nil]
+        defer { envp.forEach { free($0) }; argv.forEach { free($0) } }
+        var p: pid_t = 0
+        guard posix_spawn(&p, shell, &fa, &attr, argv, envp) == 0 else { close(m); return nil }
+        pid = p
+
+        let src = DispatchSource.makeReadSource(fileDescriptor: m, queue: .global())
+        src.setEventHandler { [weak self] in
+            guard let self else { return }
+            var buf = [UInt8](repeating: 0, count: 8192)
+            let n = read(self.master, &buf, buf.count)
+            if n > 0 { self.onOutput?(Data(buf[0..<n])) } else { self.source?.cancel(); self.onExit?() }
+        }
+        src.resume()
+        source = src
+    }
+
+    func send(_ s: String) { let d = Array(s.utf8); _ = d.withUnsafeBufferPointer { write(master, $0.baseAddress, d.count) } }
+
+    func interrupt() { send("\u{03}") }
+
+    func stop() {
+        source?.cancel()
+        if pid > 0 { kill(-pid, SIGHUP); kill(pid, SIGKILL); var st: Int32 = 0; waitpid(pid, &st, WNOHANG) }
+        close(master)
+    }
+}
+
+final class TerminalTextView: NSTextView {
+    var sendInput: ((String) -> Void)?
+    var interrupt: (() -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with e: NSEvent) {
+        let f = e.modifierFlags
+        if f.contains(.command) { super.keyDown(with: e); return }       // ⌘C kopíruje, ⌘V se řeší v paste
+        if f.contains(.control), let c = e.charactersIgnoringModifiers?.lowercased().unicodeScalars.first, c.value >= 97, c.value <= 122 {
+            if c == "c" { interrupt?() } else { sendInput?(String(UnicodeScalar(c.value - 96)!)) }
+            return
+        }
+        switch e.keyCode {
+        case 36, 76: sendInput?("\r")
+        case 51: sendInput?("\u{7F}")
+        case 48: sendInput?("\t")
+        case 53: sendInput?("\u{1B}")
+        case 126: sendInput?("\u{1B}[A")
+        case 125: sendInput?("\u{1B}[B")
+        case 124: sendInput?("\u{1B}[C")
+        case 123: sendInput?("\u{1B}[D")
+        default: if let s = e.characters, !s.isEmpty { sendInput?(s) }
+        }
+    }
+
+    override func paste(_ sender: Any?) {
+        if let s = NSPasteboard.general.string(forType: .string) { sendInput?(s) }
+    }
+}
+
+/// Okno s jednoduchým terminálem (shell v pseudoterminálu); celoobrazovkové programy (vim, top) nejsou podporovány.
+@MainActor
+final class TerminalWindow: NSObject, NSWindowDelegate {
+    private static var open: [TerminalWindow] = []
+
+    static func show(directory: URL) {
+        guard let shell = PTYShell(directory: directory.path) else { Dialogs.error("Terminál", "Shell se nepodařilo spustit."); return }
+        let w = TerminalWindow(shell: shell, directory: directory)
+        open.append(w)
+        w.window.makeKeyAndOrderFront(nil)
+    }
+
+    private let window: NSWindow
+    private let shell: PTYShell
+    private let view = TerminalTextView()
+    private var buffer = TerminalTextBuffer()
+    private var scheduled = false
+    /// Pro ladění: celý dosavadní výstup.
+    var transcript: String { buffer.text }
+    static var latest: TerminalWindow? { open.last }
+    func sendDebug(_ s: String) { shell.send(s) }
+
+    private init(shell: PTYShell, directory: URL) {
+        self.shell = shell
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 520), styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+        super.init()
+        window.title = "Terminál – \(directory.path)"
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        window.center()
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        view.isEditable = false
+        view.isSelectable = true
+        view.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        view.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1)
+        view.textColor = NSColor(calibratedWhite: 0.92, alpha: 1)
+        view.insertionPointColor = .white
+        view.autoresizingMask = [.width]
+        view.isVerticallyResizable = true
+        view.textContainer?.widthTracksTextView = true
+        view.sendInput = { [weak shell] s in shell?.send(s) }
+        view.interrupt = { [weak shell] in shell?.interrupt() }
+        scroll.documentView = view
+        scroll.frame = window.contentView!.bounds
+        scroll.autoresizingMask = [.width, .height]
+        window.contentView!.addSubview(scroll)
+        window.makeFirstResponder(view)
+        shell.onOutput = { [weak self] data in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.received(data) } }
+        }
+        shell.onExit = { [weak self] in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.received(Data("\n[shell skončil – zavřete okno]\n".utf8)) } }
+        }
+    }
+
+    private func received(_ data: Data) {
+        buffer.append(data)
+        guard !scheduled else { return }
+        scheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { [weak self] in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+    }
+
+    private func refresh() {
+        scheduled = false
+        view.string = buffer.text
+        view.textColor = NSColor(calibratedWhite: 0.92, alpha: 1)
+        view.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        view.scrollToEndOfDocument(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        shell.onOutput = nil; shell.onExit = nil
+        shell.stop()
+        Self.open.removeAll { $0 === self }
+    }
+}
