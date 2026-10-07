@@ -7,7 +7,7 @@
 @phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 9 273 793 (cache čtení 9 067 468, output 93 127)
 @phase | 3 | Multi-Rename, porovnání, synchronizace, duplicity, kódování | hotovo | 4 364 489 (cache čtení 4 257 286, output 52 593)
 @phase | 4 | Archivy jako adresáře | hotovo | 8 107 801 (cache čtení 7 975 992, output 64 308), stav k PR 4b
-@phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | plán | -
+@phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | probíhá | -
 @phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | plán | -
 
 Panely a zobrazení | Dva panely vedle sebe | D | 1 |
@@ -91,7 +91,7 @@ Archivy | Otevření a zobrazení souboru z archivu (Enter, F3, F4) | D | 4 | p�
 Archivy | Test archivu | D | 4 | menu Nástroje
 Archivy | Kopie do archivu, mazání, přejmenování a nové složky uvnitř archivu, archiv → archiv | D | 4 | zip, tar.*, 7z přepisem archivu (atomicky); rar, iso, cab jen pro čtení; UI ověřeno jen spuštěním
 
-Síť | FTP a FTPS (obnovení stahování, fronta) | T | 5 |
+Síť | FTP a FTPS (obnovení stahování, fronta) | P | 5 | klient hotový a ověřený proti testovacímu serveru (MLSD i LIST, stahování s obnovením, nahrávání, mazání, přejmenování, TLS volba); napojení na panely přijde v dalším kroku
 Síť | SFTP | T | 5 |
 Síť | SMB (sdílené složky) | T | 5 |
 Síť | WebDAV | T | 5 |
