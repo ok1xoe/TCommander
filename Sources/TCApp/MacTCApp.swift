@@ -63,10 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let out = CommandLine.arguments[i + 1]
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                TerminalWindow.latest?.sendDebug("echo mactc-pty-$((20+22)); pwd; tty\r")
+                TerminalWindow.latest?.sendDebug("echo mactc-pty-$((20+22)); env | grep -i CLICOLOR; ls -l /bin | head -4; stty size\r")
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                try? (TerminalWindow.latest?.transcript ?? "(žádné okno)").write(toFile: out, atomically: true, encoding: .utf8)
+                try? ((TerminalWindow.latest?.transcript ?? "(žádné okno)") + "\n[" + (TerminalWindow.latest?.styleSummary ?? "") + "]").write(toFile: out, atomically: true, encoding: .utf8)
                 NSApp.terminate(nil)
             }
         }

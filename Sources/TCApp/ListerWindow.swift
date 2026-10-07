@@ -5,7 +5,27 @@ import TCCore
 import WebKit
 
 private final class ListerPanel: NSWindow {
+    var onKey: ((String) -> Bool)?
     override func cancelOperation(_ sender: Any?) { close() }
+
+    override func keyDown(with event: NSEvent) {
+        // N / P = další / předchozí soubor (mimo psaní do textových polí)
+        if !(firstResponder is NSText), event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+           let c = event.charactersIgnoringModifiers?.lowercased(), onKey?(c) == true { return }
+        super.keyDown(with: event)
+    }
+}
+
+/// Clip view, který vycentruje menší dokument (obrázek) v okně místo přilepení k rohu.
+private final class CenteringClipView: NSClipView {
+    override func constrainBoundsRect(_ proposed: NSRect) -> NSRect {
+        var rect = super.constrainBoundsRect(proposed)
+        guard let doc = documentView else { return rect }
+        let f = doc.frame
+        if f.width < proposed.width { rect.origin.x = (f.width - proposed.width) / 2 }
+        if f.height < proposed.height { rect.origin.y = (f.height - proposed.height) / 2 }
+        return rect
+    }
 }
 
 /// Okno Listeru (F3): text, hex, obrázek, PDF, média, HTML. Esc zavře, 1–3 přepínají režimy.
@@ -13,21 +33,43 @@ private final class ListerPanel: NSWindow {
 final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
     private static var open: [ListerWindow] = []
 
-    static func show(_ url: URL, skipPlugins: Bool = false) {
+    static func show(_ url: URL, skipPlugins: Bool = false, siblings: [URL] = []) {
         if !skipPlugins, PluginViewWindow.tryShow(url) { return }
         if let w = open.first(where: { $0.url == url }) { w.window.makeKeyAndOrderFront(nil); return }
-        guard let w = ListerWindow(url: url) else { return }
+        guard let w = ListerWindow(url: url, siblings: siblings) else { return }
         open.append(w)
         w.window.makeKeyAndOrderFront(nil)
     }
 
+    /// Přepne na další (+1) nebo předchozí (−1) soubor ze seznamu v panelu; nové okno převezme polohu a velikost.
+    private func navigate(by delta: Int) {
+        guard siblings.count > 1, let i = siblings.firstIndex(of: url) else { return }
+        var j = i
+        for _ in 0..<siblings.count {
+            j = (j + delta + siblings.count) % siblings.count
+            guard j != i, let w = ListerWindow(url: siblings[j], siblings: siblings) else { continue }
+            Self.open.append(w)
+            w.window.setFrame(window.frame, display: true)
+            w.window.makeKeyAndOrderFront(nil)
+            window.close()
+            return
+        }
+    }
+
     private let url: URL
+    private let siblings: [URL]
     private let data: Data
     private let window: ListerPanel
     private let modes: [ListerMode]
     private let container = NSView()
     private let segmented: NSSegmentedControl
     private let info = NSTextField(labelWithString: "")
+    private let prevButton = NSButton(title: "◀︎", target: nil, action: nil)
+    private let nextButton = NSButton(title: "▶︎", target: nil, action: nil)
+    private var imageRotation = 0
+    private var imageInfo = ""
+    private var imageScroll: NSScrollView?
+    private var imageBase: NSImage?
     private var encodingName = ""
     private var hexTable: NSTableView?
     private var textPage = 0
@@ -41,8 +83,9 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private var wrap = true
     private var player: AVPlayer?
 
-    private init?(url: URL) {
+    private init?(url: URL, siblings: [URL] = []) {
         self.url = url
+        self.siblings = siblings
         guard let d = try? Data(contentsOf: url, options: .alwaysMapped) else {
             Dialogs.error("Soubor nelze otevřít", url.path); return nil
         }
@@ -62,14 +105,27 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         segmented.selectedSegment = 0
         info.font = .systemFont(ofSize: 11)
         info.textColor = .secondaryLabelColor
-        for v in [segmented, info, container] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; window.contentView?.addSubview(v) }
+        prevButton.target = self; prevButton.action = #selector(prevFile)
+        nextButton.target = self; nextButton.action = #selector(nextFile)
+        prevButton.toolTip = "Předchozí soubor (P)"; nextButton.toolTip = "Další soubor (N)"
+        let multiple = siblings.count > 1
+        prevButton.isHidden = !multiple; nextButton.isHidden = !multiple
+        if multiple, let i = siblings.firstIndex(of: url) { window.title = "\(url.lastPathComponent) – Lister (\(i + 1)/\(siblings.count))" }
+        window.onKey = { [weak self] c in
+            switch c { case "n": self?.navigate(by: 1); return true; case "p": self?.navigate(by: -1); return true; default: return false }
+        }
+        for v in [segmented, info, container, prevButton, nextButton] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; window.contentView?.addSubview(v) }
         let c = window.contentView!
         NSLayoutConstraint.activate([
             segmented.topAnchor.constraint(equalTo: c.topAnchor, constant: 8),
             segmented.leadingAnchor.constraint(equalTo: c.leadingAnchor, constant: 10),
             info.centerYAnchor.constraint(equalTo: segmented.centerYAnchor),
             info.leadingAnchor.constraint(equalTo: segmented.trailingAnchor, constant: 12),
-            info.trailingAnchor.constraint(lessThanOrEqualTo: c.trailingAnchor, constant: -10),
+            nextButton.trailingAnchor.constraint(equalTo: c.trailingAnchor, constant: -10),
+            nextButton.centerYAnchor.constraint(equalTo: segmented.centerYAnchor),
+            prevButton.trailingAnchor.constraint(equalTo: nextButton.leadingAnchor, constant: -4),
+            prevButton.centerYAnchor.constraint(equalTo: segmented.centerYAnchor),
+            info.trailingAnchor.constraint(lessThanOrEqualTo: prevButton.leadingAnchor, constant: -10),
             container.topAnchor.constraint(equalTo: segmented.bottomAnchor, constant: 8),
             container.leadingAnchor.constraint(equalTo: c.leadingAnchor),
             container.trailingAnchor.constraint(equalTo: c.trailingAnchor),
@@ -99,7 +155,12 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         case .media:
             let v = AVPlayerView(); let p = AVPlayer(url: url); v.player = p; player = p; view = v
         case .web:
-            let v = WKWebView(); v.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent()); view = v
+            let v = WKWebView()
+            // HTML bez deklarovaného kódování (meta charset) se dekóduje podle obsahu, jinak by WebKit rozbil diakritiku
+            let head = String(decoding: data.prefix(2048), as: UTF8.self).lowercased()
+            if head.contains("charset") { v.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent()) }
+            else { v.loadHTMLString(TextDecoding.decode(data).text, baseURL: url.deletingLastPathComponent()) }
+            view = v
         }
         view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(view)
@@ -108,7 +169,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
             view.leadingAnchor.constraint(equalTo: container.leadingAnchor), view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
         ])
         let size = ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file)
-        info.stringValue = [size, mode == .text ? encodingName : ""].filter { !$0.isEmpty }.joined(separator: " · ")
+        info.stringValue = [size, mode == .text ? encodingName : "", mode == .image ? imageInfo : ""].filter { !$0.isEmpty }.joined(separator: " · ")
         if let i = modes.firstIndex(of: mode) { segmented.selectedSegment = i }
     }
 
@@ -237,16 +298,77 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         info.stringValue = String(format: "Nalezeno na offsetu 0x%X (%d)", off, off)
     }
 
+    @objc private func prevFile() { navigate(by: -1) }
+    @objc private func nextFile() { navigate(by: 1) }
+
+    // MARK: Obrázky: přiblížení a otočení
+
     private func imageView() -> NSView {
         let scroll = NSScrollView()
+        scroll.contentView = CenteringClipView()
         scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
         scroll.allowsMagnification = true
-        let iv = NSImageView(image: NSImage(contentsOf: url) ?? NSImage())
-        iv.imageScaling = .scaleProportionallyUpOrDown
-        iv.frame = NSRect(origin: .zero, size: iv.image?.size ?? NSSize(width: 100, height: 100))
-        scroll.documentView = iv
-        return scroll
+        scroll.minMagnification = 0.05; scroll.maxMagnification = 16
+        imageScroll = scroll
+        imageBase = NSImage(contentsOf: url)
+        imageRotation = 0
+        applyImage()
+
+        func button(_ title: String, _ action: Selector, _ tip: String) -> NSButton {
+            let b = NSButton(title: title, target: self, action: action); b.toolTip = tip; return b
+        }
+        let bar = NSStackView(views: [button("−", #selector(zoomOut), "Oddálit"), button("+", #selector(zoomIn), "Přiblížit"),
+                                      button("100 %", #selector(zoomActual), "Skutečná velikost"), button("Přizpůsobit", #selector(zoomFit), "Přizpůsobit oknu"),
+                                      button("⟲", #selector(rotateLeft), "Otočit doleva"), button("⟳", #selector(rotateRight), "Otočit doprava"), NSView()])
+        bar.spacing = 6; bar.edgeInsets = NSEdgeInsets(top: 4, left: 10, bottom: 4, right: 10)
+        let box = NSStackView(views: [bar, scroll]); box.orientation = .vertical; box.spacing = 0; box.alignment = .leading
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.widthAnchor.constraint(equalTo: box.widthAnchor).isActive = true
+        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        DispatchQueue.main.async { [weak self] in self?.zoomFit() }
+        return box
     }
+
+    private func applyImage() {
+        guard let base = imageBase, let scroll = imageScroll else { return }
+        let img = Self.rotated(base, quarterTurns: imageRotation)
+        let iv = NSImageView(image: img)
+        iv.imageScaling = .scaleNone
+        iv.frame = NSRect(origin: .zero, size: img.size)
+        scroll.documentView = iv
+        let rot = ((imageRotation % 4) + 4) % 4
+        imageInfo = "\(Int(base.size.width))×\(Int(base.size.height)) px" + (rot != 0 ? " · otočeno \(rot * 90)°" : "")
+        info.stringValue = ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file) + " · " + imageInfo
+    }
+
+    /// Kopie obrázku otočená po čtvrtinách kruhu (kladný směr = doprava).
+    static func rotated(_ image: NSImage, quarterTurns: Int) -> NSImage {
+        let q = ((quarterTurns % 4) + 4) % 4
+        guard q != 0 else { return image }
+        let size = image.size
+        let newSize = q % 2 == 1 ? NSSize(width: size.height, height: size.width) : size
+        let out = NSImage(size: newSize)
+        out.lockFocus()
+        let t = NSAffineTransform()
+        t.translateX(by: newSize.width / 2, yBy: newSize.height / 2)
+        t.rotate(byDegrees: -CGFloat(q) * 90)
+        t.translateX(by: -size.width / 2, yBy: -size.height / 2)
+        t.concat()
+        image.draw(at: .zero, from: .zero, operation: .copy, fraction: 1)
+        out.unlockFocus()
+        return out
+    }
+
+    @objc private func zoomIn() { imageScroll?.animator().magnification = min(16, (imageScroll?.magnification ?? 1) * 1.25) }
+    @objc private func zoomOut() { imageScroll?.animator().magnification = max(0.05, (imageScroll?.magnification ?? 1) / 1.25) }
+    @objc private func zoomActual() { imageScroll?.magnification = 1 }
+    @objc private func zoomFit() {
+        guard let scroll = imageScroll, let doc = scroll.documentView, doc.frame.width > 0, doc.frame.height > 0 else { return }
+        let v = scroll.contentSize
+        scroll.magnification = min(1, v.width / doc.frame.width, v.height / doc.frame.height)
+    }
+    @objc private func rotateLeft() { imageRotation -= 1; applyImage(); zoomFit() }
+    @objc private func rotateRight() { imageRotation += 1; applyImage(); zoomFit() }
 
     func numberOfRows(in tableView: NSTableView) -> Int { HexDump.rowCount(length: data.count) }
 
