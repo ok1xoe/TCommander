@@ -10,6 +10,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let i = CommandLine.arguments.firstIndex(of: "--lister"), i + 1 < CommandLine.arguments.count {
             ListerWindow.show(URL(fileURLWithPath: CommandLine.arguments[i + 1]))
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--thumbs"), i + 1 < CommandLine.arguments.count {   // ladění: náhledy v adresáři
+            AppModel.shared.source.navigate(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+            AppModel.shared.source.viewMode = .thumbnails
+        }
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
             for n in 1...2 {
@@ -111,6 +115,11 @@ struct TCCommands: Commands {
         CommandMenu("Zobrazení") {
             Toggle("Skryté soubory", isOn: Binding(get: { model.showHidden }, set: { model.showHidden = $0 }))
                 .keyboardShortcut(".", modifiers: [.command, .shift])
+            Button("Plný režim") { model.source.viewMode = .full }.keyboardShortcut("1", modifiers: .control)
+            Button("Stručný režim") { model.source.viewMode = .brief }.keyboardShortcut("2", modifiers: .control)
+            Button("Náhledy") { model.source.viewMode = .thumbnails }.keyboardShortcut("3", modifiers: .control)
+            Button("Quick View (druhý panel)") { model.quickViewOn.toggle() }.keyboardShortcut("q", modifiers: .control)
+            Divider()
             Button("Obnovit") { model.reloadAll() }.keyboardShortcut("r")
             Button("Branch view (všechny podadresáře)") { model.toggleBranchView() }.keyboardShortcut("b")
             Button("Rychlý filtr") { model.toggleFilter() }.keyboardShortcut("f")

@@ -3,8 +3,8 @@
 # Formát fází:     @phase | číslo | název | stav (hotovo/probíhá/plán) | tokeny (nebo -)
 # Formát funkcí:   kategorie | funkce | stav | fáze | poznámka
 @phase | 0 | Průzkum TC a návrh | hotovo | 582 208 (cache čtení 533 596, output 9 064)
-@phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 2 747 398 (cache čtení 2 592 754, output 75 031), stav k PR
-@phase | 2 | Fronta operací, Lister, hledání, hotlist, kontrolní součty | plán | -
+@phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 3 237 493 (cache čtení 3 067 722, output 76 954)
+@phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 8 718 567 (cache čtení 8 516 701, output 90 868), stav k PR 2f
 @phase | 3 | Multi-Rename, porovnání, synchronizace | plán | -
 @phase | 4 | Archivy jako adresáře | plán | -
 @phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | plán | -
@@ -15,15 +15,15 @@ Panely a zobrazení | Panely nad sebou | T | 6 |
 Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |
 Panely a zobrazení | Zamykání karet, uložené sady karet (Favorite tabs) | T | 6 |
 Panely a zobrazení | Režim Plný (název, přípona, velikost, datum, atributy) | D | 1 |
-Panely a zobrazení | Režim Stručný (Brief) | T | 2 |
-Panely a zobrazení | Strom adresářů (Tree) | T | 2 |
-Panely a zobrazení | Náhledy obrázků (Thumbnails) | T | 2 |
+Panely a zobrazení | Režim Stručný (Brief) | P | 2 | jen sloupec názvů (⌃2); víc sloupců vedle sebe zatím ne
+Panely a zobrazení | Strom adresářů (Tree) | T | 6 |
+Panely a zobrazení | Náhledy obrázků (Thumbnails) | D | 2 | ⌃3, náhledy přes Quick Look; ověřeno jen spuštěním bez pádu
 Panely a zobrazení | Vlastní sloupce a pohledy | T | 6 |
 Panely a zobrazení | Řazení podle názvu / přípony / velikosti / data (klik na hlavičku) | D | 1 |
 Panely a zobrazení | Rychlé hledání psaním (type-ahead) | D | 1 | vestavěné v tabulce
 Panely a zobrazení | Rychlý filtr (Ctrl+S, ⌘F) | D | 2 | pole nad seznamem, Esc zruší
 Panely a zobrazení | Skryté soubory (⇧⌘.) | D | 1 |
-Panely a zobrazení | Quick View panel (Ctrl+Q) | T | 2 |
+Panely a zobrazení | Quick View panel (Ctrl+Q) | D | 2 | druhý panel ukazuje náhled souboru pod kurzorem; ověřeno jen překladem
 Panely a zobrazení | Barvy podle typu souboru | T | 6 |
 Panely a zobrazení | Výběr svazků a oblíbených složek | P | 1 | menu svazků; tlačítková lišta disků ve fázi 6
 Panely a zobrazení | Historie adresářů (zpět / vpřed) | D | 1 | ⌘[ ⌘]
@@ -32,7 +32,7 @@ Panely a zobrazení | Branch view (Ctrl+B, všechny soubory podadresářů) | D 
 Panely a zobrazení | Cíl = zdroj, prohození panelů | D | 1 | ⌘=  ⌘U
 Panely a zobrazení | Stavový řádek (označeno, počty, volné místo) | D | 1 |
 Panely a zobrazení | Obnovení karet a nastavení po spuštění | D | 1 |
-Panely a zobrazení | Drag & drop mezi panely a Finderem | T | 2 |
+Panely a zobrazení | Drag & drop mezi panely a Finderem | D | 2 | stejný svazek = přesun, jinak kopie, ⌥ = kopie; ručně neověřeno
 Panely a zobrazení | Automatická aktualizace při změně na disku | D | 2 | sledování adresáře + obnovení při aktivaci aplikace; změny obsahu uvnitř souboru (velikost) zatím ne
 
 Označování | Označit mezerníkem / Insert | D | 1 | mezerník u adresáře spočte jeho velikost
@@ -100,7 +100,7 @@ Příkazová řádka | Spuštění příkazu v aktuálním adresáři (zsh), s �
 Příkazová řádka | Příkaz `cd` | D | 1 |
 Příkazová řádka | Vložit název souboru do příkazové řádky (Ctrl+Enter) | D | 1 |
 Příkazová řádka | Otevření souboru přidruženým programem (Enter) | D | 1 |
-Příkazová řádka | Historie příkazů | T | 2 |
+Příkazová řádka | Historie příkazů | D | 2 | šipky nahoru/dolů v příkazové řádce
 Příkazová řádka | Vestavěný terminál | T | 6 |
 Příkazová řádka | Vlastní přidružení souborů k programům | T | 6 |
 

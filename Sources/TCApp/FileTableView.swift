@@ -84,6 +84,7 @@ struct FileTableView: NSViewRepresentable {
     let onFocus: () -> Void
     let onKey: (NSEvent) -> Bool
     let onOpen: () -> Void
+    var onDrop: ([URL], URL, Bool) -> Void = { _, _, _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -111,6 +112,9 @@ struct FileTableView: NSViewRepresentable {
         add("date", "Datum", 125, min: 110)
         add("attr", "Atr", 80, min: 70)
 
+        table.registerForDraggedTypes([.fileURL])
+        table.setDraggingSourceOperationMask([.copy, .move], forLocal: true)
+        table.setDraggingSourceOperationMask(.copy, forLocal: false)
         table.dataSource = c
         table.delegate = c
         table.target = c
@@ -145,6 +149,8 @@ struct FileTableView: NSViewRepresentable {
             guard let table else { return }
             let tab = parent.tab
             syncing = true
+            let brief = tab.viewMode == .brief
+            for col in table.tableColumns { col.isHidden = brief && col.identifier.rawValue != "name" }
             if parent.revision != lastRevision {
                 lastRevision = parent.revision
                 table.reloadData()
@@ -217,6 +223,47 @@ struct FileTableView: NSViewRepresentable {
 
         func tableView(_ tableView: NSTableView, typeSelectStringFor tableColumn: NSTableColumn?, row: Int) -> String? {
             parent.tab.entries.indices.contains(row) ? parent.tab.entries[row].name : nil
+        }
+
+        // MARK: Drag & drop
+
+        func tableView(_ tableView: NSTableView, writeRowsWith rowIndexes: IndexSet, to pboard: NSPasteboard) -> Bool {
+            let tab = parent.tab
+            guard let row = rowIndexes.first, tab.entries.indices.contains(row), !tab.entries[row].isParentLink else { return false }
+            let dragged = tab.entries[row]
+            let urls = tab.marked.contains(dragged.url) ? tab.entries.filter { tab.marked.contains($0.url) }.map(\.url) : [dragged.url]
+            pboard.clearContents()
+            return pboard.writeObjects(urls.map { $0 as NSURL })
+        }
+
+        private func dropTarget(row: Int, op: NSTableView.DropOperation) -> URL {
+            let tab = parent.tab
+            if op == .on, tab.entries.indices.contains(row), tab.entries[row].isDirectory { return tab.entries[row].url }
+            return tab.path
+        }
+
+        func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int,
+                       proposedDropOperation op: NSTableView.DropOperation) -> NSDragOperation {
+            let tab = parent.tab
+            if op == .on, tab.entries.indices.contains(row), tab.entries[row].isDirectory, !tab.entries[row].isParentLink {
+                // zůstává na řádku adresáře
+            } else {
+                tableView.setDropRow(-1, dropOperation: .on)
+            }
+            let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+            guard let first = urls.first else { return [] }
+            let dest = dropTarget(row: tableView.selectedRow == -1 ? -1 : row, op: op)
+            if urls.contains(where: { $0.deletingLastPathComponent().standardizedFileURL == dest.standardizedFileURL }) && op != .on { return [] }
+            return AppModel.dropIsMove(source: first, destination: dest, option: NSEvent.modifierFlags.contains(.option)) ? .move : .copy
+        }
+
+        func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int,
+                       dropOperation op: NSTableView.DropOperation) -> Bool {
+            let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+            guard let first = urls.first else { return false }
+            let dest = dropTarget(row: row, op: op)
+            parent.onDrop(urls, dest, AppModel.dropIsMove(source: first, destination: dest, option: NSEvent.modifierFlags.contains(.option)))
+            return true
         }
 
         @objc func doubleClicked() {
