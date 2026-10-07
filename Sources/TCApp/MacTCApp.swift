@@ -129,6 +129,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             } }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--longpress-demo"), i + 2 < CommandLine.arguments.count {     // ladění: krátké a dlouhé pravé tlačítko nad adresářem
+            let m = AppModel.shared
+            m.source.navigate(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { MainActor.assumeIsolated {
+                func find(_ v: NSView) -> KeyTableView? { if let t = v as? KeyTableView { return t }; for s in v.subviews { if let t = find(s) { return t } }; return nil }
+                guard let w = NSApp.windows.first(where: { $0.contentView != nil && find($0.contentView!) != nil }), let table = find(w.contentView!),
+                      let row = m.source.entries.firstIndex(where: { $0.isDirectory && !$0.isParentLink }) else {
+                    try? "adresář v panelu nenalezen".write(toFile: CommandLine.arguments[i + 2], atomically: true, encoding: .utf8); NSApp.terminate(nil); return
+                }
+                let p = table.convert(NSPoint(x: 40, y: table.rect(ofRow: row).midY), to: nil)
+                func event(_ t: NSEvent.EventType) -> NSEvent { NSEvent.mouseEvent(with: t, location: p, modifierFlags: [], timestamp: 0, windowNumber: w.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)! }
+                let tabsBefore = m.group(m.activeSide).tabs.count
+                table.rightMouseDown(with: event(.rightMouseDown)); RunLoop.current.run(until: Date().addingTimeInterval(0.2)); table.rightMouseUp(with: event(.rightMouseUp))
+                RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+                var log = "krátké kliknutí: dialog \(NSApp.modalWindow == nil ? "nezobrazen" : "ZOBRAZEN")\n"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    MainActor.assumeIsolated {
+                        let alert = NSApp.modalWindow
+                        let texts = alert?.contentView.map { v -> [String] in
+                            func labels(_ v: NSView) -> [String] { (v as? NSTextField).map { [$0.stringValue] } ?? v.subviews.flatMap(labels) }
+                            return labels(v) } ?? []
+                        log += "dlouhé podržení: dialog \(alert == nil ? "NEZOBRAZEN" : "zobrazen") \(texts.filter { !$0.isEmpty })\n"
+                        NSApp.abortModal()
+                        log += "záložek před: \(tabsBefore), po zrušení: \(m.group(m.activeSide).tabs.count)\n"
+                        try? log.write(toFile: CommandLine.arguments[i + 2], atomically: true, encoding: .utf8)
+                        NSApp.terminate(nil)
+                    }
+                }
+                table.rightMouseDown(with: event(.rightMouseDown))
+            } }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }
