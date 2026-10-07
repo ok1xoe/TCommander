@@ -45,7 +45,7 @@ import Foundation
 
     @Test func fileHashMatchesDataHash() throws {
         let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
-        let big = String(repeating: "macTC", count: 500_000)
+        let big = String(repeating: "TCommander", count: 500_000)
         let f = try write(d, "big.txt", big)
         for a in ChecksumAlgorithm.allCases {
             #expect(Checksum.hash(f, a) == Checksum.hash(of: Data(big.utf8), a))

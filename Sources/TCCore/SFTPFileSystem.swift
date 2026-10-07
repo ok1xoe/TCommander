@@ -52,13 +52,13 @@ public final class SFTPFileSystem: RemoteFileSystemProtocol, @unchecked Sendable
 
     public init(connection: SFTPConnection) {
         self.connection = connection
-        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("macTC/ssh")
+        let caches = AppPaths.caches("ssh")
         try? FileManager.default.createDirectory(at: caches, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         controlDir = caches
         if connection.password.isEmpty { askpass = nil } else {
             // pomocný skript vypíše heslo z proměnné prostředí; heslo se na disk nezapisuje
             let script = caches.appendingPathComponent("askpass-\(UUID().uuidString).sh")
-            try? "#!/bin/sh\nprintf '%s\\n' \"$MACTC_SSH_PASSWORD\"\n".write(to: script, atomically: true, encoding: .utf8)
+            try? "#!/bin/sh\nprintf '%s\\n' \"$TCOMMANDER_SSH_PASSWORD\"\n".write(to: script, atomically: true, encoding: .utf8)
             try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
             askpass = script
         }
@@ -91,7 +91,7 @@ public final class SFTPFileSystem: RemoteFileSystemProtocol, @unchecked Sendable
         if let askpass {
             env["SSH_ASKPASS"] = askpass.path
             env["SSH_ASKPASS_REQUIRE"] = "force"
-            env["MACTC_SSH_PASSWORD"] = connection.password
+            env["TCOMMANDER_SSH_PASSWORD"] = connection.password
             env["DISPLAY"] = env["DISPLAY"] ?? ":0"
         }
         return env
@@ -103,7 +103,7 @@ public final class SFTPFileSystem: RemoteFileSystemProtocol, @unchecked Sendable
     }
 
     private func makeProcess(_ commands: [String]) throws -> (Process, URL, Pipe, Pipe) {
-        let batch = FileManager.default.temporaryDirectory.appendingPathComponent("macTC-sftp-\(UUID().uuidString).batch")
+        let batch = FileManager.default.temporaryDirectory.appendingPathComponent("TCommander-sftp-\(UUID().uuidString).batch")
         try (commands.joined(separator: "\n") + "\n").write(to: batch, atomically: true, encoding: .utf8)
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/sftp")

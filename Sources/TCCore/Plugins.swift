@@ -119,7 +119,7 @@ public final class PluginHost: @unchecked Sendable {
     private let lock = NSLock()
 
     public static func defaultDirectory() -> URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("macTC/PlugIns")
+        AppPaths.plugins
     }
 
     public init(directory: URL = PluginHost.defaultDirectory()) { self.directory = directory }
@@ -183,7 +183,8 @@ public final class PluginHost: @unchecked Sendable {
         let out = Pipe(), err = Pipe(), inp = Pipe()
         p.standardOutput = out; p.standardError = err; p.standardInput = inp
         var env = ProcessInfo.processInfo.environment
-        env["MACTC_PLUGIN_DIR"] = plugin.directory.path
+        env["TCOMMANDER_PLUGIN_DIR"] = plugin.directory.path
+        env["MACTC_PLUGIN_DIR"] = plugin.directory.path                 // starší název (kvůli již napsaným pluginům)
         p.environment = env
         do { try p.run() } catch { throw PluginError(message: "Plugin \(m.name) nelze spustit: \(error.localizedDescription)") }
         let collected = DataBox()

@@ -44,9 +44,9 @@ import Foundation
         catch { #expect("\(error.localizedDescription)".contains("Syntax Error")) }
     }
 
-    @Test(.enabled(if: PlantUML.locate(extraJarDirectories: [NSHomeDirectory() + "/Library/Application Support/macTC"]) != nil, "PlantUML není nainstalovaný"))
+    @Test(.enabled(if: PlantUML.locate(extraJarDirectories: [NSHomeDirectory() + "/Library/Application Support/TCommander"]) != nil, "PlantUML není nainstalovaný"))
     func rendersARealDiagram() throws {
-        let launcher = try #require(PlantUML.locate(extraJarDirectories: [NSHomeDirectory() + "/Library/Application Support/macTC"]))
+        let launcher = try #require(PlantUML.locate(extraJarDirectories: [NSHomeDirectory() + "/Library/Application Support/TCommander"]))
         let d = FileManager.default.temporaryDirectory.appendingPathComponent("puml-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: d) }

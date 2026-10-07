@@ -77,9 +77,9 @@ import Foundation
 
     @Test func adifFieldsLengthsAndRecordMarkers() {
         #expect(SyntaxHighlighter.language(forFileName: "log.ADI") == "adif" && SyntaxHighlighter.language(forFileName: "x.adif") == "adif")
-        let text = "ADIF export by macTC\n<ADIF_VER:5>3.1.0\n<EOH>\n<CALL:5>OK1XO <BAND:3>20m <QSO_DATE:8:D>20261007 <EOR>\n<call:4>DL1A<eor>"
+        let text = "ADIF export by TCommander\n<ADIF_VER:5>3.1.0\n<EOH>\n<CALL:5>OK1XO <BAND:3>20m <QSO_DATE:8:D>20261007 <EOR>\n<call:4>DL1A<eor>"
         let r = kinds(text, "adif")
-        #expect(r.first?.1 == .comment && r.first?.0 == "ADIF export by macTC\n")                // komentář je jen volný text před prvním polem
+        #expect(r.first?.1 == .comment && r.first?.0 == "ADIF export by TCommander\n")                // komentář je jen volný text před prvním polem
         #expect(has(r, "<ADIF_VER", .tag) && has(r, "3.1.0", .string))                           // pole v hlavičce se zvýrazní jako ostatní
         #expect(has(r, "<EOH>", .keyword) && has(r, "<EOR>", .keyword) && has(r, "<eor>", .keyword))
         #expect(has(r, "<CALL", .tag) && has(r, "OK1XO", .string) && has(r, "20m", .string) && has(r, "20261007", .string) && has(r, "D", .type) && has(r, "5", .number) && has(r, "<call", .tag) && has(r, "DL1A", .string))
@@ -102,7 +102,7 @@ import Foundation
     }
 
     @Test func yamlKeysAnchorsTagsDocumentsAndComments() {
-        let y = "---\n# komentář\nname: macTC  # za mezerou\nurl: http://x.cz/#frag\nlist:\n  - a: 1\n  - \"k\": true\nbase: &b\n  x: *b\nt: !!str 5\n'q k': 'v'\nmsg: don't panic\n...\n"
+        let y = "---\n# komentář\nname: TCommander  # za mezerou\nurl: http://x.cz/#frag\nlist:\n  - a: 1\n  - \"k\": true\nbase: &b\n  x: *b\nt: !!str 5\n'q k': 'v'\nmsg: don't panic\n...\n"
         let r = kinds(y, "yaml")
         #expect(has(r, "---", .preprocessor) && has(r, "...", .preprocessor) && has(r, "# komentář", .comment) && has(r, "# za mezerou", .comment))
         for k in ["name", "url", "list", "a", "\"k\"", "base", "x", "t", "'q k'", "msg"] { #expect(has(r, k, .attribute), "klíč \(k)") }

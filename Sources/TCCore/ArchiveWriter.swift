@@ -65,7 +65,7 @@ public enum ArchiveWriter {
                         control: OperationControl, progress: (@Sendable (TransferProgress) -> Void)?, replaceInPlace: Bool) -> OperationReport {
         var report = OperationReport()
         let fm = FileManager.default
-        let tmp = destination.deletingLastPathComponent().appendingPathComponent(".macTC-\(UUID().uuidString).tmp")
+        let tmp = destination.deletingLastPathComponent().appendingPathComponent(".TCommander-\(UUID().uuidString).tmp")
         guard let a = archive_write_new() else {
             report.failures.append(.init(url: destination, message: "Nelze inicializovat libarchive")); return report
         }

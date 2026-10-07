@@ -301,6 +301,6 @@ public final class ArchiveFileSystem: VirtualFileSystem, @unchecked Sendable {
         return dir.appendingPathComponent((ArchiveSupport.normalize(innerPath) as NSString).lastPathComponent)
     }
 
-    public static var temporaryRoot: URL { FileManager.default.temporaryDirectory.appendingPathComponent("macTC-archive") }
+    public static var temporaryRoot: URL { FileManager.default.temporaryDirectory.appendingPathComponent("TCommander-archive") }
     public static func cleanTemporary() { try? FileManager.default.removeItem(at: temporaryRoot) }
 }

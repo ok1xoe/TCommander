@@ -21,7 +21,7 @@ enum WindowTranslator {
     private static func tr(_ s: String) -> String { s.isEmpty ? s : Localization.translate(s, language: language) }
 
     static func translate(_ window: NSWindow) {
-        guard language == "en", window.title != "macTC" else { return }          // hlavní okno se překládá funkcí L()
+        guard language == "en", window.title != "TCommander" else { return }          // hlavní okno se překládá funkcí L()
         let t = tr(window.title)
         if t != window.title { window.title = t }
         if let v = window.contentView { walk(v) }

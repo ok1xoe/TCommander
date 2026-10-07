@@ -59,7 +59,7 @@ for cat, fs in cats.items():
 now = datetime.datetime.now().strftime("%-d. %-m. %Y %H:%M")
 page = f"""<!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>macTC – funkce a stav</title>
+<title>TCommander – funkce a stav</title>
 <style>
 :root{{--bg:#fafaf9;--fg:#1c1917;--mut:#78716c;--card:#fff;--line:#e7e5e4;--acc:#2563eb;--d:#16a34a;--p:#d97706;--t:#78716c;--x:#a8a29e}}
 @media(prefers-color-scheme:dark){{:root{{--bg:#141413;--fg:#f5f5f4;--mut:#a8a29e;--card:#1c1b1a;--line:#2e2c2a;--acc:#60a5fa;--d:#4ade80;--p:#fbbf24;--t:#a8a29e;--x:#78716c}}}}
@@ -82,7 +82,7 @@ button{{font:inherit;font-size:13px;padding:4px 12px;border-radius:99px;border:1
 button[aria-pressed=true]{{background:var(--acc);border-color:var(--acc);color:#fff}}
 @media(max-width:600px){{td:nth-child(3),th:nth-child(3){{display:none}}}}
 </style></head><body><main>
-<h1>macTC</h1>
+<h1>TCommander</h1>
 <p class="sub">Nativní macOS správce souborů inspirovaný Total Commanderem · soupis funkcí TC a stav implementace ·
 aktualizováno {now} · commit <code>{esc(commit)}</code> · zdroj: <a href="features.txt">features.txt</a>, <a href="token-ledger.md">evidence tokenů</a></p>
 <div class="cards">

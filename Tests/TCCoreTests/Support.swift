@@ -1,7 +1,7 @@
 import Foundation
 
 func makeTempDir() throws -> URL {
-    let u = FileManager.default.temporaryDirectory.appendingPathComponent("mactc-\(UUID().uuidString)")
+    let u = FileManager.default.temporaryDirectory.appendingPathComponent("tcommander-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
     return u.resolvingSymlinksInPath()
 }

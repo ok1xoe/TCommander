@@ -370,7 +370,7 @@ public struct ColorRule: Codable, Hashable, Identifiable, Sendable {
 public struct JSONStore<T: Codable>: Sendable where T: Sendable {
     public let file: URL
     public init(name: String, directory: URL? = nil) {
-        let dir = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("macTC")
+        let dir = directory ?? AppPaths.support
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         file = dir.appendingPathComponent(name + ".json")
     }

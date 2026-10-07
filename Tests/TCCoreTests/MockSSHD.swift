@@ -17,7 +17,7 @@ final class MockSSHD {
     }()
 
     init() throws {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("mactc-sshd-\(UUID().uuidString.prefix(8))")
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tcommander-sshd-\(UUID().uuidString.prefix(8))")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         func sh(_ c: String) throws {
             let r = Shell.run(c, in: dir)

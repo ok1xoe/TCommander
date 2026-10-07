@@ -1,4 +1,4 @@
-# macTC – návrh
+# TCommander – návrh
 
 Cíl: nativní macOS aplikace pokrývající funkce Total Commanderu (https://www.ghisler.com/featurel.htm). Distribuce mimo App Store (potřebuje plný přístup k disku). macOS 14+, Swift 6, bez Xcode projektu (jen SwiftPM).
 

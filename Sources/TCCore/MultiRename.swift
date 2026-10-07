@@ -181,7 +181,7 @@ public enum RenameEngine {
         do {
             for w in work {
                 let dir = w.source.deletingLastPathComponent()
-                let tmp = dir.appendingPathComponent(".macTC-rename-\(UUID().uuidString)")
+                let tmp = dir.appendingPathComponent(".TCommander-rename-\(UUID().uuidString)")
                 try fs.move(w.source, to: tmp)
                 stage1.append((w.source, tmp, dir.appendingPathComponent(w.newName)))
             }
