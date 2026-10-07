@@ -90,6 +90,11 @@ struct TCCommands: Commands {
             Button("Kontrolní součty…") { model.checksums() }
             Button("Ověřit kontrolní součty ze souboru") { model.verifyChecksums() }
             Divider()
+            Button("Najít duplicitní soubory…") { model.findDuplicates() }
+            Divider()
+            Button("Kódovat soubory (MIME, UUE, XXE) do druhého panelu…") { model.encodeFiles() }
+            Button("Dekódovat soubory do druhého panelu…") { model.decodeFiles() }
+            Divider()
             Button("Rozdělit soubor…") { model.splitFile() }
             Button("Spojit soubory (.001)…") { model.combineFiles() }
             Divider()
