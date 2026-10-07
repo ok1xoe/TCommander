@@ -6,7 +6,7 @@
 @phase | 1 | Dva panely, navigace, základní souborové operace | hotovo | 3 237 493 (cache čtení 3 067 722, output 76 954)
 @phase | 2 | Fronta operací, Lister, hledání, hotlist, režimy zobrazení, nástroje | hotovo | 9 273 793 (cache čtení 9 067 468, output 93 127)
 @phase | 3 | Multi-Rename, porovnání, synchronizace, duplicity, kódování | hotovo | 4 031 289 (cache čtení 3 926 612, output 50 938), stav k PR 3c
-@phase | 4 | Archivy jako adresáře | plán | -
+@phase | 4 | Archivy jako adresáře | probíhá | -
 @phase | 5 | Síť: FTP/FTPS, SFTP, SMB, WebDAV | plán | -
 @phase | 6 | Plugin API, button bar, menu a zkratky, nastavení | plán | -
 
@@ -84,9 +84,12 @@ Prohlížení a editace | Lister: hledání v obsahu | P | 2 | v textovém reži
 Prohlížení a editace | Editace (F4) v externím editoru | D | 1 | TextEdit
 Prohlížení a editace | Konfigurovatelný editor, vestavěný editor | T | 6 |
 
-Archivy | Prohlížení archivu jako adresáře (ZIP, TAR, GZ, 7z, RAR…) | T | 4 |
-Archivy | Balení (Alt+F5) a rozbalení (Alt+F9), na pozadí | T | 4 |
-Archivy | Test archivu, kopie archiv → archiv | T | 4 |
+Archivy | Prohlížení archivu jako adresáře (ZIP, TAR, GZ, 7z, RAR…) | D | 4 | Enter na archivu, „..“ vystoupí; čtení přes systémovou libarchive (zip, tar.*, 7z, rar, cab, iso …); otestováno na zip a tar.gz
+Archivy | Balení (Alt+F5), na pozadí | T | 4 |
+Archivy | Rozbalení z archivu (F5) a rozbalení celého archivu (Alt+F9), na pozadí | D | 4 | ochrana proti „zip slip“, zachování časů a odkazů, řešení konfliktů
+Archivy | Otevření a zobrazení souboru z archivu (Enter, F3, F4) | D | 4 | přes dočasné rozbalení
+Archivy | Test archivu | D | 4 | menu Nástroje
+Archivy | Kopie do archivu, mazání a přejmenování uvnitř archivu, archiv → archiv | T | 4 | ve zbývající části fáze 4
 
 Síť | FTP a FTPS (obnovení stahování, fronta) | T | 5 |
 Síť | SFTP | T | 5 |

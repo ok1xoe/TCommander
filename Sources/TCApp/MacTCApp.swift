@@ -21,6 +21,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let i = args.firstIndex(of: "--sync"), i + 2 < args.count {              // ladění: synchronizace dvou adresářů
             SyncWindow.show(left: URL(fileURLWithPath: args[i + 1]), right: URL(fileURLWithPath: args[i + 2]), jobs: AppModel.shared.jobs) {}
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--archive"), i + 1 < CommandLine.arguments.count {     // ladění: vstup do archivu
+            let a = URL(fileURLWithPath: CommandLine.arguments[i + 1])
+            AppModel.shared.source.navigate(to: a.deletingLastPathComponent(), select: a)
+            AppModel.shared.source.enterArchive(a)
+        }
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
             for n in 1...2 {
@@ -90,6 +95,9 @@ struct TCCommands: Commands {
             Button("Kontrolní součty…") { model.checksums() }
             Button("Ověřit kontrolní součty ze souboru") { model.verifyChecksums() }
             Divider()
+            Button("Rozbalit archiv…") { model.unpackArchives() }
+            Button("Otestovat archiv") { model.testArchives() }
+            Divider()
             Button("Najít duplicitní soubory…") { model.findDuplicates() }
             Divider()
             Button("Kódovat soubory (MIME, UUE, XXE) do druhého panelu…") { model.encodeFiles() }
@@ -114,7 +122,7 @@ struct TCCommands: Commands {
             Button("Spočítat velikosti adresářů") { model.source.computeAllDirSizes() }
         }
         CommandMenu("Oblíbené") {
-            Button("Přidat aktuální adresář") { model.hotlist.add(model.source.path) }.keyboardShortcut("d")
+            Button("Přidat aktuální adresář") { model.hotlist.add(model.source.persistentPath) }.keyboardShortcut("d")
             Divider()
             ForEach(model.hotlist.entries) { e in
                 Button(e.name) { model.goTo(URL(fileURLWithPath: e.path)) }

@@ -9,7 +9,8 @@ let package = Package(
         .library(name: "TCCore", targets: ["TCCore"]),
     ],
     targets: [
-        .target(name: "TCCore"),
+        .target(name: "CArchive", linkerSettings: [.linkedLibrary("archive")]),
+        .target(name: "TCCore", dependencies: ["CArchive"]),
         .executableTarget(
             name: "TCApp",
             dependencies: ["TCCore"],
