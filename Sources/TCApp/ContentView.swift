@@ -50,6 +50,7 @@ struct FKeyBar: View {
             btn("F5 Kopírovat") { model.transfer(.copy) }
             btn("F6 Přesunout") { model.transfer(.move) }
             btn("F7 Nový adresář") { model.makeDirectory() }
+            btn("⌥F7 Hledat") { model.search() }
             btn("F8 Smazat") { model.delete(permanent: false) }
         }
         .padding(2)

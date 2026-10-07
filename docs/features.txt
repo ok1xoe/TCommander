@@ -60,10 +60,10 @@ Souborové operace | Kontrolní součty (CRC32, MD5, SHA) vytvořit / ověřit |
 Souborové operace | Rozdělit a spojit soubory | T | 2 |
 Souborové operace | Kódování UUE / XXE / MIME | T | 3 |
 
-Hledání | Hledání podle masky, velikosti, data, atributů (Alt+F7) | T | 2 |
-Hledání | Hledání textu v souborech (regex, kódování) | T | 2 |
+Hledání | Hledání podle masky, velikosti a data (Alt+F7) | P | 2 | podadresáře, skryté, velikost od–do, změněno za N dní; podle atributů zatím ne
+Hledání | Hledání textu v souborech (regex, kódování) | D | 2 | rozpoznání kódování, regex, bez ohledu na diakritiku; binární soubory po bajtech
 Hledání | Hledání uvnitř archivů | T | 4 |
-Hledání | Výsledky jako panel, uložené šablony hledání | T | 2 |
+Hledání | Výsledky jako panel, uložené šablony hledání | P | 2 | výsledky v okně s přechodem na soubor a zobrazením; jako virtuální panel a šablony ne
 Hledání | Hledání duplicitních souborů | T | 3 |
 
 Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | T | 3 |

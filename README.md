@@ -4,7 +4,7 @@ Nativní macOS správce souborů inspirovaný Total Commanderem. Swift 6, SwiftU
 
 ```bash
 swift build          # build
-swift test           # testy
+scripts/test.sh        # testy (swift test + cesta k pluginu Swift Testing)
 swift run macTC      # spuštění
 scripts/bundle.sh    # složí dist/macTC.app
 ```
