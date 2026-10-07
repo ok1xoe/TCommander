@@ -160,6 +160,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 table.rightMouseDown(with: event(.rightMouseDown))
             } }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--many-tabs"), i + 1 < CommandLine.arguments.count, let n = Int(CommandLine.arguments[i + 1]) {   // ladění: mnoho záložek
+            let dirs = ["/usr/lib", "/usr/bin", "/usr/share", "/usr/local", "/Library", "/System", "/Applications", "/tmp", "/private/var", "/opt", "/usr/libexec", "/usr/sbin", "/bin", "/sbin", "/Users"]
+            for k in 0..<n { AppModel.shared.group(.left).newTab(at: URL(fileURLWithPath: dirs[k % dirs.count])) }
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--strip-demo"), i + 1 < CommandLine.arguments.count {      // ladění: kliknutí na šipky pásu záložek
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { MainActor.assumeIsolated {
+                func all(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(all) }
+                guard let root = NSApp.windows.first(where: { $0.contentView != nil })?.contentView else { return }
+                let strips = all(root).compactMap { $0 as? StripView }
+                var log = "pásů: \(strips.count)\n"
+                for (n, strip) in strips.enumerated() {
+                    let sv = all(strip).compactMap { $0 as? NSScrollView }.first
+                    let btns = all(strip).compactMap { $0 as? NSButton }
+                    func state() -> String { "x=\(Int(sv?.contentView.bounds.origin.x ?? -1)) doleva=\(btns.first { $0.toolTip == "Doleva" }.map { $0.isEnabled && !$0.isHidden } ?? false) doprava=\(btns.first { $0.toolTip == "Doprava" }.map { $0.isEnabled && !$0.isHidden } ?? false)" }
+                    log += "pás \(n): \(state())\n"
+                    btns.first { $0.toolTip == "Doleva" }?.performClick(nil); RunLoop.current.run(until: Date().addingTimeInterval(0.5)); log += "   po kliknutí doleva: \(state())\n"
+                    btns.first { $0.toolTip == "Doprava" }?.performClick(nil); RunLoop.current.run(until: Date().addingTimeInterval(0.5)); log += "   po kliknutí doprava: \(state())\n"
+                }
+                try? log.write(toFile: CommandLine.arguments[i + 1], atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            } }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }

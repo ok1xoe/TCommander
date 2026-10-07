@@ -67,6 +67,8 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Doleva": "Left",
+        "Doprava": "Right",
         "Plugin není k dispozici.": "The plugin is not available.",
         "Vybrat…": "Choose…",
         "Vybrat...": "Choose...",

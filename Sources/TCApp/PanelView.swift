@@ -90,7 +90,7 @@ struct TabBar: View {
     let onSelect: (Int) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollStrip {
             HStack(spacing: 2) {
                 ForEach(Array(group.tabs.enumerated()), id: \.element.id) { i, t in
                     let title = t.archiveFile?.lastPathComponent ?? (t.path.path == "/" ? "/" : t.path.lastPathComponent)
@@ -101,6 +101,7 @@ struct TabBar: View {
                         .background(i == group.activeIndex ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12))
                         .clipShape(RoundedRectangle(cornerRadius: 5))
                         .contentShape(Rectangle())
+                        .stripActive(i == group.activeIndex)
                         .onTapGesture { onSelect(i) }
                 }
             }
@@ -180,7 +181,7 @@ struct DriveBar: View {
     }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollStrip {
             HStack(spacing: 3) {
                 ForEach(Array(places.enumerated()), id: \.offset) { _, p in
                     let active = current.path == p.url.path || (p.url.path != "/" && current.path.hasPrefix(p.url.path + "/"))
@@ -191,6 +192,7 @@ struct DriveBar: View {
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
+                    .stripActive(active)
                 }
             }
             .padding(.horizontal, 6).padding(.bottom, 3)
