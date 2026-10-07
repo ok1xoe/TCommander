@@ -11,6 +11,10 @@ swift run macTC          # nebo přímo z balíčku
 scripts/test.sh          # testy (swift test + cesta k pluginu Swift Testing pro Command Line Tools)
 ```
 
+## Instalace
+
+Hotové balíčky (`.dmg`, `.zip`, univerzální: Apple Silicon i Intel) jsou v [Releases](../../releases). Přetáhněte `macTC.app` do Aplikací. Aplikace je podepsaná ad-hoc, takže při prvním spuštění použijte pravé tlačítko › Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/macTC.app`). Podpis Developer ID a notarizace jsou popsané v [docs/release.md](docs/release.md).
+
 Požadavky: macOS 14+, Swift 6 (stačí Command Line Tools). Aplikace není v App Store sandboxu (potřebuje plný přístup k disku); při prvním spuštění může být nutné povolit ji v Systémové nastavení › Soukromí a zabezpečení.
 
 ## Co umí

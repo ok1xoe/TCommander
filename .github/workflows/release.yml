@@ -1,0 +1,94 @@
+name: Release
+
+# Spustí se pushnutím tagu v* (např. v0.1.0), nebo ručně (pak se balíčky jen nahrají jako artefakt).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      # Volitelné secrets pro podpis Developer ID a notarizaci (viz docs/release.md); bez nich se aplikace podepíše ad-hoc.
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verze z tagu
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0-dev"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Testy
+        run: swift test
+
+      - name: Import podpisového certifikátu
+        if: env.MACOS_CERTIFICATE != ''
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/certificate.p12"
+
+      - name: Sestavení, podpis a balíčky
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          if [ -n "$MACOS_CERTIFICATE" ] && [ -n "$MACOS_SIGNING_IDENTITY" ]; then export CODESIGN_IDENTITY="$MACOS_SIGNING_IDENTITY"; fi
+          scripts/package.sh
+
+      - name: Artefakty
+        uses: actions/upload-artifact@v4
+        with:
+          name: macTC-${{ steps.version.outputs.version }}
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/SHA256SUMS.txt
+
+      - name: Release na GitHubu
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ -n "$MACOS_CERTIFICATE" ] && [ -n "$MACOS_SIGNING_IDENTITY" ] && [ -n "$NOTARY_APPLE_ID" ]; then
+            SIGN_NOTE="Aplikace je podepsaná Developer ID a notarizovaná, takže se po stažení otevře bez upozornění."
+          else
+            SIGN_NOTE="Aplikace je podepsaná ad-hoc (bez Apple Developer ID). macOS ji po stažení z internetu zablokuje – viz „Instalace“ níže."
+          fi
+          cat > notes.md <<NOTES
+          ## macTC $VERSION
+
+          Nativní správce souborů pro macOS inspirovaný Total Commanderem (dva panely, archivy, FTP/SFTP/SMB/WebDAV, Lister, terminál, hromadné přejmenování, synchronizace, zvýrazňování syntaxe, diagramy PlantUML…). Požaduje macOS 14 nebo novější; univerzální aplikace (Apple Silicon i Intel).
+
+          $SIGN_NOTE
+
+          ### Instalace
+          1. Stáhněte \`macTC-$VERSION.dmg\` (nebo \`.zip\`) a přetáhněte \`macTC.app\` do složky Aplikace.
+          2. Při prvním spuštění ad-hoc podepsané aplikace: pravým tlačítkem na aplikaci › **Otevřít** › **Otevřít**, nebo v Terminálu \`xattr -dr com.apple.quarantine /Applications/macTC.app\`.
+          3. Diagramy PlantUML vyžadují PlantUML a Javu (\`brew install plantuml\`).
+
+          Kontrolní součty jsou v \`SHA256SUMS.txt\`.
+
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/macTC-$VERSION.zip dist/macTC-$VERSION.dmg dist/SHA256SUMS.txt \
+            --title "macTC $VERSION" --notes-file notes.md --generate-notes --verify-tag
