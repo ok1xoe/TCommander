@@ -76,6 +76,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.terminate(nil)
             }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--mount-selftest"), i + 2 < CommandLine.arguments.count {      // ladění: připojení svazku (WebDAV/SMB), zápis a čtení souboru
+            let url = URL(string: CommandLine.arguments[i + 1])!, out = CommandLine.arguments[i + 2]
+            Task {
+                var report = ""
+                do {
+                    let mp = try await NetworkMounts.mount(url, user: nil, password: nil)
+                    report += "mount: \(mp.path)\n"
+                    let names = (try? FileManager.default.contentsOfDirectory(atPath: mp.path)) ?? []
+                    report += "list: \(names.sorted())\n"
+                    let f = mp.appendingPathComponent("mactc-written.txt")
+                    try "zapsáno z macTC".write(to: f, atomically: false, encoding: .utf8)
+                    report += "readback: \((try? String(contentsOf: f, encoding: .utf8)) ?? "CHYBA")\n"
+                    try? FileManager.default.removeItem(at: f)
+                } catch { report += "error: \(error.localizedDescription)\n" }
+                try? report.write(toFile: out, atomically: true, encoding: .utf8)
+                NSApp.terminate(nil)
+            }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }
