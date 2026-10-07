@@ -31,7 +31,13 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | 9b – ověření WebDAV | 14:00:14 – 14:04:01 (PR #32) | 7 | 14 | 5 640 | 1 452 035 | 3 933 | 1 461 622 |
 | 10 – konfigurovatelné hlavní menu | 14:04:01 – 14:12:45 (PR #33) | 15 | 30 | 42 448 | 3 488 459 | 21 872 | 3 552 809 |
 | 11 – PlantUML, ADIF, YAML, SQL dialekty | 14:12:45 – 14:38:12 (PR #35) | 28 | 56 | 71 275 | 7 928 036 | 46 777 | 8 046 144 |
-| **Celkem** | 09:37 – 14:38:12 (PR #35) | 345 | 690 | 1 221 701 | 139 135 786 | 842 725 | 141 200 902 |
+| 12 – oprava PageUp/PageDown | 14:38:12 – 15:03:00 (PR #37) | 23 | 46 | 28 543 | 7 793 573 | 15 816 | 7 837 978 |
+| 12b – release: balíčky, Actions, v0.1.0 | 15:03:00 – 17:05:58 (PR #40) | 74 | 148 | 63 895 | 29 012 984 | 39 559 | 29 116 586 |
+| 12c – dlouhé podržení pravého tlačítka, nápady na název | 17:05:58 – 20:39:25 (PR #41) | 20 | 40 | 437 948 | 8 312 147 | 32 760 | 8 782 895 |
+| 12d – čtečka Markdownu, F4 se zvýrazněním | 20:39:25 – 20:58:38 (PR #42) | 21 | 42 | 41 912 | 10 086 768 | 29 077 | 10 157 799 |
+| 12e – přejmenování na TCommander | 20:58:38 – 21:04:40 (PR #43) | 8 | 16 | 15 230 | 4 095 400 | 10 175 | 4 120 821 |
+| 12f – ukázkové pluginy | 21:04:40 – 21:22:56 (PR #44) | 28 | 56 | 72 660 | 15 519 128 | 44 889 | 15 636 733 |
+| **Celkem** | 09:37 – 21:22:56 (PR #44) | 519 | 1038 | 1 881 889 | 213 955 786 | 1 015 001 | 216 853 714 |
 
 Poznámka: hodnoty fází 1 a 2 byly původně změřeny před kroky PR/sloučení a jsou opraveny na celé okno fáze (konec = sloučení posledního PR fáze). Původní hodnota fáze 1 (2 747 398) byla změřena před kroky PR/sloučení; zde je opravená hodnota za celé okno fáze.
 
@@ -40,6 +46,6 @@ Autoritativní kontrola: `/cost` v Claude Code (měla by se shodovat se součtem
 ## Jak číst „celkem“
 
 Sloupec **cache čtení** při každém volání znovu započítává celou dosavadní konverzaci, proto je největší a součet „CELKEM“ vypadá vysoko.
-Skutečně nově zpracované tokeny za celý vývoj (do PR #35): **input 690 + cache zápis 1 221 701 + output 842 725 = 2 065 116**.
+Skutečně nově zpracované tokeny za celý vývoj (do PR #44): **input 1038 + cache zápis 1 881 889 + output 1 015 001 = 2 897 928**.
 Cache čtení se obvykle účtuje se silnou slevou, takže pro cenu je důležité sledovat druhy zvlášť (cenu odvodíte z aktuálního ceníku).
 Hodnoty se dají kdykoli přepočítat: `scripts/token_usage.py --since <ISO UTC> --until <ISO UTC>`; autoritativní kontrola je `/cost`.

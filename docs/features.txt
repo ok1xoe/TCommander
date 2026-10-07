@@ -14,6 +14,7 @@
 @phase | 9 | Celoobrazovkový terminál, ověření WebDAV | hotovo | 5 246 704 (cache čtení 5 157 874, output 30 910)
 @phase | 10 | Konfigurovatelné hlavní menu | hotovo | 3 552 809 (cache čtení 3 488 459, output 21 872)
 @phase | 11 | PlantUML, další jazyky zvýrazňování (SQL, ADIF, YAML) | hotovo | 8 046 144 (cache čtení 7 928 036, output 46 777)
+@phase | 12 | Oprava PageUp/PageDown, release v0.1.0 a GitHub Actions, záložka z adresáře, čtečka Markdownu, F4 se zvýrazněním, přejmenování na TCommander, ukázkové pluginy | hotovo | 75 652 812 (cache čtení 74 820 000, output 172 276)
 Panely a zobrazení | Dva panely vedle sebe | D | 1 |
 Panely a zobrazení | Panely nad sebou | D | 6 | Nastavení › Obecné; ověřeno jen překladem
 Panely a zobrazení | Karty (nový, zavřít, přepínání, ⌘T/⌘W) | D | 1 |
