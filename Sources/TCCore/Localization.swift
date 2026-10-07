@@ -27,6 +27,8 @@ public enum Localization {
     public static let untranslated: Set<String> = ["Start", "Server", "Quick View (druhý panel)", "Branch view (všechny podadresáře)"]
 
     public static let en: [String: String] = [
+        "Hlavní menu": "Main Menu",
+        "(prázdné – položky přidáte v Nastavení › Hlavní menu)": "(empty – add items in Settings › Main Menu)",
         "Nový tab": "New Tab", "Zavřít tab": "Close Tab", "Soubor": "File", "Otevřít": "Open", "Hledat soubory…": "Find Files…",
         "Přejmenovat…": "Rename…", "Nový adresář…": "New Folder…", "Nový soubor…": "New File…", "Kopírovat…": "Copy…",
         "Přesunout…": "Move…", "Smazat…": "Delete…", "Smazat trvale…": "Delete Permanently…", "Ověřovat kopie (SHA-256)": "Verify Copies (SHA-256)",
@@ -65,6 +67,17 @@ public enum Localization {
     // ===GENERATED===
     /// Další překlady statických textů oken a dialogů.
     public static let enMore: [String: String] = [
+        "Název vlastního menu:": "Custom menu name:",
+        "Název (Podmenu/Položka; „-“ = oddělovač)": "Name (Submenu/Item; “-” = separator)",
+        "Zkratka": "Shortcut",
+        "Menu": "Menu",
+        "Vestavěná položka": "Built-in item",
+        "Zobrazit (ano/ne)": "Show (yes/no)",
+        "Vlastní položky": "Custom items",
+        "Vestavěné položky": "Built-in items",
+        "Vlastní menu se zobrazí v hlavním menu za menu Porovnání. Příkazy a parametry jsou stejné jako ve Start menu; zkratka např. ctrl+shift+k nebo f9.": "The custom menu appears in the main menu after Comparison. Commands and parameters are the same as in the Start menu; shortcut e.g. ctrl+shift+k or f9.",
+        "Skrytá položka zmizí z menu včetně své zkratky. Pořadí vestavěných položek je pevné; vlastní uspořádání vytvoříte ve vlastním menu.": "A hidden item disappears from the menu together with its shortcut. The order of built-in items is fixed; create your own arrangement in the custom menu.",
+        "Nová položka": "New item",
         "Upravit text": "Edit text",
         "Blok → doprava": "Block → right",
         "← Blok doleva": "← Block left",

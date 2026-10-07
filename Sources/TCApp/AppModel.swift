@@ -37,6 +37,7 @@ final class AppModel {
     @ObservationIgnored let buttonBarStore = JSONStore<[ButtonBarItem]>(name: "buttonbar")
     @ObservationIgnored let startMenuStore = JSONStore<[ButtonBarItem]>(name: "startmenu")
     @ObservationIgnored let associationsStore = JSONStore<[FileAssociation]>(name: "associations")
+    @ObservationIgnored let mainMenuStore = JSONStore<MainMenuConfig>(name: "mainmenu")
     @ObservationIgnored let favoriteTabsStore = JSONStore<[FavoriteTabSet]>(name: "favoritetabs")
 
     var settings: AppSettings { didSet { if settings != oldValue { applySettings(oldValue); settingsStore.save(settings) } } }
@@ -45,6 +46,7 @@ final class AppModel {
     var buttonBar: [ButtonBarItem] { didSet { buttonBarStore.save(buttonBar) } }
     var startMenu: [ButtonBarItem] { didSet { startMenuStore.save(startMenu) } }
     var associations: [FileAssociation] { didSet { associationsStore.save(associations) } }
+    var mainMenu: MainMenuConfig { didSet { mainMenuStore.save(mainMenu) } }
     var favoriteTabs: [FavoriteTabSet] { didSet { favoriteTabsStore.save(favoriteTabs) } }
 
     var verifyCopies: Bool { get { settings.verifyCopies } set { settings.verifyCopies = newValue } }
@@ -84,6 +86,7 @@ final class AppModel {
         startMenu = startMenuStore.load(default: DefaultCustomization.startMenu)
         associations = associationsStore.load(default: [])
         favoriteTabs = favoriteTabsStore.load(default: [])
+        mainMenu = mainMenuStore.load(default: MainMenuConfig())
         for t in left.tabs + right.tabs { t.showHidden = settings.showHidden }
         ArchiveFileSystem.cleanTemporary()
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
