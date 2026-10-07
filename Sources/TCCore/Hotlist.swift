@@ -20,7 +20,7 @@ public final class Hotlist {
     }
 
     public static func defaultFile() -> URL {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("macTC")
+        let dir = AppPaths.support
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("hotlist.json")
     }

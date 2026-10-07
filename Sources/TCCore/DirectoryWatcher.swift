@@ -4,7 +4,7 @@ import Foundation
 public final class DirectoryWatcher: @unchecked Sendable {
     private let source: DispatchSourceFileSystemObject
     private var pending: DispatchWorkItem?
-    private let queue = DispatchQueue(label: "macTC.DirectoryWatcher")
+    private let queue = DispatchQueue(label: "TCommander.DirectoryWatcher")
 
     public init?(url: URL, debounce: TimeInterval = 0.25, handler: @escaping @Sendable () -> Void) {
         let fd = open(url.path, O_EVTONLY)

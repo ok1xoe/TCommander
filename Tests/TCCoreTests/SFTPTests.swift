@@ -56,7 +56,7 @@ import Foundation
         #expect(box.last.filesDone == 3 && box.last.bytesDone == box.last.bytesTotal)
         // obnovení rozpracovaného souboru (reget)
         try FileManager.default.removeItem(at: out.appendingPathComponent("tree/sub/big.txt"))
-        let part = out.appendingPathComponent("tree/sub/big.txt.macTCpart")
+        let part = out.appendingPathComponent("tree/sub/big.txt.tcpart")
         try String(content.prefix(50_000)).write(to: part, atomically: true, encoding: .utf8)
         let r2 = RemoteTransfer.download(t.fs, [u(t.root, "tree/sub/big.txt").path], to: out.appendingPathComponent("tree/sub"), policy: .overwrite)
         let got = try String(contentsOf: out.appendingPathComponent("tree/sub/big.txt"), encoding: .utf8)

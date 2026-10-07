@@ -384,13 +384,13 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     private static let plantUMLMissing = "PlantUML nebyl nalezen."
 
     private func startDiagramRender() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("macTC").path
+        let support = AppPaths.support.path
         guard let launcher = PlantUML.locate(configured: AppModel.shared.settings.plantUMLPath, extraJarDirectories: [support]) else {
             diagramState = .failed(Self.plantUMLMissing); return
         }
         diagramState = .rendering
         let file = url
-        let out = FileManager.default.temporaryDirectory.appendingPathComponent("macTC-plantuml-\(UUID().uuidString)")
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("TCommander-plantuml-\(UUID().uuidString)")
         Task.detached {
             let result = Result { try PlantUML.render(file: file, into: out, launcher: launcher) }
             let images = (try? result.get())?.compactMap { (try? Data(contentsOf: $0)).flatMap { NSImage(data: $0) } } ?? []

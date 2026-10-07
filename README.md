@@ -1,19 +1,19 @@
-# macTC
+# TCommander
 
 Nativní správce souborů pro macOS inspirovaný Total Commanderem. Swift 6, SwiftUI + AppKit, Swift Package (bez Xcode projektu).
 
 ## Spuštění
 
 ```bash
-scripts/bundle.sh        # složí dist/macTC.app (release build, ad-hoc podpis)
-open dist/macTC.app
-swift run macTC          # nebo přímo z balíčku
+scripts/bundle.sh        # složí dist/TCommander.app (release build, ad-hoc podpis)
+open dist/TCommander.app
+swift run TCommander          # nebo přímo z balíčku
 scripts/test.sh          # testy (swift test + cesta k pluginu Swift Testing pro Command Line Tools)
 ```
 
 ## Instalace
 
-Hotové balíčky (`.dmg`, `.zip`, univerzální: Apple Silicon i Intel) jsou v [Releases](../../releases). Přetáhněte `macTC.app` do Aplikací. Aplikace je podepsaná ad-hoc, takže při prvním spuštění použijte pravé tlačítko › Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/macTC.app`). Podpis Developer ID a notarizace jsou popsané v [docs/release.md](docs/release.md).
+Hotové balíčky (`.dmg`, `.zip`, univerzální: Apple Silicon i Intel) jsou v [Releases](../../releases). Přetáhněte `TCommander.app` do Aplikací. Aplikace je podepsaná ad-hoc, takže při prvním spuštění použijte pravé tlačítko › Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/TCommander.app`). Podpis Developer ID a notarizace jsou popsané v [docs/release.md](docs/release.md).
 
 Požadavky: macOS 14+, Swift 6 (stačí Command Line Tools). Aplikace není v App Store sandboxu (potřebuje plný přístup k disku); při prvním spuštění může být nutné povolit ji v Systémové nastavení › Soukromí a zabezpečení.
 
@@ -41,7 +41,7 @@ FTP/FTPS, SFTP, SMB a WebDAV, terminál (včetně vim, top a dalších celoobraz
 
 ## Známá omezení
 
-Diagramy PlantUML (F3 na `.puml`) vykresluje skutečný PlantUML: nainstalujte `brew install plantuml` (potřebuje Javu), nebo uložte `plantuml.jar` do `~/Library/Application Support/macTC/`, případně zadejte cestu v Nastavení › Obecné.
+Diagramy PlantUML (F3 na `.puml`) vykresluje skutečný PlantUML: nainstalujte `brew install plantuml` (potřebuje Javu), nebo uložte `plantuml.jar` do `~/Library/Application Support/TCommander/`, případně zadejte cestu v Nastavení › Obecné.
 
-Nastavení uložené v `~/Library/Application Support/macTC/`. SMB (ověřil uživatel), WebDAV (lokální server wsgidav) i proxy SOCKS5 a HTTP CONNECT (lokální proxy) jsou ověřené. TLS u FTP a přihlášení heslem u SFTP jsou implementované, ale nebyly ověřeny proti skutečné službě.
+Nastavení uložené v `~/Library/Application Support/TCommander/`. SMB (ověřil uživatel), WebDAV (lokální server wsgidav) i proxy SOCKS5 a HTTP CONNECT (lokální proxy) jsou ověřené. TLS u FTP a přihlášení heslem u SFTP jsou implementované, ale nebyly ověřeny proti skutečné službě.
 Většina oken a dialogů je ověřená spuštěním a snímky, nikoli automatizovanými UI testy; automaticky testovaná je logika.

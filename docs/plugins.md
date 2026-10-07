@@ -1,6 +1,6 @@
-# Pluginy macTC
+# Pluginy TCommander
 
-Plugin je **složka** v `~/Library/Application Support/macTC/PlugIns/` s manifestem `plugin.json` a spustitelným souborem.
+Plugin je **složka** v `~/Library/Application Support/TCommander/PlugIns/` s manifestem `plugin.json` a spustitelným souborem.
 Komunikuje s aplikací přes argumenty příkazové řádky, standardní vstup a **JSON na standardním výstupu**, takže
 ho lze napsat v libovolném jazyce (Python, shell, Swift, Go, …). Obdoba pluginů WDX, WLX, WCX a WFX z Total Commanderu;
 binární Windows pluginy se načíst nedají.
@@ -26,7 +26,7 @@ Po přidání pluginu: Nastavení › Pluginy › *Znovu načíst*.
 ```
 
 `interpreter` je volitelný (bez něj se spustí `executable` přímo, musí mít právo spuštění). Cesta `executable` je relativní
-ke složce pluginu a nesmí obsahovat `..`. Proměnná prostředí `MACTC_PLUGIN_DIR` ukazuje na složku pluginu.
+ke složce pluginu a nesmí obsahovat `..`. Proměnná prostředí `TCOMMANDER_PLUGIN_DIR` ukazuje na složku pluginu (starší název `MACTC_PLUGIN_DIR` zůstává kvůli kompatibilitě).
 Plugin musí skončit s kódem 0; chybová zpráva patří na standardní chybový výstup.
 
 ## Obsahové sloupce (WDX)

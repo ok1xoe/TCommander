@@ -13,7 +13,7 @@ public struct WincmdImport: Equatable, Sendable {
 }
 
 public enum WincmdImporter {
-    /// Příkazy TC → příkazy macTC (jen ty, které macTC má).
+    /// Příkazy TC → příkazy TCommander (jen ty, které TCommander má).
     public static let commandMap: [String: String] = [
         "cm_copy": "cm_copy", "cm_renmov": "cm_move", "cm_delete": "cm_delete", "cm_mkdir": "cm_mkdir", "cm_list": "cm_view",
         "cm_edit": "cm_edit", "cm_searchfor": "cm_search", "cm_multirenamefiles": "cm_multirename", "cm_comparefilesbycontent": "cm_comparefiles",
@@ -128,7 +128,7 @@ public enum WincmdImporter {
         for sec in ["shortcuts"] {
             for (k, v) in sections[sec] ?? [] {
                 guard let mapped = commandMap[v.lowercased()] ?? commandMap[v] else {
-                    if v.lowercased().hasPrefix("cm_") { result.skipped.append("Zkratka \(k): příkaz \(v) macTC nemá") }
+                    if v.lowercased().hasPrefix("cm_") { result.skipped.append("Zkratka \(k): příkaz \(v) TCommander nemá") }
                     continue
                 }
                 guard let sc = parseShortcut(k) else { result.skipped.append("Zkratka \(k) → \(v): klávesu nelze převést"); continue }

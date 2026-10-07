@@ -113,7 +113,7 @@ extension AppModel {
         let targets = source.targets
         var listFile: String?
         if needsList {
-            let f = FileManager.default.temporaryDirectory.appendingPathComponent("macTC-list-\(UUID().uuidString).lst")
+            let f = FileManager.default.temporaryDirectory.appendingPathComponent("TCommander-list-\(UUID().uuidString).lst")
             try? targets.map(\.url.path).joined(separator: "\n").write(to: f, atomically: true, encoding: .utf8)
             listFile = f.path
         }

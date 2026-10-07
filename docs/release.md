@@ -7,7 +7,7 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-Tag spustí workflow `.github/workflows/release.yml`: spustí testy, sestaví univerzální aplikaci (arm64 + x86_64), podepíše ji, vytvoří `macTC-<verze>.zip`, `macTC-<verze>.dmg` a `SHA256SUMS.txt` a založí GitHub Release.
+Tag spustí workflow `.github/workflows/release.yml`: spustí testy, sestaví univerzální aplikaci (arm64 + x86_64), podepíše ji, vytvoří `TCommander-<verze>.zip`, `TCommander-<verze>.dmg` a `SHA256SUMS.txt` a založí GitHub Release.
 Průběžné sestavení a testy na každém pushi a pull requestu dělá `.github/workflows/ci.yml`.
 
 Stejný balíček se dá sestavit lokálně: `VERSION=0.2.0 scripts/package.sh` (výstup v `dist/`).
@@ -15,7 +15,7 @@ Stejný balíček se dá sestavit lokálně: `VERSION=0.2.0 scripts/package.sh` 
 ## Podpis
 
 Bez nastavení se aplikace podepíše **ad-hoc** (`codesign -s -`). Běží na každém Macu, ale protože není podepsaná certifikátem Apple Developer ID a notarizovaná, Gatekeeper ji po stažení z internetu zablokuje. Uživatel ji otevře pravým tlačítkem › Otevřít, nebo příkazem
-`xattr -dr com.apple.quarantine /Applications/macTC.app`.
+`xattr -dr com.apple.quarantine /Applications/TCommander.app`.
 
 Aby se aplikace instalovala bez upozornění, je potřeba placený účet Apple Developer Program a certifikát **Developer ID Application** (certifikát „Apple Development“ ani „Apple Distribution“ k tomu nestačí). Pak v nastavení repozitáře (Settings › Secrets and variables › Actions) vytvořte secrets:
 

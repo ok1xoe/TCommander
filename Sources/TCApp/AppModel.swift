@@ -2,7 +2,7 @@ import AppKit
 import Observation
 import TCCore
 
-extension Notification.Name { static let macTCBeginRename = Notification.Name("macTC.beginRename") }
+extension Notification.Name { static let tcommanderBeginRename = Notification.Name("TCommander.beginRename") }
 
 enum Side { case left, right
     var other: Side { self == .left ? .right : .left }
@@ -534,7 +534,7 @@ final class AppModel {
         if source.insideArchive { renameInArchive(); return }
         if source.remote != nil { renameOnRemote(); return }
         if source.viewMode == .full, let e = source.cursorEntry, !e.isParentLink {            // přímo v seznamu
-            NotificationCenter.default.post(name: .macTCBeginRename, object: source)
+            NotificationCenter.default.post(name: .tcommanderBeginRename, object: source)
             return
         }
         guard let e = source.targets.first, source.targets.count == 1 else { return }
@@ -577,12 +577,12 @@ final class AppModel {
             } else {
                 self.source.navigateLocal(url.deletingLastPathComponent(), select: url)
             }
-            NSApp.windows.first { $0.isVisible && $0.title == "macTC" }?.makeKeyAndOrderFront(nil)
+            NSApp.windows.first { $0.isVisible && $0.title == "TCommander" }?.makeKeyAndOrderFront(nil)
         } toPanel: { [weak self] urls, title in
             guard let self else { return }
             if self.source.isVirtual { self.source.leaveVirtual() }
             self.source.showResults(urls, title: title)
-            NSApp.windows.first { $0.isVisible && $0.title == "macTC" }?.makeKeyAndOrderFront(nil)
+            NSApp.windows.first { $0.isVisible && $0.title == "TCommander" }?.makeKeyAndOrderFront(nil)
         }
     }
 

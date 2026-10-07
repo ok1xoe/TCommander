@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PluginHost.shared.reload()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        // Ladicí přepínač: macTC --lister <soubor> otevře rovnou Lister.
+        // Ladicí přepínač: TCommander --lister <soubor> otevře rovnou Lister.
         if let i = CommandLine.arguments.firstIndex(of: "--lister"), i + 1 < CommandLine.arguments.count {
             ListerWindow.show(URL(fileURLWithPath: CommandLine.arguments[i + 1]))
         }
@@ -69,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let out = CommandLine.arguments[i + 1]
             TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                TerminalWindow.latest?.sendDebug("echo mactc-pty-$((20+22)); env | grep -i CLICOLOR; ls -l /bin | head -4; stty size\r")
+                TerminalWindow.latest?.sendDebug("echo tcommander-pty-$((20+22)); env | grep -i CLICOLOR; ls -l /bin | head -4; stty size\r")
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                 try? ((TerminalWindow.latest?.transcript ?? "(žádné okno)") + "\n[" + (TerminalWindow.latest?.styleSummary ?? "") + "]").write(toFile: out, atomically: true, encoding: .utf8)
@@ -85,8 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     report += "mount: \(mp.path)\n"
                     let names = (try? FileManager.default.contentsOfDirectory(atPath: mp.path)) ?? []
                     report += "list: \(names.sorted())\n"
-                    let f = mp.appendingPathComponent("mactc-written.txt")
-                    try "zapsáno z macTC".write(to: f, atomically: false, encoding: .utf8)
+                    let f = mp.appendingPathComponent("tcommander-written.txt")
+                    try "zapsáno z TCommander".write(to: f, atomically: false, encoding: .utf8)
                     report += "readback: \((try? String(contentsOf: f, encoding: .utf8)) ?? "CHYBA")\n"
                     try? FileManager.default.removeItem(at: f)
                 } catch { report += "error: \(error.localizedDescription)\n" }
@@ -194,12 +194,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct MacTCApp: App {
+struct TCommanderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     private let model = AppModel.shared
 
     var body: some Scene {
-        WindowGroup("macTC") {
+        WindowGroup("TCommander") {
             ContentView(model: model)
         }
         .defaultSize(width: 1400, height: 800)

@@ -112,7 +112,7 @@ import Foundation
         #expect(box.last.bytesDone == box.last.bytesTotal && box.last.bytesTotal == 3 + 300_000 + 7 && box.last.filesDone == 3)
         let m = try LocalFileSystem().stat(out.appendingPathComponent("top.txt")).modified
         #expect(abs((m ?? .distantPast).timeIntervalSince1970 - 1_700_000_000) < 2)
-        #expect(try FileManager.default.contentsOfDirectory(atPath: out.path).allSatisfy { !$0.hasSuffix(".macTCpart") })
+        #expect(try FileManager.default.contentsOfDirectory(atPath: out.path).allSatisfy { !$0.hasSuffix(".tcpart") })
     }
 
     @Test func downloadConflictPoliciesAndResume() throws {
@@ -127,7 +127,7 @@ import Foundation
         #expect(FileManager.default.fileExists(atPath: out.appendingPathComponent("f copy.txt").path))
         // obnovení: část souboru už je stažena
         try FileManager.default.removeItem(at: mine)
-        try String(content.prefix(40_000)).write(to: out.appendingPathComponent("f.txt.macTCpart"), atomically: true, encoding: .utf8)
+        try String(content.prefix(40_000)).write(to: out.appendingPathComponent("f.txt.tcpart"), atomically: true, encoding: .utf8)
         let r = RemoteTransfer.download(fs, ["/f.txt"], to: out, policy: .overwrite)
         let got = try String(contentsOf: mine, encoding: .utf8)
         #expect(r.failures.isEmpty && got == content)
@@ -141,7 +141,7 @@ import Foundation
         let r = RemoteTransfer.download(fs, ["/huge.bin"], to: out, control: control, progress: { if $0.bytesDone > 500_000 { control.cancel() } })
         #expect(r.cancelled && r.succeeded == 0)
         #expect(!FileManager.default.fileExists(atPath: out.appendingPathComponent("huge.bin").path))
-        #expect(FileManager.default.fileExists(atPath: out.appendingPathComponent("huge.bin.macTCpart").path))
+        #expect(FileManager.default.fileExists(atPath: out.appendingPathComponent("huge.bin.tcpart").path))
         let r2 = RemoteTransfer.download(fs, ["/huge.bin"], to: out)           // dokončení z rozpracovaného
         let size = try Data(contentsOf: out.appendingPathComponent("huge.bin")).count
         #expect(r2.failures.isEmpty && size == 8_000_000)

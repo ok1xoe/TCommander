@@ -39,7 +39,7 @@ import Foundation
 
     @Test func catalogIsUniqueAndMatchesTheHideableItemsInTheMenuSource() throws {
         #expect(Set(MainMenuCatalog.items).count == MainMenuCatalog.items.count)
-        let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Sources/TCApp/MacTCApp.swift")
+        let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Sources/TCApp/TCommanderApp.swift")
         guard let text = try? String(contentsOf: file, encoding: .utf8) else { return }
         let re = try NSRegularExpression(pattern: #"\.hideable\(model, "((?:[^"\\]|\\.)*)"\)"#)
         let used = Set(re.matches(in: text, range: NSRange(text.startIndex..., in: text)).map { (text as NSString).substring(with: $0.range(at: 1)) })

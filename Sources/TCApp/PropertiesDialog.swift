@@ -71,7 +71,7 @@ final class PropertiesDialog: NSObject {
         }
         recursive.state = .off
         rows.append(line("", recursive))
-        let note = NSTextField(wrappingLabelWithString: "Změna vlastníka a skupiny vyžaduje práva správce a v macTC není k dispozici.")
+        let note = NSTextField(wrappingLabelWithString: "Změna vlastníka a skupiny vyžaduje práva správce a v TCommander není k dispozici.")
         note.font = .systemFont(ofSize: 11); note.textColor = .secondaryLabelColor
         rows.append(line("", note))
 

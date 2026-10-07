@@ -2,10 +2,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "macTC",
+    name: "TCommander",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "macTC", targets: ["TCApp"]),
+        .executable(name: "TCommander", targets: ["TCApp"]),
         .library(name: "TCCore", targets: ["TCCore"]),
     ],
     targets: [

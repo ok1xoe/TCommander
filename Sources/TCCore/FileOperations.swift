@@ -250,7 +250,7 @@ public struct FileOperations: Sendable {
             let a = Checksum.hash(src, .sha256) { n in ctx.tracker.add(bytes: Int64(n)); return ctx.control.checkpoint() }
             let b = Checksum.hash(dst, .sha256) { n in ctx.tracker.add(bytes: Int64(n)); return ctx.control.checkpoint() }
             guard let a, let b else { unlink(dst.path); throw CancellationError() }
-            if a != b { unlink(dst.path); throw NSError(domain: "macTC", code: 1, userInfo: [NSLocalizedDescriptionKey: "Ověření kopie selhalo (nesouhlasí kontrolní součet)"]) }
+            if a != b { unlink(dst.path); throw NSError(domain: "TCommander", code: 1, userInfo: [NSLocalizedDescriptionKey: "Ověření kopie selhalo (nesouhlasí kontrolní součet)"]) }
         }
     }
 

@@ -58,7 +58,7 @@ jobs:
       - name: Artefakty
         uses: actions/upload-artifact@v4
         with:
-          name: macTC-${{ steps.version.outputs.version }}
+          name: TCommander-${{ steps.version.outputs.version }}
           path: |
             dist/*.zip
             dist/*.dmg
@@ -76,19 +76,19 @@ jobs:
             SIGN_NOTE="Aplikace je podepsaná ad-hoc (bez Apple Developer ID). macOS ji po stažení z internetu zablokuje – viz „Instalace“ níže."
           fi
           cat > notes.md <<NOTES
-          ## macTC $VERSION
+          ## TCommander $VERSION
 
           Nativní správce souborů pro macOS inspirovaný Total Commanderem (dva panely, archivy, FTP/SFTP/SMB/WebDAV, Lister, terminál, hromadné přejmenování, synchronizace, zvýrazňování syntaxe, diagramy PlantUML…). Požaduje macOS 14 nebo novější; univerzální aplikace (Apple Silicon i Intel).
 
           $SIGN_NOTE
 
           ### Instalace
-          1. Stáhněte \`macTC-$VERSION.dmg\` (nebo \`.zip\`) a přetáhněte \`macTC.app\` do složky Aplikace.
-          2. Při prvním spuštění ad-hoc podepsané aplikace: pravým tlačítkem na aplikaci › **Otevřít** › **Otevřít**, nebo v Terminálu \`xattr -dr com.apple.quarantine /Applications/macTC.app\`.
+          1. Stáhněte \`TCommander-$VERSION.dmg\` (nebo \`.zip\`) a přetáhněte \`TCommander.app\` do složky Aplikace.
+          2. Při prvním spuštění ad-hoc podepsané aplikace: pravým tlačítkem na aplikaci › **Otevřít** › **Otevřít**, nebo v Terminálu \`xattr -dr com.apple.quarantine /Applications/TCommander.app\`.
           3. Diagramy PlantUML vyžadují PlantUML a Javu (\`brew install plantuml\`).
 
           Kontrolní součty jsou v \`SHA256SUMS.txt\`.
 
           NOTES
-          gh release create "$GITHUB_REF_NAME" dist/macTC-$VERSION.zip dist/macTC-$VERSION.dmg dist/SHA256SUMS.txt \
-            --title "macTC $VERSION" --notes-file notes.md --generate-notes --verify-tag
+          gh release create "$GITHUB_REF_NAME" dist/TCommander-$VERSION.zip dist/TCommander-$VERSION.dmg dist/SHA256SUMS.txt \
+            --title "TCommander $VERSION" --notes-file notes.md --generate-notes --verify-tag

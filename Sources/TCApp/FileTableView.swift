@@ -177,7 +177,7 @@ struct FileTableView: NSViewRepresentable {
         init(_ p: FileTableView) {
             parent = p
             super.init()
-            NotificationCenter.default.addObserver(forName: .macTCBeginRename, object: nil, queue: .main) { [weak self] n in
+            NotificationCenter.default.addObserver(forName: .tcommanderBeginRename, object: nil, queue: .main) { [weak self] n in
                 MainActor.assumeIsolated {
                     guard let self, n.object as AnyObject === self.parent.tab else { return }
                     self.beginRename()

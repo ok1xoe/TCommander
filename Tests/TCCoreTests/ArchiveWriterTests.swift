@@ -67,7 +67,7 @@ import Foundation
         #expect(try String(contentsOf: x.appendingPathComponent("folder/new.txt"), encoding: .utf8) == "NEW")
         #expect(try String(contentsOf: x.appendingPathComponent("renamed.txt"), encoding: .utf8) == "unicode")
         // žádné dočasné soubory vedle archivu
-        #expect(try FileManager.default.contentsOfDirectory(atPath: d.path).filter { $0.hasPrefix(".macTC-") }.isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: d.path).filter { $0.hasPrefix(".TCommander-") }.isEmpty)
     }
 
     @Test func modifyKeepsFormatForTarGzAnd7z() throws {
@@ -97,7 +97,7 @@ import Foundation
         var bad2 = ArchiveFileSystem.Changes(); bad2.makeDirectories = ["../x"]
         #expect(try ArchiveFileSystem(archiveURL: zip).apply(bad2).failures.count == 1)
         #expect(try Data(contentsOf: zip) == before)       // původní archiv zůstal nedotčený
-        #expect(try FileManager.default.contentsOfDirectory(atPath: d.path).filter { $0.hasPrefix(".macTC-") }.isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: d.path).filter { $0.hasPrefix(".TCommander-") }.isEmpty)
     }
 
     @Test func cancelLeavesOriginalAndNoTempFile() throws {
@@ -112,7 +112,7 @@ import Foundation
         let newOne = d.appendingPathComponent("new.zip")
         #expect(ArchiveWriter.create(newOne, format: .zip, sources: items, control: c).cancelled)
         #expect(!FileManager.default.fileExists(atPath: newOne.path))
-        #expect(try FileManager.default.contentsOfDirectory(atPath: d.path).filter { $0.hasPrefix(".macTC-") }.isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: d.path).filter { $0.hasPrefix(".TCommander-") }.isEmpty)
     }
 }
 

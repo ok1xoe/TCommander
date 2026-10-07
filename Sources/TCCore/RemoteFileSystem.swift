@@ -335,9 +335,9 @@ public final class RemoteFileSystem: RemoteFileSystemProtocol, @unchecked Sendab
 }
 
 public enum RemoteTransfer {
-    private static let partSuffix = ".macTCpart"
+    private static let partSuffix = ".tcpart"
 
-    /// Stáhne položky ze serveru do `dest` (adresáře); rozpracované soubory `.macTCpart` se příště obnoví.
+    /// Stáhne položky ze serveru do `dest` (adresáře); rozpracované soubory `.tcpart` se příště obnoví.
     public static func download(_ fs: any RemoteFileSystemProtocol, _ paths: [String], to dest: URL, policy: ConflictPolicy = .overwrite,
                                 control: OperationControl = OperationControl(),
                                 progress: (@Sendable (TransferProgress) -> Void)? = nil) -> OperationReport {
