@@ -71,9 +71,9 @@ Multi-Rename Tool | Masky `[N]`, `[E]`, `[C]`, `[d]`, rozsahy | D | 3 | ⌃M; `[
 Multi-Rename Tool | Počítadlo, velikost písmen, regex, hledat a nahradit | D | 3 | zvlášť maska názvu a přípony
 Multi-Rename Tool | Náhled, vrácení zpět, uložené předvolby | D | 3 | živý náhled s kontrolou konfliktů, bezpečné záměny názvů; okno ručně neověřeno
 
-Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | T | 3 |
-Porovnání a synchronizace | Porovnání adresářů | T | 3 |
-Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | T | 3 |
+Porovnání a synchronizace | Porovnání souborů podle obsahu s editorem | P | 3 | rozdíly vedle sebe se synchronním posunem a skokem na další rozdíl (Myers diff); editace přímo v okně chybí
+Porovnání a synchronizace | Porovnání adresářů | D | 3 | označí rozdílné soubory v obou panelech
+Porovnání a synchronizace | Synchronizace adresářů (podadresáře, směr, filtry) | D | 3 | pět směrů včetně zrcadlení, úprava akcí po řádcích, běží ve frontě; okno ověřeno jen spuštěním
 Porovnání a synchronizace | Synchronizace s ZIP | T | 4 |
 
 Prohlížení a editace | Zobrazit (F3) otevře Lister | D | 2 |

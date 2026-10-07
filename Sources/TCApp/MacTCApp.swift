@@ -14,6 +14,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppModel.shared.source.navigate(to: URL(fileURLWithPath: CommandLine.arguments[i + 1]))
             AppModel.shared.source.viewMode = .thumbnails
         }
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--compare"), i + 2 < args.count {           // ladění: porovnání dvou souborů
+            FileCompareWindow.show(URL(fileURLWithPath: args[i + 1]), URL(fileURLWithPath: args[i + 2]))
+        }
+        if let i = args.firstIndex(of: "--sync"), i + 2 < args.count {              // ladění: synchronizace dvou adresářů
+            SyncWindow.show(left: URL(fileURLWithPath: args[i + 1]), right: URL(fileURLWithPath: args[i + 2]), jobs: AppModel.shared.jobs) {}
+        }
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
             for n in 1...2 {
@@ -69,6 +76,11 @@ struct TCCommands: Commands {
             Button("Smazat trvale…") { model.delete(permanent: true) }
             Divider()
             Toggle("Ověřovat kopie (SHA-256)", isOn: Binding(get: { model.verifyCopies }, set: { model.verifyCopies = $0 }))
+        }
+        CommandMenu("Porovnání") {
+            Button("Porovnat soubory podle obsahu…") { model.compareFiles() }.keyboardShortcut("c", modifiers: [.control, .shift])
+            Button("Porovnat adresáře (označit rozdíly)") { model.compareDirectories() }.keyboardShortcut("d", modifiers: [.control, .shift])
+            Button("Synchronizovat adresáře…") { model.synchronize() }.keyboardShortcut("s", modifiers: [.control, .shift])
         }
         CommandMenu("Nástroje") {
             Button("Hromadné přejmenování…") { model.multiRename() }.keyboardShortcut("m", modifiers: .control)

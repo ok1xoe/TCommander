@@ -175,6 +175,9 @@ public final class PanelTab: Identifiable {
         revision &+= 1
     }
 
+    /// Nahradí označení danými URL (jen položky, které v panelu jsou).
+    public func setMarks(_ urls: Set<URL>) { marked = urls.intersection(Set(entries.map(\.url))); revision &+= 1 }
+
     public func saveSelection() { savedSelection = marked }
 
     public func restoreSelection() {
