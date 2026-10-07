@@ -52,8 +52,8 @@ public enum BinaryDiff {
         var rows: [Int] = []
         var lastRow = -1
         var truncated = false
-        a.withUnsafeBytes { pa in
-            b.withUnsafeBytes { pb in
+        a.withUnsafeBytes { (pa: UnsafeRawBufferPointer) in
+            b.withUnsafeBytes { (pb: UnsafeRawBufferPointer) in
                 for i in 0..<common where pa[i] != pb[i] {
                     differing += 1
                     let row = i / HexDump.width
