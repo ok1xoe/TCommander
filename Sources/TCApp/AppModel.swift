@@ -19,6 +19,9 @@ final class AppModel {
     var pathEdit: [Bool: String] = [:]
     var busy: String?
     let jobs = JobManager()
+    let hotlist = Hotlist(file: Hotlist.defaultFile())
+    /// Zobrazený rychlý filtr v panelech (klíč: levý = true).
+    var filterVisible: [Bool: Bool] = [:]
     var verifyCopies = false { didSet { defaults.set(verifyCopies, forKey: "verifyCopies") } }
     var status: String?
     var deleteToTrash = true
@@ -85,7 +88,10 @@ final class AppModel {
         case 69: if m == [] { markByMask(on: true); return true }
         case 78: if m == [] { markByMask(on: false); return true }
         case 67: if m == [] { source.invertMarks(); return true }
+        case 11: if m == .control { toggleBranchView(); return true }   // Ctrl+B
+        case 1: if m == .control { toggleFilter(); return true }        // Ctrl+S
         case 53: // Esc
+            if filterVisible[side.key] == true { filterVisible[side.key] = false; source.quickFilter = ""; return true }
             if !source.quickFilter.isEmpty { source.quickFilter = "" } else { commandLine = ""; source.marked.isEmpty ? () : source.unmarkAll() }
             return true
         case 120: rename(); return true                                  // F2
@@ -119,6 +125,15 @@ final class AppModel {
     }
 
     func goTo(_ url: URL) { source.navigate(to: url) }
+
+    func toggleBranchView() { if source.isBranch { source.exitBranchView() } else { source.enterBranchView() } }
+
+    func toggleFilter() {
+        let k = activeSide.key
+        let show = filterVisible[k] != true
+        filterVisible[k] = show
+        if !show { source.quickFilter = "" }
+    }
     func swapPanels() {
         let a = source.path, b = target.path
         source.navigate(to: b); target.navigate(to: a)
