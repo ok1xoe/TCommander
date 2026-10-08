@@ -71,23 +71,25 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if [ -n "$MACOS_CERTIFICATE" ] && [ -n "$MACOS_SIGNING_IDENTITY" ] && [ -n "$NOTARY_APPLE_ID" ]; then
-            SIGN_NOTE="Aplikace je podepsaná Developer ID a notarizovaná, takže se po stažení otevře bez upozornění."
+            SIGN_NOTE="The app is signed with a Developer ID and notarized, so it opens without any warning after download."
           else
-            SIGN_NOTE="Aplikace je podepsaná ad-hoc (bez Apple Developer ID). macOS ji po stažení z internetu zablokuje – viz „Instalace“ níže."
+            SIGN_NOTE="The app is signed ad-hoc (without an Apple Developer ID), so macOS asks for confirmation the first time you open a downloaded copy – see Installation below."
           fi
           cat > notes.md <<NOTES
           ## TCommander $VERSION
 
-          Nativní správce souborů pro macOS inspirovaný Total Commanderem (dva panely, archivy, FTP/SFTP/SMB/WebDAV, Lister, terminál, hromadné přejmenování, synchronizace, zvýrazňování syntaxe, diagramy PlantUML…). Požaduje macOS 14 nebo novější; univerzální aplikace (Apple Silicon i Intel).
+          A native two-panel file manager for macOS (two panels and tabs, viewer and editor with syntax highlighting, Markdown reader, search, compare and synchronize, archives, FTP/SFTP/SMB/WebDAV, terminal, plugins). Requires macOS 14 or later; universal app (Apple silicon and Intel).
+
+          **User guide:** https://ok1xoe.github.io/TCommander/ (also built into the app: Help menu).
 
           $SIGN_NOTE
 
-          ### Instalace
-          1. Stáhněte \`TCommander-$VERSION.dmg\` (nebo \`.zip\`) a přetáhněte \`TCommander.app\` do složky Aplikace.
-          2. Při prvním spuštění ad-hoc podepsané aplikace: pravým tlačítkem na aplikaci › **Otevřít** › **Otevřít**, nebo v Terminálu \`xattr -dr com.apple.quarantine /Applications/TCommander.app\`.
-          3. Diagramy PlantUML vyžadují PlantUML a Javu (\`brew install plantuml\`).
+          ### Installation
+          1. Download \`TCommander-$VERSION.dmg\` (or the \`.zip\`) and drag \`TCommander.app\` to your Applications folder.
+          2. First launch of an ad-hoc signed app: right-click the app › **Open** › **Open**, or run \`xattr -dr com.apple.quarantine /Applications/TCommander.app\` in Terminal.
+          3. PlantUML diagrams need PlantUML and Java (\`brew install plantuml\`).
 
-          Kontrolní součty jsou v \`SHA256SUMS.txt\`.
+          SHA-256 checksums are in \`SHA256SUMS.txt\`.
 
           NOTES
           gh release create "$GITHUB_REF_NAME" dist/TCommander-$VERSION.zip dist/TCommander-$VERSION.dmg dist/SHA256SUMS.txt \
