@@ -254,4 +254,23 @@ write(f"{dl}/installer-notes.txt", "Release 3.2\n- fixed crash on start\n- faste
 with open(f"{dl}/sample-data.bin", "wb") as f: f.write(os.urandom(48_000))
 write(f"{dl}/invoice-2026-09.csv", "id,customer,total\n1,ACME,120.00\n2,Globex,87.50\n", t(5))
 subprocess.run(["/usr/bin/zip", "-qr", f"{dl}/Backup-2026-09.zip", "Projects/website"], cwd=root, check=False)
+
+# --- více obsahu pro záběry hlavního okna (různé typy souborů a podsložky)
+def blob(path, size, days):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f: f.write(os.urandom(size))
+    os.utime(path, (t(days), t(days)))
+for name, size, days in [("Podcast episode 12.mp3", 3_400_000, 2), ("Holiday video.mov", 6_800_000, 9), ("Annual report.pdf", 920_000, 4),
+                         ("Presentation.key", 2_100_000, 6), ("Fonts.zip", 1_300_000, 15), ("TCommander-installer.dmg", 5_200_000, 1)]:
+    blob(f"{dl}/{name}", size, days)
+png(f"{dl}/Screenshot 2026-10-01.png", 640, 400, ((90, 120, 200), (240, 200, 120)))
+for d in ["Invoices", "Recipes", "Contracts"]:
+    os.makedirs(f"{root}/Documents/{d}", exist_ok=True)
+    write(f"{root}/Documents/{d}/readme.txt", f"{d}\n", t(30))
+for i in range(1, 4):
+    write(f"{root}/Documents/Invoices/invoice-2026-0{i}.csv", "id,total\n1,100\n", t(30 * i))
+for d in ["Winter", "Travel", "Family"]:
+    png(f"{root}/Photos/{d}/cover.png", 320, 240, ((60, 90, 160), (200, 220, 250)))
+for d in ["shared-ui", "docs", "scripts"]:
+    write(f"{root}/Projects/{d}/README.md", f"# {d}\n", t(20))
 print("Hotovo:", root)

@@ -169,6 +169,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !paths.isEmpty { AppModel.shared.group(side).replaceTabs(paths.map { ($0, false) }, active: 0, showHidden: false) }
             if let m = modeArg(modeFlag) { AppModel.shared.group(side).active.viewMode = m }
         }
+        // snímky obrazovky: --quick-view (náhled souboru v druhém panelu), --cursor "název" (kurzor na soubor v aktivním panelu), --active right
+        if CommandLine.arguments.contains("--quick-view") { AppModel.shared.quickViewOn = true }
+        if let i = CommandLine.arguments.firstIndex(of: "--active"), i + 1 < CommandLine.arguments.count { AppModel.shared.activeSide = CommandLine.arguments[i + 1] == "right" ? .right : .left }
+        if let i = CommandLine.arguments.firstIndex(of: "--cursor"), i + 1 < CommandLine.arguments.count {
+            let name = CommandLine.arguments[i + 1]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { MainActor.assumeIsolated {
+                let tab = AppModel.shared.source
+                if let k = tab.entries.firstIndex(where: { $0.name == name }) { tab.moveCursor(to: k) }
+            } }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--window-size"), i + 1 < CommandLine.arguments.count {
             let wh = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
             if wh.count == 2 {

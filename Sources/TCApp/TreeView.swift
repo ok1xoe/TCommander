@@ -73,6 +73,10 @@ struct TreeView: NSViewRepresentable {
             var r: [DirNode] = [DirNode(url: Sandbox.home, name: "Domů"), DirNode(url: URL(fileURLWithPath: "/"), name: "/")]
             let vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []
             for v in vols where v.path != "/" { r.append(DirNode(url: v, name: (try? v.resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? v.lastPathComponent)) }
+            // snímky obrazovky: --tree-root <složka> omezí strom na ukázkovou složku (bez složek z počítače autora)
+            if let i = CommandLine.arguments.firstIndex(of: "--tree-root"), i + 1 < CommandLine.arguments.count {
+                let u = URL(fileURLWithPath: CommandLine.arguments[i + 1]); r = [DirNode(url: u, name: u.lastPathComponent)]
+            }
             roots = r
         }
 

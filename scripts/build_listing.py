@@ -20,14 +20,16 @@ FIELDS = [("name", "Name"), ("subtitle", "Subtitle"), ("promotional_text", "Prom
 LOCALES = [("en-US", "English (U.S.)", "primary"), ("cs", "Czech", "additional")]
 
 SHOT_TITLES = {
-    "01-two-panels": "Two panels with tabs, thumbnails and marked files",
-    "02-syntax-highlighting": "Viewer with syntax highlighting",
-    "03-markdown-reader": "Markdown rendered as a page",
-    "04-compare-files": "Side-by-side file comparison",
-    "05-synchronize": "Folder synchronization with a preview",
-    "06-find-files": "Search by name and content",
-    "07-multi-rename": "Multi-Rename with live preview",
-    "08-terminal": "Built-in terminal running vim",
+    "01-two-panels-full": "Two panels in full view with tabs and marked files",
+    "02-brief-view": "Brief view: file names in columns",
+    "03-thumbnails": "Thumbnail view next to a detailed list",
+    "04-tree-view": "Folder tree beside the file list",
+    "05-quick-view": "Quick View: preview in the other panel",
+    "06-syntax-highlighting": "Viewer with syntax highlighting",
+    "07-markdown-reader": "Markdown rendered as a page",
+    "08-compare-files": "Side-by-side file comparison",
+    "09-multi-rename": "Multi-Rename with live preview",
+    "10-terminal": "Built-in terminal running vim",
 }
 REVIEW_NOTE = ("TCommander is a file manager. Because of the App Sandbox it asks once, at first launch, for a folder it may use "
                "(please choose your home folder in the dialog). It remembers the choice using security-scoped bookmarks. You can also "
