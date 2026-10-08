@@ -17,7 +17,7 @@ final class PropertiesDialog: NSObject {
     private let sizeLabel = NSTextField(labelWithString: "")
     private let perm = NSTextField(), date = NSTextField()
     private var flagBoxes: [FileFlag: NSButton] = [:]
-    private let recursive = NSButton(checkboxWithTitle: "Použít změny i na obsah složky (rekurzivně)", target: nil, action: nil)
+    private let recursive = NSButton(checkboxWithTitle: L("Použít změny i na obsah složky (rekurzivně)"), target: nil, action: nil)
     private var initialFlags: [FileFlag: Bool] = [:]
     private var task: Task<Void, Never>?
     static let dateFormat: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd.MM.yyyy HH:mm:ss"; return f }()
@@ -39,16 +39,16 @@ final class PropertiesDialog: NSObject {
             let pathLabel = NSTextField(wrappingLabelWithString: e.url.path)
             pathLabel.isSelectable = true; pathLabel.preferredMaxLayoutWidth = 400
             pathLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 400).isActive = true
-            rows.append(line("Cesta:", pathLabel))
-            rows.append(line("Druh:", text(Fmt.kind(of: e))))
-            rows.append(line("Velikost:", sizeLabel))
-            rows.append(line("Vlastník / skupina:", text("\(FileAttributes.ownerName(e.ownerID)) / \(FileAttributes.groupName(e.groupID))")))
-            rows.append(line("Vytvořeno:", text(Fmt.date(e.created))))
-            rows.append(line("Otevřeno:", text(Fmt.date(e.accessed))))
+            rows.append(line(L("Cesta:"), pathLabel))
+            rows.append(line(L("Druh:"), text(Fmt.kind(of: e))))
+            rows.append(line(L("Velikost:"), sizeLabel))
+            rows.append(line(L("Vlastník / skupina:"), text("\(FileAttributes.ownerName(e.ownerID)) / \(FileAttributes.groupName(e.groupID))")))
+            rows.append(line(L("Vytvořeno:"), text(Fmt.date(e.created))))
+            rows.append(line(L("Otevřeno:"), text(Fmt.date(e.accessed))))
             sizeLabel.stringValue = e.isDirectory ? "počítám…" : "\(Fmt.bytes(e.size)) bajtů (\(Fmt.human(e.size)))"
         } else {
-            rows.append(line("Položek:", text("\(entries.count)")))
-            rows.append(line("Velikost:", sizeLabel))
+            rows.append(line(L("Položek:"), text("\(entries.count)")))
+            rows.append(line(L("Velikost:"), sizeLabel))
             sizeLabel.stringValue = "počítám…"
         }
         perm.stringValue = single.map { String($0.permissions, radix: 8) } ?? ""
@@ -56,10 +56,10 @@ final class PropertiesDialog: NSObject {
         date.stringValue = single?.modified.map { Self.dateFormat.string(from: $0) } ?? ""
         date.placeholderString = "dd.MM.yyyy HH:mm:ss (prázdné = beze změny)"
         for f in [perm, date] { f.widthAnchor.constraint(equalToConstant: 320).isActive = true }
-        rows.append(line("Oprávnění (osmičkově):", perm))
-        rows.append(line("Datum změny:", date))
+        rows.append(line(L("Oprávnění (osmičkově):"), perm))
+        rows.append(line(L("Datum změny:"), date))
         for flag in FileFlag.allCases {
-            let b = NSButton(checkboxWithTitle: flag.title, target: nil, action: nil)
+            let b = NSButton(checkboxWithTitle: L(flag.title), target: nil, action: nil)
             let all = entries.compactMap { FileAttributes.flags(of: $0.url) }
             let on = !all.isEmpty && all.allSatisfy { $0.contains(flag) }
             let some = all.contains { $0.contains(flag) }
@@ -71,15 +71,15 @@ final class PropertiesDialog: NSObject {
         }
         recursive.state = .off
         rows.append(line("", recursive))
-        let note = NSTextField(wrappingLabelWithString: "Změna vlastníka a skupiny vyžaduje práva správce a v TCommander není k dispozici.")
+        let note = NSTextField(wrappingLabelWithString: L("Změna vlastníka a skupiny vyžaduje práva správce a v TCommander není k dispozici."))
         note.font = .systemFont(ofSize: 11); note.textColor = .secondaryLabelColor
         rows.append(line("", note))
 
         let stack = NSStackView(views: rows); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 5
         let alert = NSAlert()
-        alert.messageText = single.map { "Vlastnosti – \($0.name)" } ?? "Vlastnosti – \(entries.count) položek"
+        alert.messageText = single.map { L("Vlastnosti – \($0.name)") } ?? L("Vlastnosti – \(entries.count) položek")
         alert.accessoryView = Dialogs.fit(stack, minWidth: 520)
-        alert.addButton(withTitle: "Použít"); alert.addButton(withTitle: "Zrušit")
+        alert.addButton(withTitle: L("Použít")); alert.addButton(withTitle: L("Zrušit"))
         alert.window.initialFirstResponder = perm
 
         // velikost složek se počítá na pozadí

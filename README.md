@@ -1,47 +1,58 @@
 # TCommander
 
-Nativní správce souborů pro macOS inspirovaný Total Commanderem. Swift 6, SwiftUI + AppKit, Swift Package (bez Xcode projektu).
+*English · [Česky](README.cs.md)*
 
-## Spuštění
+A native two-panel file manager for macOS in the tradition of Norton Commander and Total Commander. Swift 6, SwiftUI + AppKit, built as a Swift package (no Xcode project).
+
+**Website and user guide:** https://ok1xoe.github.io/TCommander/ · also built into the app (*Help* menu)
+
+## Features
+
+- **Two panels with tabs**, history, favorites; full, brief, thumbnail and tree views; custom columns and colors; a queue of operations with progress, pause and cancel; verified copies
+- **Viewer (F3)**: text in any encoding, hex, images, PDF, audio/video, HTML, a built-in **Markdown reader**, PlantUML diagrams
+- **Editor (F4)** and viewer with **syntax highlighting** for 25+ languages (also YAML, SQL, ADIF, Markdown, PlantUML)
+- **Search** by name, content, regex, hex, date, size and attributes, also inside archives
+- **Compare** files (side by side, editable) and folders; **synchronize** with a preview; Multi-Rename; checksums; duplicates; split/combine
+- **Archives as folders**: zip, tar.*, 7z (read/write), rar, iso, cab (read)
+- **Network**: FTP/FTPS, SFTP, SMB, WebDAV with proxy support and Keychain passwords
+- **Terminal** (also full-screen programs like vim and top) and a command line
+- **Customizable**: every shortcut, the button bar, Start menu, main menu, user commands; import from Total Commander (`wincmd.ini`)
+- **Plugins** in any language (columns, viewers, archives, file systems) with ten working examples
+- English and Czech interface
+
+## Install
+
+Download the `.dmg` or `.zip` (universal: Apple silicon and Intel, macOS 14+) from [Releases](../../releases) and drag **TCommander.app** to Applications. The download is signed ad-hoc, so on first launch right-click › **Open** (or `xattr -dr com.apple.quarantine /Applications/TCommander.app`). Developer ID signing and notarization are described in [docs/release.md](docs/release.md).
+
+TCommander is also prepared for the **Mac App Store** (App Sandbox edition), see [docs/appstore.md](docs/appstore.md).
+
+## Build from source
+
+Requires macOS 14+ and Swift 6 (the Command Line Tools are enough).
 
 ```bash
-scripts/bundle.sh        # složí dist/TCommander.app (release build, ad-hoc podpis)
-open dist/TCommander.app
-swift run TCommander          # nebo přímo z balíčku
-scripts/test.sh          # testy (swift test + cesta k pluginu Swift Testing pro Command Line Tools)
+swift run TCommander          # run from the package
+scripts/bundle.sh             # build dist/TCommander.app (release, ad-hoc signed)
+scripts/package.sh            # universal .app + .zip + .dmg in dist/
+scripts/appstore.sh           # Mac App Store package (see docs/appstore.md)
+scripts/build_site.sh         # website and user guide in site/
+scripts/test.sh               # tests (swift test with the Swift Testing plugin path for the Command Line Tools)
 ```
 
-## Instalace
+## Documentation
 
-Hotové balíčky (`.dmg`, `.zip`, univerzální: Apple Silicon i Intel) jsou v [Releases](../../releases). Přetáhněte `TCommander.app` do Aplikací. Aplikace je podepsaná ad-hoc, takže při prvním spuštění použijte pravé tlačítko › Otevřít (nebo `xattr -dr com.apple.quarantine /Applications/TCommander.app`). Podpis Developer ID a notarizace jsou popsané v [docs/release.md](docs/release.md).
+- User guide: [English](docs/manual/en/00-index.md) · [Čeština](docs/manual/cs/00-index.md) (sources of the built-in help and the website)
+- [docs/plugins.md](docs/plugins.md): plugin API, examples in `docs/plugin-examples/`
+- [docs/spec.md](docs/spec.md): design and architecture · [docs/index.html](docs/index.html): feature list with implementation status
+- [docs/release.md](docs/release.md): releases and signing · [docs/appstore.md](docs/appstore.md): Mac App Store
 
-Požadavky: macOS 14+, Swift 6 (stačí Command Line Tools). Aplikace není v App Store sandboxu (potřebuje plný přístup k disku); při prvním spuštění může být nutné povolit ji v Systémové nastavení › Soukromí a zabezpečení.
+## Architecture
 
-## Co umí
+- `TCCore`: logic without UI (virtual file systems for local, archive, FTP, SFTP and plugins; file operations, search, synchronization, renaming, commands, plugins, Markdown and syntax highlighting). Covered by automated tests.
+- `TCApp`: SwiftUI/AppKit interface.
+- `CArchive`, `CCurl`: thin bindings to the system libarchive and libcurl.
+- `DocsBuilder`: generates the website and the built-in help from `docs/manual`.
 
-Dva panely s kartami, režimy Plný / Stručný / Náhledy / Strom, vlastní sloupce, barvy souborů, lišta disků, fronta operací s průběhem a pauzou,
-kopírování s ověřením, Lister (text, hex, obrázky, PDF, média, HTML), hledání (i uvnitř archivů a podle obsahu), Multi-Rename,
-porovnání a synchronizace adresářů (i s archivy), kontrolní součty, rozdělení a spojení souborů, archivy jako adresáře (zip, tar.*, 7z, rar, …),
-FTP/FTPS, SFTP, SMB a WebDAV, terminál (včetně vim, top a dalších celoobrazovkových programů), vestavěný editor a Lister se zvýrazňováním syntaxe (včetně SQL, YAML, ADIF a PlantUML) a vykreslováním diagramů PlantUML, porovnání souborů s úpravami přímo v okně, příkazy, konfigurovatelné zkratky a hlavní menu, tlačítková lišta, pluginy, import z Total Commanderu, čeština a angličtina.
+## Notes
 
-**Přesný soupis všech funkcí TC a stav implementace (včetně toho, co je u částečných funkcí hotové a co chybí):** [docs/index.html](docs/index.html)
-(generuje se příkazem `python3 scripts/build_docs.py` ze souboru [docs/features.txt](docs/features.txt)).
-
-## Dokumentace
-
-- [docs/spec.md](docs/spec.md) – návrh a architektura
-- [docs/plugins.md](docs/plugins.md) – pluginy (sloupce, prohlížeče, archivy, souborové systémy), ukázky v `docs/plugin-examples/`
-- [docs/token-ledger.md](docs/token-ledger.md) – evidence spotřeby tokenů po fázích (`scripts/token_usage.py`)
-
-## Architektura
-
-- `TCCore` – logika bez UI: virtuální souborové systémy (lokální, archiv, FTP, SFTP, plugin), souborové operace, hledání, synchronizace, přejmenování, příkazy, pluginy. Pokrytá automatickými testy.
-- `TCApp` – SwiftUI/AppKit rozhraní.
-- `CArchive`, `CCurl` – tenké vazby na systémové knihovny libarchive a libcurl.
-
-## Známá omezení
-
-Diagramy PlantUML (F3 na `.puml`) vykresluje skutečný PlantUML: nainstalujte `brew install plantuml` (potřebuje Javu), nebo uložte `plantuml.jar` do `~/Library/Application Support/TCommander/`, případně zadejte cestu v Nastavení › Obecné.
-
-Nastavení uložené v `~/Library/Application Support/TCommander/`. SMB (ověřil uživatel), WebDAV (lokální server wsgidav) i proxy SOCKS5 a HTTP CONNECT (lokální proxy) jsou ověřené. TLS u FTP a přihlášení heslem u SFTP jsou implementované, ale nebyly ověřeny proti skutečné službě.
-Většina oken a dialogů je ověřená spuštěním a snímky, nikoli automatizovanými UI testy; automaticky testovaná je logika.
+TCommander is an independent project and is not affiliated with Total Commander or its author.

@@ -203,8 +203,8 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         showTextPage(min(textPage, pages - 1))
 
         // lišta: kódování, zalamování a (u velkých souborů) stránkování po 16 MB
-        if encodingPopup.numberOfItems == 0 { encodingPopup.addItems(withTitles: TextDecoding.selectableEncodings) }
-        encodingPopup.selectItem(withTitle: forcedEncoding)
+        if encodingPopup.numberOfItems == 0 { encodingPopup.addItems(withTitles: TextDecoding.selectableEncodings.map { L($0) }) }       // zobrazené názvy jsou přeložené, hodnotu určuje pořadí
+        encodingPopup.selectItem(at: TextDecoding.selectableEncodings.firstIndex(of: forcedEncoding) ?? 0)
         encodingPopup.target = self; encodingPopup.action = #selector(encodingChanged)
         wrapBox.state = wrap ? .on : .off
         wrapBox.target = self; wrapBox.action = #selector(wrapChanged)
@@ -237,7 +237,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     @objc private func wrapChanged() { wrap = wrapBox.state == .on; applyWrap() }
 
     @objc private func encodingChanged() {
-        forcedEncoding = encodingPopup.titleOfSelectedItem ?? "Automaticky"
+        forcedEncoding = TextDecoding.selectableEncodings.indices.contains(encodingPopup.indexOfSelectedItem) ? TextDecoding.selectableEncodings[encodingPopup.indexOfSelectedItem] : "Automaticky"
         showTextPage(textPage)
     }
 
@@ -427,6 +427,7 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         case .rendering: return messageView("Vykresluji diagram…")
         case .failed(let message):
             let notFound = message == Self.plantUMLMissing
+            if message == Self.plantUMLSandboxed { return messageView(message, hint: "Sandbox aplikace z App Store nedovoluje spouštět Javu. Zdroj diagramu je v záložce Text; vykreslování umí verze ke stažení z GitHubu.") }
             return messageView(message, hint: notFound ? "Nainstalujte ho příkazem  brew install plantuml  (potřebuje Javu), nebo v Nastavení › Obecné zadejte cestu k plantuml.jar. Zdroj diagramu je v záložce Text." : "Zdroj diagramu je v záložce Text.")
         case .done(let images):
             diagramIndex = min(max(0, diagramIndex), images.count - 1)
@@ -435,11 +436,12 @@ final class ListerWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
     }
 
     private static let plantUMLMissing = "PlantUML nebyl nalezen."
+    private static let plantUMLSandboxed = "Vykreslování diagramů PlantUML není ve verzi z App Store dostupné."
 
     private func startDiagramRender() {
         let support = AppPaths.support.path
         guard let launcher = PlantUML.locate(configured: AppModel.shared.settings.plantUMLPath, extraJarDirectories: [support]) else {
-            diagramState = .failed(Self.plantUMLMissing); return
+            diagramState = .failed(Sandbox.isSandboxed ? Self.plantUMLSandboxed : Self.plantUMLMissing); return
         }
         diagramState = .rendering
         let file = url

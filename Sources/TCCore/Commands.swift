@@ -124,6 +124,7 @@ public enum CommandRegistry {
         CommandInfo("cm_disconnect", "Odpojit server", "Síť"),
         CommandInfo("cm_terminal", "Terminál", "Nástroje"),
         CommandInfo("cm_settings", "Nastavení", "Nástroje"),
+        CommandInfo("cm_help", "Nápověda", "Nástroje", [s("f1")]),
         CommandInfo("cm_cmdhistory", "Příkazová řádka: vložit název", "Nástroje", [s("return", [.ctrl])]),
     ]
 
@@ -314,7 +315,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var showHidden = false
     public var rowHeight = 20.0
     public var fontSize = 12.0
-    public var language = "cs"
+    public var language = "en"          // výchozí jazyk rozhraní (cs nebo en)
     public var panelsStacked = false
     /// F4 otevře textové soubory ve vestavěném editoru (jinak v aplikaci `editorApp`).
     public var useBuiltinEditor = false

@@ -18,7 +18,7 @@ final class ConnectForm: NSObject {
     init(saved: [SavedConnection]) { self.saved = saved }
 
     func run() -> Result? {
-        kind.addItems(withTitles: SavedConnection.Kind.allCases.map(\.rawValue))
+        kind.addItems(withTitles: SavedConnection.Kind.available.map(\.rawValue))
         kind.target = self; kind.action = #selector(kindChanged)
         picker.addItem(withTitle: "Nové připojení")
         picker.addItems(withTitles: saved.map(\.name))
@@ -50,7 +50,7 @@ final class ConnectForm: NSObject {
         guard alert.runModal() == .alertFirstButtonReturn else { return nil }
         let h = host.stringValue.trimmingCharacters(in: .whitespaces)
         guard !h.isEmpty else { Dialogs.error("Připojení", "Zadejte adresu serveru."); return nil }
-        let k = SavedConnection.Kind.allCases[max(0, kind.indexOfSelectedItem)]
+        let k = SavedConnection.Kind.available[max(0, kind.indexOfSelectedItem)]
         let n = name.stringValue.trimmingCharacters(in: .whitespaces)
         let c = SavedConnection(id: currentID, name: n.isEmpty ? h : n, kind: k, host: h, port: Int(port.stringValue),
                                 user: user.stringValue.trimmingCharacters(in: .whitespaces),
@@ -60,7 +60,7 @@ final class ConnectForm: NSObject {
     }
 
     @objc private func kindChanged() {
-        let k = SavedConnection.Kind.allCases[max(0, kind.indexOfSelectedItem)]
+        let k = SavedConnection.Kind.available[max(0, kind.indexOfSelectedItem)]
         port.placeholderString = k.defaultPort.map(String.init) ?? "výchozí"
         if k == .sftp && path.stringValue == "/" { path.stringValue = ""; path.placeholderString = "prázdné = domovský adresář" }
         if k != .sftp && path.stringValue.isEmpty { path.stringValue = "/" }
@@ -71,7 +71,7 @@ final class ConnectForm: NSObject {
         guard saved.indices.contains(i) else { currentID = UUID(); return }
         let c = saved[i]
         currentID = c.id
-        kind.selectItem(at: SavedConnection.Kind.allCases.firstIndex(of: c.kind) ?? 0)
+        kind.selectItem(at: SavedConnection.Kind.available.firstIndex(of: c.kind) ?? 0)
         host.stringValue = c.host; port.stringValue = c.port.map(String.init) ?? ""; user.stringValue = c.user
         path.stringValue = c.path; name.stringValue = c.name
         selfSigned.state = c.allowSelfSigned ? .on : .off

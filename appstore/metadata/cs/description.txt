@@ -1,0 +1,27 @@
+TCommander je rychlý správce souborů se dvěma panely pro Mac, vytvořený pro lidi, kteří pracují s mnoha soubory. Dvě složky vedle sebe, všechno z klávesnice a nástroje, které obvykle potřebujete, rovnou vestavěné.
+
+DVA PANELY, MNOHO ZÁLOŽEK
+Kopírujte a přesouvejte mezi dvěma složkami klávesami F5 a F6 a procházejte je pomocí záložek, historie a oblíbených. Vyberte plný, stručný, náhledový nebo stromový režim a řaďte a barvěte soubory podle sebe.
+
+PROHLÍŽEČ A EDITOR
+F3 zobrazí text v libovolném kódování, hexadecimální výpis, obrázky, PDF, zvuk, video a Markdown vykreslený jako stránku. F4 soubor upraví. Zdrojový kód je barevně zvýrazněný ve více než 25 jazycích, ve světlém i tmavém vzhledu.
+
+HLEDÁNÍ, POROVNÁNÍ, SYNCHRONIZACE
+Hledejte podle názvu, textu, regulárního výrazu, velikosti, data a atributů, i uvnitř archivů. Porovnávejte soubory vedle sebe a upravujte je přímo v okně, porovnávejte celé složky a synchronizujte s náhledem dřív, než se cokoli změní.
+
+ARCHIVY JAKO SLOŽKY
+Procházejte, rozbalujte a upravujte zip, tar, 7z a čtěte rar, iso a cab jako běžné složky.
+
+SÍŤ
+Připojte se k serverům FTP, FTPS (TLS), SMB a WebDAV, navazujte přerušené přenosy a používejte proxy. Hesla zůstávají ve vaší Klíčence.
+
+DALŠÍ NÁSTROJE
+Hromadné přejmenování se vzory, počítadly a daty. Kontrolní součty, dělení a spojování souborů, hledání duplicit, odkazy, vestavěný terminál spouštějící celoobrazovkové programy jako vim a příkazová řádka.
+
+PŘIZPŮSOBTE SI HO
+Změňte každou klávesovou zkratku. Upravte tlačítkovou lištu, menu Start i hlavní menu, přidejte vlastní příkazy a naimportujte nastavení z Total Commanderu. Rozhraní v angličtině a češtině.
+
+SOUKROMÍ PŘEDEVŠÍM
+Žádné účty, analytika ani sledování. TCommander běží v App Sandboxu macOS a sahá jen na složky, které mu povolíte.
+
+Vyžaduje macOS 14 nebo novější. Nativně běží na Macích s Apple silicon i Intel.

@@ -85,6 +85,7 @@ extension AppModel {
         case "cm_connect": connectToServer()
         case "cm_disconnect": disconnect()
         case "cm_settings": SettingsWindow.show(self)
+        case "cm_help": HelpWindow.show()
         case "cm_cmdhistory": insertNameIntoCommandLine()
         default:
             if !performExtended(id) { Dialogs.error("Příkaz", "Neznámý příkaz „\(id)“.") }

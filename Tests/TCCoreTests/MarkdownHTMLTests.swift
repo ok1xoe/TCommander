@@ -9,7 +9,14 @@ import Foundation
         let h = html("# Nadpis\n\nPrvní řádek\ndruhý řádek\n\n## Podnadpis ##\n\nTitulek\n=======\n\nDalší\n-----")
         #expect(h.contains("<h1 id=\"nadpis\">Nadpis</h1>") && h.contains("<h2 id=\"podnadpis\">Podnadpis</h2>"))
         #expect(h.contains("<p>První řádek\ndruhý řádek</p>"))
-        #expect(h.contains("<h1 id=\"titulek\">Titulek</h1>") && h.contains("<h2 id=\"další\">Další</h2>"))
+        #expect(h.contains("<h1 id=\"titulek\">Titulek</h1>") && h.contains("<h2 id=\"dalsi\"><a id=\"další\"></a>Další</h2>"))
+    }
+
+    @Test func headingIdsAreAsciiWithTheUnicodeAnchorAlongside() {
+        let h = html("## Hromadné přejmenování\n\n### Plain Title 2\n\n# Čeština – ukázka")
+        #expect(h.contains("<h2 id=\"hromadne-prejmenovani\"><a id=\"hromadné-přejmenování\"></a>Hromadné přejmenování</h2>"))
+        #expect(h.contains("<h3 id=\"plain-title-2\">Plain Title 2</h3>"), "bez diakritiky žádná druhá kotva")
+        #expect(h.contains("id=\"cestina--ukazka\"") || h.contains("id=\"cestina-ukazka\""))
     }
 
     @Test func emphasisStrongStrikeAndCode() {

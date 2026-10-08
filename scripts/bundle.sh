@@ -10,21 +10,11 @@ cp "$BIN" "$APP/Contents/MacOS/TCommander"
 mkdir -p "$APP/Contents/Resources/PluginExamples"
 cp -R docs/plugin-examples/. "$APP/Contents/Resources/PluginExamples/"
 find "$APP/Contents/Resources/PluginExamples" -name __pycache__ -type d -prune -exec rm -r {} +
-cat > "$APP/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleName</key><string>TCommander</string>
-  <key>CFBundleDisplayName</key><string>TCommander</string>
-  <key>CFBundleIdentifier</key><string>cz.ok1xoe.TCommander</string>
-  <key>CFBundleExecutable</key><string>TCommander</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>NSHighResolutionCapable</key><true/>
-  <key>NSPrincipalClass</key><string>NSApplication</string>
-</dict></plist>
-PLIST
+sed -e "s/@VERSION@/1.0.0/" -e "s/@BUILD@/1/" appstore/Info.plist.in > "$APP/Contents/Info.plist"
+cp appstore/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+echo "==> Příručka (nápověda v aplikaci)"
+scripts/build_site.sh >/dev/null 2>&1 || true
+mkdir -p "$APP/Contents/Resources/Help"
+cp -R site/docs site/assets "$APP/Contents/Resources/Help/"
 codesign --force --sign - "$APP" >/dev/null 2>&1 || true
 echo "Hotovo: $APP"

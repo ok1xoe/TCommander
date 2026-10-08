@@ -1,0 +1,1 @@
+Version 1.0: the first release. Two panels, viewer and editor with syntax highlighting, search, compare and sync, archives, FTP/SMB/WebDAV, terminal, Markdown reader, a built-in user guide.

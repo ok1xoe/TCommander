@@ -146,7 +146,7 @@ struct VolumeMenu: View {
 
     var body: some View {
         Menu {
-            let home = FileManager.default.homeDirectoryForCurrentUser
+            let home = Sandbox.home
             Button(L("Domů")) { go(home) }
             ForEach(["Desktop", "Documents", "Downloads"], id: \.self) { n in
                 Button(n) { go(home.appendingPathComponent(n)) }
@@ -169,10 +169,11 @@ struct DriveBar: View {
     let go: (URL) -> Void
 
     private var places: [(title: String, url: URL, icon: String)] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = Sandbox.home
         var list: [(String, URL, String)] = [(L("Domů"), home, "house"), ("Desktop", home.appendingPathComponent("Desktop"), "menubar.dock.rectangle"),
                                              ("Downloads", home.appendingPathComponent("Downloads"), "arrow.down.circle"), (L("Aplikace"), URL(fileURLWithPath: "/Applications"), "app.badge")]
-        let vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []
+        var vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []
+        if ProcessInfo.processInfo.environment["TC_SCREENSHOT"] != nil { vols = vols.filter { $0.path == "/" } }          // snímky obrazovky: bez názvů cizích disků
         for v in vols {
             let name = v.path == "/" ? "Macintosh HD" : ((try? v.resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? v.lastPathComponent)
             list.append((name, v, "externaldrive"))

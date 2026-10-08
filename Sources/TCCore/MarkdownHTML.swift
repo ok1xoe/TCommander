@@ -33,7 +33,7 @@ public enum MarkdownHTML {
         """
     }
 
-    static func escape(_ s: String) -> String {
+    public static func escape(_ s: String) -> String {
         var out = ""; out.reserveCapacity(s.count)
         for c in s { switch c { case "&": out += "&amp;"; case "<": out += "&lt;"; case ">": out += "&gt;"; case "\"": out += "&quot;"; default: out.append(c) } }
         return out
@@ -142,10 +142,22 @@ public enum MarkdownHTML {
             return out
         }
 
-        static func slug(_ text: String) -> String {
+        /// Identifikátor nadpisu: malá písmena a číslice, mezery a pomlčky jako „-“, bez diakritiky (aby fungovaly odkazy #hromadne-prejmenovani).
+        static func slug(_ text: String) -> String { slugify(text.folding(options: .diacriticInsensitive, locale: nil)) }
+
+        /// Varianta s diakritikou (jako na GitHubu); liší-li se od `slug`, přidá se k nadpisu jako druhá kotva.
+        static func unicodeSlug(_ text: String) -> String { slugify(text) }
+
+        private static func slugify(_ text: String) -> String {
             var s = ""
             for c in text.lowercased() { if c.isLetter || c.isNumber { s.append(c) } else if c == " " || c == "-" { s.append("-") } }
             return s
+        }
+
+        /// Otevírací značka nadpisu včetně kotev.
+        func headingOpen(_ level: Int, _ text: String) -> String {
+            let a = Self.slug(text), b = Self.unicodeSlug(text)
+            return "<h\(level) id=\"\(a)\">" + (a != b ? "<a id=\"\(MarkdownHTML.escape(b))\"></a>" : "")
         }
 
         // MARK: bloky
@@ -168,7 +180,7 @@ public enum MarkdownHTML {
                     continue
                 }
                 if let (level, text) = Self.atx(line) {
-                    out += "<h\(level) id=\"\(Self.slug(text))\">\(inline(text))</h\(level)>\n"; i += 1; continue
+                    out += headingOpen(level, text) + "\(inline(text))</h\(level)>\n"; i += 1; continue
                 }
                 if Self.isHR(line) { out += "<hr>\n"; i += 1; continue }
 
@@ -227,7 +239,7 @@ public enum MarkdownHTML {
                     let core = lead.trimmingCharacters(in: .init(charactersIn: " "))
                     return trailing >= 2 && idx < para.count - 1 ? core + "  " : core
                 }.joined(separator: "\n")
-                if setext > 0 { out += "<h\(setext) id=\"\(Self.slug(text))\">\(inline(text))</h\(setext)>\n" }
+                if setext > 0 { out += headingOpen(setext, text) + "\(inline(text))</h\(setext)>\n" }
                 else if tight { out += inline(text) + "\n" } else { out += "<p>\(inline(text))</p>\n" }
             }
             return out

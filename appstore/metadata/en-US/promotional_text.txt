@@ -1,0 +1,1 @@
+Fast, keyboard-first file management with a built-in viewer and editor, search, compare and sync, archives, FTP and a terminal.

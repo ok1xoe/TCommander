@@ -1,0 +1,1 @@
+file manager,two panel,dual pane,commander,ftp,archive,zip,sync,compare,rename,hex,terminal,finder

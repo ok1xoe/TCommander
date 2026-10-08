@@ -2,7 +2,7 @@
 # Release balíček: univerzální TCommander.app (arm64 + x86_64), podpis, volitelná notarizace, zip, dmg a kontrolní součty v dist/.
 #
 # Proměnné prostředí (všechny volitelné):
-#   VERSION             verze aplikace (výchozí 0.1.0)
+#   VERSION             verze aplikace (výchozí 1.0.0)
 #   BUILD_NUMBER        číslo sestavení (výchozí 1)
 #   CODESIGN_IDENTITY   název podpisové identity (např. "Developer ID Application: Jméno (TEAMID)");
 #                       výchozí „-“ = ad-hoc podpis (aplikace běží, ale Gatekeeper po stažení z internetu zobrazí upozornění)
@@ -11,24 +11,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-0.1.0}"
+VERSION="${VERSION:-1.0.0}"
 BUILD="${BUILD_NUMBER:-1}"
 IDENTITY="${CODESIGN_IDENTITY:--}"
 APP="dist/TCommander.app"
 ZIP="dist/TCommander-$VERSION.zip"
 DMG="dist/TCommander-$VERSION.dmg"
 
-echo "==> Sestavení (release, arm64 a x86_64 zvlášť; společné sestavení obou architektur selhává na některých Xcode)"
-BIN_DIR="$(mktemp -d)"
-for arch in arm64 x86_64; do
-  swift build -c release --triple "$arch-apple-macosx14.0"
-  # výstupní složka se podle nástrojů může u obou architektur shodovat, proto binárku hned zkopírujeme
-  cp "$(swift build -c release --triple "$arch-apple-macosx14.0" --show-bin-path)/TCommander" "$BIN_DIR/TCommander-$arch"
-  lipo -archs "$BIN_DIR/TCommander-$arch"
-done
-lipo -create -output "$BIN_DIR/TCommander" "$BIN_DIR/TCommander-arm64" "$BIN_DIR/TCommander-x86_64"
-BIN="$BIN_DIR/TCommander"
-lipo -info "$BIN"
+echo "==> Sestavení (release, arm64 + x86_64)"
+BIN="$(scripts/build_universal.sh | tail -1)"
 
 echo "==> Složení $APP"
 rm -rf dist; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -36,24 +27,12 @@ cp "$BIN" "$APP/Contents/MacOS/TCommander"
 mkdir -p "$APP/Contents/Resources/PluginExamples"
 cp -R docs/plugin-examples/. "$APP/Contents/Resources/PluginExamples/"
 find "$APP/Contents/Resources/PluginExamples" -name __pycache__ -type d -prune -exec rm -r {} +
-cat > "$APP/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleName</key><string>TCommander</string>
-  <key>CFBundleDisplayName</key><string>TCommander</string>
-  <key>CFBundleIdentifier</key><string>cz.ok1xoe.TCommander</string>
-  <key>CFBundleExecutable</key><string>TCommander</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleVersion</key><string>$BUILD</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
-  <key>NSHighResolutionCapable</key><true/>
-  <key>NSPrincipalClass</key><string>NSApplication</string>
-  <key>NSHumanReadableCopyright</key><string>TCommander – správce souborů se dvěma panely</string>
-</dict></plist>
-PLIST
+sed -e "s/@VERSION@/$VERSION/" -e "s/@BUILD@/$BUILD/" appstore/Info.plist.in > "$APP/Contents/Info.plist"
+cp appstore/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+echo "==> Příručka (nápověda v aplikaci)"
+VERSION="$VERSION" scripts/build_site.sh >&2
+mkdir -p "$APP/Contents/Resources/Help"
+cp -R site/docs site/assets "$APP/Contents/Resources/Help/"
 
 sign() {
   if [ "$IDENTITY" = "-" ]; then codesign --force --sign - "$@"

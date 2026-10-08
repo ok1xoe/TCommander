@@ -1,0 +1,27 @@
+TCommander is a fast two-panel file manager for the Mac, built for people who work with lots of files. Two folders side by side, everything on the keyboard, and the tools you usually need already built in.
+
+TWO PANELS, MANY TABS
+Copy and move between two folders with F5 and F6, and browse them with tabs, history and favorites. Choose between full, brief, thumbnail and tree views, and sort or color files the way you like.
+
+VIEWER AND EDITOR
+Press F3 to view text in any encoding, hex dumps, images, PDF, audio and video, and Markdown rendered as a page. Press F4 to edit. Source code is syntax-highlighted in more than 25 languages, in light and dark mode.
+
+FIND, COMPARE, SYNCHRONIZE
+Search by name, text, regular expression, size, date and attributes, even inside archives. Compare files side by side and edit them in place, compare whole folders, and synchronize with a preview before anything changes.
+
+ARCHIVES AS FOLDERS
+Browse, extract and update zip, tar, 7z and read rar, iso and cab like ordinary folders.
+
+NETWORK
+Connect to FTP, FTPS (TLS), SMB and WebDAV servers, resume interrupted transfers and use a proxy. Passwords stay in your Keychain.
+
+MORE TOOLS
+Multi-Rename with patterns, counters and dates. Checksums, file splitting and joining, duplicate finder, links, a built-in terminal that runs full-screen programs such as vim, and a command line.
+
+MAKE IT YOURS
+Change every keyboard shortcut. Edit the button bar, the Start menu and the main menu, add your own commands, and import your Total Commander settings. English and Czech interface.
+
+PRIVATE BY DESIGN
+No accounts, no analytics, no tracking. TCommander runs in the macOS App Sandbox and only touches the folders you allow.
+
+Requires macOS 14 or later. Runs natively on Apple silicon and Intel Macs.

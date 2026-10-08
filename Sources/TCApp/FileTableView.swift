@@ -274,7 +274,7 @@ struct FileTableView: NSViewRepresentable {
             let keys: [PanelColumn: SortKey] = [.name: .name, .ext: .ext, .size: .size, .date: .date]
             for col in table.tableColumns {
                 let pc = PanelColumn(rawValue: col.identifier.rawValue)
-                var t = pc.title
+                var t = L(pc.title)
                 if keys[pc] == s.key { t += s.ascending ? " ▲" : " ▼" }
                 col.title = t
             }

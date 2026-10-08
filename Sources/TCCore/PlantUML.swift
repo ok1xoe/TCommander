@@ -35,6 +35,7 @@ public enum PlantUML {
 
     /// Najde PlantUML: `configured` (příkaz nebo .jar z Nastavení; prázdné = automaticky), pak známá umístění (Homebrew, MacPorts, Application Support).
     public static func locate(configured: String = "", extraJarDirectories: [String] = []) -> Launcher? {
+        if Sandbox.isSandboxed { return nil }                                          // sandbox neumožňuje spouštět Javu a cizí .jar
         let fm = FileManager.default
         func launcher(for path: String) -> Launcher? {
             let p = (path as NSString).expandingTildeInPath

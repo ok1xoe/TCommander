@@ -8,6 +8,7 @@ NAMES = {
     9: "Celoobrazovkový terminál, ověření WebDAV",
     10: "Konfigurovatelné hlavní menu",
     11: "PlantUML, další jazyky zvýrazňování (SQL, ADIF, YAML)",
+    13: "Verze 1.0.0: App Store (sandbox, ikona, skripty, texty), příručka a web, nápověda v aplikaci, angličtina jako výchozí jazyk",
     12: "Oprava PageUp/PageDown, release v0.1.0 a GitHub Actions, záložka z adresáře, čtečka Markdownu, F4 se zvýrazněním, přejmenování na TCommander, ukázkové pluginy",
 }
 total = {}
