@@ -37,7 +37,8 @@ Sloupce: **input** = necachovaný vstup, **cache zápis** = poprvé zapsaný kon
 | 12d – čtečka Markdownu, F4 se zvýrazněním | 20:39:25 – 20:58:38 (PR #42) | 21 | 42 | 41 912 | 10 086 768 | 29 077 | 10 157 799 |
 | 12e – přejmenování na TCommander | 20:58:38 – 21:04:40 (PR #43) | 8 | 16 | 15 230 | 4 095 400 | 10 175 | 4 120 821 |
 | 12f – ukázkové pluginy | 21:04:40 – 21:22:56 (PR #44) | 28 | 56 | 72 660 | 15 519 128 | 44 889 | 15 636 733 |
-| **Celkem** | 09:37 – 21:22:56 (PR #44) | 519 | 1038 | 1 881 889 | 213 955 786 | 1 015 001 | 216 853 714 |
+| 13 – verze 1.0.0: App Store, příručka a web, nápověda, release v0.2.0 | 21:22:56 – 00:26:34 (PR #51) | 134 | 268 | 341 929 | 102 445 794 | 227 407 | 103 015 398 |
+| **Celkem** | 09:37 – 00:26:34 (PR #51) | 653 | 1306 | 2 223 818 | 316 401 580 | 1 242 408 | 319 869 112 |
 
 Poznámka: hodnoty fází 1 a 2 byly původně změřeny před kroky PR/sloučení a jsou opraveny na celé okno fáze (konec = sloučení posledního PR fáze). Původní hodnota fáze 1 (2 747 398) byla změřena před kroky PR/sloučení; zde je opravená hodnota za celé okno fáze.
 
@@ -46,6 +47,6 @@ Autoritativní kontrola: `/cost` v Claude Code (měla by se shodovat se součtem
 ## Jak číst „celkem“
 
 Sloupec **cache čtení** při každém volání znovu započítává celou dosavadní konverzaci, proto je největší a součet „CELKEM“ vypadá vysoko.
-Skutečně nově zpracované tokeny za celý vývoj (do PR #44): **input 1038 + cache zápis 1 881 889 + output 1 015 001 = 2 897 928**.
+Skutečně nově zpracované tokeny za celý vývoj (do PR #51): **input 1306 + cache zápis 2 223 818 + output 1 242 408 = 3 467 532**.
 Cache čtení se obvykle účtuje se silnou slevou, takže pro cenu je důležité sledovat druhy zvlášť (cenu odvodíte z aktuálního ceníku).
 Hodnoty se dají kdykoli přepočítat: `scripts/token_usage.py --since <ISO UTC> --until <ISO UTC>`; autoritativní kontrola je `/cost`.
