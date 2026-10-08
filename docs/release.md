@@ -29,3 +29,9 @@ Aby se aplikace instalovala bez upozornění, je potřeba placený účet Apple 
 | `NOTARY_TEAM_ID` | Team ID (10 znaků) |
 
 Pokud jsou nastavené, workflow podepíše aplikaci s hardened runtime, notarizuje ji (`notarytool`) a připne razítko (`stapler`).
+
+## Web, příručka a App Store
+
+- **Web a příručka** (`docs/manual`, `docs/web`, generátor `Sources/DocsBuilder`) se sestavují skriptem `scripts/build_site.sh` do složky `site/`. Workflow `.github/workflows/pages.yml` je při změně nasadí na GitHub Pages (`https://ok1xoe.github.io/TCommander/`); v nastavení repozitáře musí být *Pages › Source: GitHub Actions*. Stejná příručka se vkládá do aplikace (menu Nápověda); skripty `package.sh`, `appstore.sh` a `bundle.sh` ji sestaví automaticky.
+- **Mac App Store**: viz [appstore.md](appstore.md) (`scripts/appstore.sh`, texty v `appstore/metadata`, snímky v `appstore/screenshots`).
+- Verze se zadává proměnnou `VERSION` (výchozí 1.0.0); tag `v1.0.0` spustí workflow Release.

@@ -122,12 +122,19 @@ public final class PluginHost: @unchecked Sendable {
         AppPaths.plugins
     }
 
+    /// Jen pro testy: povolí pluginy i v sandboxu.
+    public var allowInSandbox = false
+
     public init(directory: URL = PluginHost.defaultDirectory()) { self.directory = directory }
 
     /// Načte manifesty ze všech podsložek; chybné pluginy se uvedou s chybou, ostatní to neovlivní.
     @discardableResult
     public func reload(directory newDirectory: URL? = nil) -> [LoadedPlugin] {
         if let newDirectory { directory = newDirectory }
+        if Sandbox.isSandboxed && !allowInSandbox {              // verze z Mac App Store nespouští kód třetích stran (pravidlo 2.5.2)
+            lock.lock(); plugins = []; lock.unlock()
+            return []
+        }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var list: [LoadedPlugin] = []
         let dirs = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey])) ?? []

@@ -17,18 +17,19 @@ public struct CustomMenuItem: Codable, Hashable, Identifiable, Sendable {
 
 /// Uspořádání hlavního menu: skrytí vestavěných položek a vlastní menu s položkami, podmenu a oddělovači.
 public struct MainMenuConfig: Codable, Equatable, Sendable {
+    /// Název vlastního menu; prázdný = výchozí „Vlastní“ / „Custom“ podle jazyka.
     public var customTitle: String
     public var customItems: [CustomMenuItem]
     /// Klíče skrytých vestavěných položek ve tvaru „Menu/Položka“ (viz `MainMenuCatalog`).
     public var hidden: Set<String>
 
-    public init(customTitle: String = "Vlastní", customItems: [CustomMenuItem] = [], hidden: Set<String> = []) {
+    public init(customTitle: String = "", customItems: [CustomMenuItem] = [], hidden: Set<String> = []) {
         self.customTitle = customTitle; self.customItems = customItems; self.hidden = hidden
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        customTitle = (try? c.decode(String.self, forKey: .customTitle)) ?? "Vlastní"
+        customTitle = (try? c.decode(String.self, forKey: .customTitle)) ?? ""
         customItems = (try? c.decode([CustomMenuItem].self, forKey: .customItems)) ?? []
         hidden = (try? c.decode(Set<String>.self, forKey: .hidden)) ?? []
     }

@@ -149,13 +149,27 @@ public final class PanelTab: Identifiable {
             return true
         }
         do {
-            let items = try fs.list(target, includeHidden: showHidden)
+            let items = try listWithAccess(target)
             apply(target, items, select: select, recordHistory: recordHistory, keepMarks: keepMarks)
             return true
         } catch {
             self.error = "\(target.path): \(error.localizedDescription)"
             revision &+= 1
             return false
+        }
+    }
+
+    /// Žádost o přístup ke složce v sandboxu (otevírací dialog); vrací true, pokud uživatel složku povolil. Nastavuje aplikace.
+    nonisolated(unsafe) public static var accessRequest: ((URL) -> Bool)?
+
+    /// Výpis složky; při odepřeném přístupu v sandboxu se jednou zeptá uživatele a zkusí to znovu.
+    private func listWithAccess(_ target: URL) throws -> [FileEntry] {
+        do { return try fs.list(target, includeHidden: showHidden) }
+        catch {
+            guard Sandbox.isSandboxed, Sandbox.isPermissionDenied(error), let request = Self.accessRequest else { throw error }
+            let granted = Thread.isMainThread ? request(target) : DispatchQueue.main.sync { request(target) }
+            guard granted else { throw error }
+            return try fs.list(target, includeHidden: showHidden)
         }
     }
 
@@ -469,7 +483,7 @@ public final class PanelGroup {
     public var active: PanelTab { tabs[activeIndex] }
 
     public init(paths: [URL], showHidden: Bool = false) {
-        let valid = paths.isEmpty ? [FileManager.default.homeDirectoryForCurrentUser] : paths
+        let valid = paths.isEmpty ? [Sandbox.home] : paths
         tabs = valid.map { PanelTab(path: $0, showHidden: showHidden) }
         tabs.forEach(wire)
     }
@@ -478,7 +492,7 @@ public final class PanelGroup {
 
     /// Nahradí všechny karty (např. při načtení sady oblíbených karet).
     public func replaceTabs(_ specs: [(path: URL, locked: Bool)], active: Int, showHidden: Bool = false) {
-        let list = specs.isEmpty ? [(FileManager.default.homeDirectoryForCurrentUser, false)] : specs
+        let list = specs.isEmpty ? [(Sandbox.home, false)] : specs
         tabs = list.map { spec in
             let t = PanelTab(path: spec.path, showHidden: showHidden)
             t.locked = spec.locked

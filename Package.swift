@@ -17,6 +17,8 @@ let package = Package(
             dependencies: ["TCCore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // generátor webu a příručky (docs/manual → site/); spouští se skriptem scripts/build_site.sh
+        .executableTarget(name: "DocsBuilder", dependencies: ["TCCore"], swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "TCCoreTests", dependencies: ["TCCore"]),
     ]
 )

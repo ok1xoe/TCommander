@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ContentColumnRegistry.shared.register(BuiltinContentColumns())
         WindowTranslator.install()
         PluginHost.shared.reload()
+        AccessPrompt.launchFinished()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Ladicí přepínač: TCommander --lister <soubor> otevře rovnou Lister.
@@ -160,6 +161,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 table.rightMouseDown(with: event(.rightMouseDown))
             } }
         }
+        // ladění / snímky obrazovky: --panel-left a:b:c  --panel-right d  --mode-left full  --mode-right thumbnails  --window-size 1440x900
+        func panelArg(_ name: String) -> [URL] { CommandLine.arguments.firstIndex(of: name).flatMap { i in i + 1 < CommandLine.arguments.count ? CommandLine.arguments[i + 1] : nil }?.split(separator: ":").map { URL(fileURLWithPath: String($0)) } ?? [] }
+        func modeArg(_ name: String) -> ViewMode? { CommandLine.arguments.firstIndex(of: name).flatMap { i in i + 1 < CommandLine.arguments.count ? CommandLine.arguments[i + 1] : nil }.flatMap { ViewMode(rawValue: $0) } }
+        for (side, flag, modeFlag) in [(Side.left, "--panel-left", "--mode-left"), (Side.right, "--panel-right", "--mode-right")] {
+            let paths = panelArg(flag)
+            if !paths.isEmpty { AppModel.shared.group(side).replaceTabs(paths.map { ($0, false) }, active: 0, showHidden: false) }
+            if let m = modeArg(modeFlag) { AppModel.shared.group(side).active.viewMode = m }
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--window-size"), i + 1 < CommandLine.arguments.count {
+            let wh = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
+            if wh.count == 2 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    for w in NSApp.windows where w.isVisible && w.styleMask.contains(.titled) {
+                        let screen = w.screen?.visibleFrame ?? NSScreen.main!.visibleFrame
+                        w.setFrame(NSRect(x: screen.minX + 40, y: screen.maxY - wh[1] - 40, width: wh[0], height: wh[1]), display: true)
+                    }
+                }
+            }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--many-tabs"), i + 1 < CommandLine.arguments.count, let n = Int(CommandLine.arguments[i + 1]) {   // ladění: mnoho záložek
             let dirs = ["/usr/lib", "/usr/bin", "/usr/share", "/usr/local", "/Library", "/System", "/Applications", "/tmp", "/private/var", "/opt", "/usr/libexec", "/usr/sbin", "/bin", "/sbin", "/Users"]
             for k in 0..<n { AppModel.shared.group(.left).newTab(at: URL(fileURLWithPath: dirs[k % dirs.count])) }
@@ -183,7 +203,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } }
         }
         if let i = CommandLine.arguments.firstIndex(of: "--terminal-cmd"), i + 1 < CommandLine.arguments.count {      // ladění: otevře terminál a spustí příkaz (okno zůstane otevřené)
-            TerminalWindow.show(directory: FileManager.default.homeDirectoryForCurrentUser)
+            let dir = CommandLine.arguments.firstIndex(of: "--terminal-dir").flatMap { d in d + 1 < CommandLine.arguments.count ? CommandLine.arguments[d + 1] : nil }
+            TerminalWindow.show(directory: dir.map { URL(fileURLWithPath: $0) } ?? Sandbox.home)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { TerminalWindow.latest?.sendDebug(CommandLine.arguments[i + 1] + "\r") }
         }
         if let i = CommandLine.arguments.firstIndex(of: "--rename-demo"), i + 1 < CommandLine.arguments.count {   // ladění: F2 v adresáři
@@ -196,6 +217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let u = URL(fileURLWithPath: CommandLine.arguments[i + 1])
             if let e = try? LocalFileSystem().stat(u) { DispatchQueue.main.async { _ = PropertiesDialog(entries: [e]).run() } }
         }
+        if let i = CommandLine.arguments.firstIndex(of: "--help-page"), i + 1 < CommandLine.arguments.count { HelpWindow.show(page: CommandLine.arguments[i + 1]) }     // ladění
         if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě
@@ -213,6 +235,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    /// Složka přetažená na ikonu aplikace nebo „Otevřít v…“: v sandboxu tím uživatel složku povolí; panel na ni přejde.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for u in urls {
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir) else { continue }
+            if isDir.boolValue {
+                AccessManager.shared.grant(u)
+                AppModel.shared.source.navigateLocal(u)
+            } else {
+                AccessManager.shared.grant(u.deletingLastPathComponent())
+                AppModel.shared.source.navigateLocal(u.deletingLastPathComponent(), select: u)
+            }
+        }
+    }
 }
 
 @main
@@ -221,7 +258,7 @@ struct TCommanderApp: App {
     private let model = AppModel.shared
 
     var body: some Scene {
-        WindowGroup("TCommander") {
+        Window("TCommander", id: "main") {          // jedno okno: událost „Otevřít“ (složka přetažená na ikonu) nesmí vytvářet další
             ContentView(model: model)
         }
         .defaultSize(width: 1400, height: 800)
@@ -243,6 +280,14 @@ struct TCCommandsFirst: Commands {
     let model: AppModel
 
     var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button(L("TCommander Nápověda")) { HelpWindow.show() }.keyboardShortcut("?", modifiers: .command)
+            Button(L("Klávesové zkratky")) { HelpWindow.show(page: "12-shortcuts.html") }
+            Divider()
+            Button(L("Webové stránky TCommanderu")) { NSWorkspace.shared.open(HelpWindow.siteURL) }
+            Button(L("Zásady ochrany soukromí")) { HelpWindow.show(page: "privacy.html") }
+            Button(L("Nahlásit chybu…")) { NSWorkspace.shared.open(HelpWindow.issuesURL) }
+        }
         CommandGroup(replacing: .newItem) {
             Button(L("Nový tab")) { model.group(model.activeSide).newTab() }.keyboardShortcut("t")
         }
@@ -277,7 +322,7 @@ struct TCCommandsFirst: Commands {
                 ForEach(model.userCommands) { u in Button(u.title) { model.runUser(u) } }
             }
         }
-        CommandMenu(model.mainMenu.customTitle.isEmpty ? "Vlastní" : model.mainMenu.customTitle) {
+        CommandMenu(model.mainMenu.customTitle.isEmpty ? L("Vlastní") : model.mainMenu.customTitle) {
             let tree = MenuNode.tree(from: model.mainMenu.customItems)
             if tree.isEmpty {
                 Button(L("(prázdné – položky přidáte v Nastavení › Hlavní menu)")) {}.disabled(true)
@@ -385,10 +430,10 @@ struct TCCommandsSecond: Commands {
                 }
             }
             Button(L("Panely nad sebou / vedle sebe")) { model.perform("cm_layout") }.hideable(model, "Zobrazení/Panely nad sebou / vedle sebe")
-            Button("Quick View (druhý panel)") { model.quickViewOn.toggle() }.keyboardShortcut("q", modifiers: .control).hideable(model, "Zobrazení/Quick View (druhý panel)")
+            Button(L("Quick View (druhý panel)")) { model.quickViewOn.toggle() }.keyboardShortcut("q", modifiers: .control).hideable(model, "Zobrazení/Quick View (druhý panel)")
             Divider()
             Button(L("Obnovit")) { model.reloadAll() }.keyboardShortcut("r").hideable(model, "Zobrazení/Obnovit")
-            Button("Branch view (všechny podadresáře)") { model.toggleBranchView() }.keyboardShortcut("b").hideable(model, "Zobrazení/Branch view (všechny podadresáře)")
+            Button(L("Branch view (všechny podadresáře)")) { model.toggleBranchView() }.keyboardShortcut("b").hideable(model, "Zobrazení/Branch view (všechny podadresáře)")
             Button(L("Rychlý filtr")) { model.toggleFilter() }.keyboardShortcut("f").hideable(model, "Zobrazení/Rychlý filtr")
             Divider()
             Button(L("Nadřazený adresář")) { model.source.goUp() }.keyboardShortcut(.upArrow, modifiers: .command).hideable(model, "Zobrazení/Nadřazený adresář")

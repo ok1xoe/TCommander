@@ -4,3 +4,5 @@
 .DS_Store
 .remember/
 dist/
+dist-appstore/
+site/

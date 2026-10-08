@@ -1,0 +1,1 @@
+správce souborů,dva panely,commander,ftp,archiv,zip,synchronizace,porovnání,přejmenování,hex

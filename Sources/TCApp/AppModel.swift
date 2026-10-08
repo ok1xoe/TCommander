@@ -63,7 +63,9 @@ final class AppModel {
     @ObservationIgnored private let defaults = UserDefaults.standard
 
     init() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        AccessManager.shared.restore()                       // povolené složky (sandbox) musí být zapnuté před prvním výpisem panelů
+        PanelTab.accessRequest = { url in MainActor.assumeIsolated { AccessPrompt.request(for: url) } }
+        let home = Sandbox.home
         func restore(_ key: String) -> PanelGroup {
             let paths = (defaults(key) ?? []).map { URL(fileURLWithPath: $0) }
                 .filter { var d: ObjCBool = false; return FileManager.default.fileExists(atPath: $0.path, isDirectory: &d) && d.boolValue }
@@ -816,7 +818,7 @@ final class AppModel {
         remember(cmd)
         if cmd == "cd" || cmd.hasPrefix("cd ") {
             let arg = String(cmd.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-            let expanded = arg.isEmpty ? NSHomeDirectory() : (arg as NSString).expandingTildeInPath
+            let expanded = arg.isEmpty ? Sandbox.home.path : (arg.hasPrefix("~") ? Sandbox.home.path + arg.dropFirst() : arg)
             let url = expanded.hasPrefix("/") ? URL(fileURLWithPath: expanded) : source.path.appendingPathComponent(expanded)
             source.navigate(to: url)
             return

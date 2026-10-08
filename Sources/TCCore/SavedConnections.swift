@@ -13,6 +13,9 @@ public struct SavedConnection: Codable, Hashable, Identifiable, Sendable {
         /// Připojení přes FTP klienta v aplikaci (ostatní typy se připojují jako svazek nebo přes SFTP).
         public var isFTP: Bool { self == .ftp || self == .ftpExplicitTLS || self == .ftpsImplicit }
         public var isMount: Bool { self == .smb || self == .webdav || self == .webdavs }
+
+        /// Typy nabízené v aktuální edici: v sandboxu (Mac App Store) nelze spouštět systémový `ssh`/`sftp` s klíči a hesly ani pluginy.
+        public static var available: [Kind] { Sandbox.isSandboxed ? allCases.filter { $0 != .sftp && $0 != .plugin } : allCases }
     }
 
     public var id: UUID

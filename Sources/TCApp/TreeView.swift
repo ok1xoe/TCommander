@@ -70,7 +70,7 @@ struct TreeView: NSViewRepresentable {
         init(_ p: TreeView) { parent = p; super.init(); buildRoots() }
 
         private func buildRoots() {
-            var r: [DirNode] = [DirNode(url: FileManager.default.homeDirectoryForCurrentUser, name: "Domů"), DirNode(url: URL(fileURLWithPath: "/"), name: "/")]
+            var r: [DirNode] = [DirNode(url: Sandbox.home, name: "Domů"), DirNode(url: URL(fileURLWithPath: "/"), name: "/")]
             let vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []
             for v in vols where v.path != "/" { r.append(DirNode(url: v, name: (try? v.resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? v.lastPathComponent)) }
             roots = r

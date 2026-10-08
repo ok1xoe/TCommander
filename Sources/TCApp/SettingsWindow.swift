@@ -170,7 +170,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     }
 
     private func shortcutRows() -> [[String]] {
-        CommandRegistry.all.map { [$0.id, $0.title, model.keymap.shortcuts(for: $0.id).map(\.description).joined(separator: ", ")] }
+        CommandRegistry.all.map { [$0.id, L($0.title), model.keymap.shortcuts(for: $0.id).map(\.description).joined(separator: ", ")] }
     }
 
     private func conflictText() -> String {
@@ -199,6 +199,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     private func mainMenuTab() -> NSView {
         let titleField = NSTextField(string: model.mainMenu.customTitle)
+        titleField.placeholderString = "Vlastní"
         titleField.widthAnchor.constraint(equalToConstant: 200).isActive = true
         let titleHandler = FieldHandler { [weak self] text in self?.model.mainMenu.customTitle = text.trimmingCharacters(in: .whitespaces) }
         titleField.target = titleHandler; titleField.action = #selector(FieldHandler.fire(_:))
@@ -219,12 +220,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         }
 
         let builtin = StringTable(columns: [.init(title: "Menu", width: 120, editable: false), .init(title: "Vestavěná položka", width: 420, editable: false), .init(title: "Zobrazit (ano/ne)", width: 120)],
-                                  rows: MainMenuCatalog.items.map { [MainMenuCatalog.menu(of: $0), MainMenuCatalog.title(of: $0), self.model.mainMenu.isVisible($0) ? "ano" : "ne"] },
+                                  rows: MainMenuCatalog.items.map { [L(MainMenuCatalog.menu(of: $0)), L(MainMenuCatalog.title(of: $0)), YesNo.text(self.model.mainMenu.isVisible($0))] },
                                   canAddRemove: false)
-        builtin.validate = { _, column, value in column != 2 || ["ano", "ne"].contains(value.lowercased()) }
+        builtin.validate = { _, column, value in column != 2 || YesNo.parse(value) != nil }
         builtin.onChange = { [weak self] r in
             var hidden = Set<String>()
-            for (i, row) in r.enumerated() where row[2].lowercased() == "ne" { hidden.insert(MainMenuCatalog.items[i]) }
+            for (i, row) in r.enumerated() where YesNo.parse(row[2]) == false { hidden.insert(MainMenuCatalog.items[i]) }
             self?.model.mainMenu.hidden = hidden
         }
         keepAlive.append(contentsOf: [custom, builtin, titleHandler] as [AnyObject])
@@ -258,10 +259,10 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     private func commandsTab() -> NSView {
         let table = StringTable(columns: [.init(title: "Jméno (em_…)", width: 110), .init(title: "Název", width: 140), .init(title: "Příkaz", width: 200),
                                           .init(title: "Parametry", width: 160), .init(title: "Startovní cesta", width: 120), .init(title: "Ikona", width: 90), .init(title: "Terminál (ano/ne)", width: 90)],
-                                rows: model.userCommands.map { [$0.name, $0.title, $0.command, $0.parameters, $0.startPath, $0.icon, $0.runInTerminal ? "ano" : "ne"] },
-                                newRow: { ["em_novy", "Nový příkaz", "", "", "", "gearshape", "ne"] })
+                                rows: model.userCommands.map { [$0.name, $0.title, $0.command, $0.parameters, $0.startPath, $0.icon, YesNo.text($0.runInTerminal)] },
+                                newRow: { ["em_novy", L("Nový příkaz"), "", "", "", "gearshape", YesNo.text(false)] })
         table.onChange = { [weak self] r in
-            self?.model.userCommands = r.map { UserCommand(name: $0[0], title: $0[1], command: $0[2], parameters: $0[3], startPath: $0[4], icon: $0[5], runInTerminal: $0[6].lowercased() == "ano") }
+            self?.model.userCommands = r.map { UserCommand(name: $0[0], title: $0[1], command: $0[2], parameters: $0[3], startPath: $0[4], icon: $0[5], runInTerminal: YesNo.parse($0[6]) == true) }
         }
         keepAlive.append(table)
         return table.view

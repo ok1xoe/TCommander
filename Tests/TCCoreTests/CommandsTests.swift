@@ -101,7 +101,7 @@ import Foundation
         try #"{"editorApp": "/Applications/Typora.app", "fontSize": 15, "deleteToTrash": false, "showHidden": true}"#.write(to: store.file, atomically: true, encoding: .utf8)
         let s = store.load(default: AppSettings())
         #expect(s.editorApp == "/Applications/Typora.app" && s.fontSize == 15 && !s.deleteToTrash && s.showHidden)
-        #expect(s.columnSets == ColumnSet.defaults && s.colorRules == ColorRule.defaults && !s.panelsStacked && s.language == "cs")
+        #expect(s.columnSets == ColumnSet.defaults && s.colorRules == ColorRule.defaults && !s.panelsStacked && s.language == "en")
         #expect(s.columnSets.contains { $0.name == "Média" })
         store.save(s)
         #expect(store.load(default: AppSettings()) == s)          // zápis a čtení nových dat zůstává konzistentní
@@ -141,7 +141,7 @@ import Foundation
             for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
                 let key = (text as NSString).substring(with: m.range(at: 1))
                 if key.contains("\\(") { continue }                       // složené texty překládají fráze
-                if Localization.en[key] == nil && !Localization.untranslated.contains(key) { missing.append("\(f): \(key)") }
+                if Localization.en[key] == nil && Localization.enMore[key] == nil && !Localization.untranslated.contains(key) { missing.append("\(f): \(key)") }
             }
         }
         #expect(missing.isEmpty, "\(missing)")
@@ -208,6 +208,34 @@ import Foundation
         for (cs, t) in Localization.enMore where cs != "Čeština" {
             #expect(!t.isEmpty, "\(cs)")
             #expect(!t.contains(where: { "ěščřžýáíéúůťďňĚŠČŘŽÝÁÍÉÚŮŤĎŇ".contains($0) }), "\(cs) → \(t)")
+        }
+    }
+}
+
+@Suite struct CommandTranslationTests {
+    @Test func everyCommandTitleHasAnEnglishTranslation() {
+        for c in CommandRegistry.all {
+            #expect(Localization.en[c.title] != nil || Localization.enMore[c.title] != nil, "chybí překlad příkazu „\(c.title)“")
+        }
+    }
+}
+
+@Suite struct LocalizationTableIntegrityTests {
+    /// Slovník s duplicitním klíčem v literálu shodí aplikaci při startu (fatalError), proto se klíče kontrolují ve zdroji.
+    @Test func dictionaryLiteralsHaveNoDuplicateKeys() throws {
+        let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Sources/TCCore/Localization.swift")
+        let text = try String(contentsOf: file, encoding: .utf8)
+        let pair = try NSRegularExpression(pattern: #""((?:[^"\\]|\\.)*)"\s*:\s*""#)
+        for name in ["public static let en: [String: String] = [", "public static let enMore: [String: String] = ["] {
+            let start = try #require(text.range(of: name)).upperBound
+            let end = try #require(text.range(of: "\n    ]\n", range: start..<text.endIndex)).lowerBound
+            let body = String(text[start..<end])
+            var seen = Set<String>(), dups: [String] = []
+            for m in pair.matches(in: body, range: NSRange(body.startIndex..., in: body)) {
+                let k = (body as NSString).substring(with: m.range(at: 1))
+                if !seen.insert(k).inserted { dups.append(k) }
+            }
+            #expect(dups.isEmpty, "\(name): \(dups)")
         }
     }
 }

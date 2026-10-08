@@ -1,0 +1,1 @@
+Verze 1.0: první vydání. Dva panely, prohlížeč a editor se zvýrazněním syntaxe, hledání, porovnání a synchronizace, archivy, FTP/SMB/WebDAV, terminál, čtečka Markdownu a uživatelská příručka přímo v aplikaci.
