@@ -173,7 +173,7 @@ struct DriveBar: View {
         var list: [(String, URL, String)] = [(L("Domů"), home, "house"), ("Desktop", home.appendingPathComponent("Desktop"), "menubar.dock.rectangle"),
                                              ("Downloads", home.appendingPathComponent("Downloads"), "arrow.down.circle"), (L("Aplikace"), URL(fileURLWithPath: "/Applications"), "app.badge")]
         var vols = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? []
-        if ProcessInfo.processInfo.environment["TC_SCREENSHOT"] != nil { vols = vols.filter { $0.path == "/" } }          // snímky obrazovky: bez názvů cizích disků
+        if ProcessInfo.processInfo.environment["TC_SCREENSHOT"] != nil || CommandLine.arguments.contains("--screenshot") { vols = vols.filter { $0.path == "/" } }          // snímky obrazovky: bez názvů cizích disků
         for v in vols {
             let name = v.path == "/" ? "Macintosh HD" : ((try? v.resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? v.lastPathComponent)
             list.append((name, v, "externaldrive"))

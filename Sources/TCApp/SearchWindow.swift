@@ -28,6 +28,14 @@ final class SearchWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NST
         w.window.makeKeyAndOrderFront(nil)
     }
 
+    /// Ladění / snímky obrazovky: vyplní masku a text a spustí hledání.
+    static func debugRun(masks: String, text: String?) {
+        guard let w = current else { return }
+        w.masks.stringValue = masks
+        if let text { w.text.stringValue = text }
+        w.start()
+    }
+
     private let window: NSWindow
     private let goTo: (URL, String?) -> Void
     private let toPanel: ([URL], String) -> Void

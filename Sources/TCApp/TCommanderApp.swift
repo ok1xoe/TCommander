@@ -169,6 +169,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !paths.isEmpty { AppModel.shared.group(side).replaceTabs(paths.map { ($0, false) }, active: 0, showHidden: false) }
             if let m = modeArg(modeFlag) { AppModel.shared.group(side).active.viewMode = m }
         }
+        // snímky obrazovky: --quick-view (náhled souboru v druhém panelu), --cursor "název" (kurzor na soubor v aktivním panelu), --active right
+        if CommandLine.arguments.contains("--quick-view") { AppModel.shared.quickViewOn = true }
+        if let i = CommandLine.arguments.firstIndex(of: "--active"), i + 1 < CommandLine.arguments.count { AppModel.shared.activeSide = CommandLine.arguments[i + 1] == "right" ? .right : .left }
+        if let i = CommandLine.arguments.firstIndex(of: "--cursor"), i + 1 < CommandLine.arguments.count {
+            let name = CommandLine.arguments[i + 1]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { MainActor.assumeIsolated {
+                let tab = AppModel.shared.source
+                if let k = tab.entries.firstIndex(where: { $0.name == name }) { tab.moveCursor(to: k) }
+            } }
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--window-size"), i + 1 < CommandLine.arguments.count {
             let wh = CommandLine.arguments[i + 1].split(separator: "x").compactMap { Double($0) }
             if wh.count == 2 {
@@ -218,6 +228,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let e = try? LocalFileSystem().stat(u) { DispatchQueue.main.async { _ = PropertiesDialog(entries: [e]).run() } }
         }
         if let i = CommandLine.arguments.firstIndex(of: "--help-page"), i + 1 < CommandLine.arguments.count { HelpWindow.show(page: CommandLine.arguments[i + 1]) }     // ladění
+        // snímky obrazovky: --mark "*.png" (označí soubory v aktivním panelu), --search-run "*.swift" ["text"], --multirename "[N]-[C].[E]" "3"
+        if let i = CommandLine.arguments.firstIndex(of: "--mark"), i + 1 < CommandLine.arguments.count {
+            AppModel.shared.source.mark(matching: CommandLine.arguments[i + 1], on: true)
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--search-run"), i + 1 < CommandLine.arguments.count {
+            let mask = CommandLine.arguments[i + 1], text = i + 2 < CommandLine.arguments.count && !CommandLine.arguments[i + 2].hasPrefix("--") ? CommandLine.arguments[i + 2] : nil
+            AppModel.shared.search()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { SearchWindow.debugRun(masks: mask, text: text) }
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--multirename"), i + 2 < CommandLine.arguments.count {
+            AppModel.shared.multiRename()
+            let name = CommandLine.arguments[i + 1], digits = CommandLine.arguments[i + 2]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { MultiRenameWindow.debugSet(name: name, ext: "[E]", digits: digits) }
+        }
         if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě

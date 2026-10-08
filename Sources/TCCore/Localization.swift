@@ -525,6 +525,8 @@ public enum Localization {
         "zbývá ": "remaining ",
         "Čeština": "Čeština",
         "číslic": "digits",
+        "hledat": "find",
+        "krok": "step",
         "Řádků": "Lines",
         "Šablony": "Templates",
         "Žádné duplicity": "No duplicates",
