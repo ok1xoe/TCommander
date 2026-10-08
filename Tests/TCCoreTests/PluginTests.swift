@@ -163,6 +163,7 @@ enum SamplePlugins {
     }
 }
 
+extension PluginHostTests {
 @Suite(.serialized) struct PluginFileSystemTests {
     @Test func browsesAndTransfersThroughPlugin() throws {
         let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d); ContentColumnRegistry.shared.removeAll() }
@@ -207,4 +208,5 @@ enum SamplePlugins {
         for _ in 0..<100 { if tab.path.path == "/dir" && !tab.isLoading { break }; try await Task.sleep(nanoseconds: 100_000_000) }
         #expect(tab.entries.map(\.name) == ["..", "b.txt"])
     }
+}
 }
