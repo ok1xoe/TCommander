@@ -5,6 +5,13 @@ import TCCore
 final class MultiRenameWindow: NSObject, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
     private static var current: MultiRenameWindow?
 
+    /// Ladění / snímky obrazovky: nastaví masku názvu, masku přípony a počítadlo.
+    static func debugSet(name: String, ext: String, digits: String) {
+        guard let w = current else { return }
+        w.nameMask.stringValue = name; w.extMask.stringValue = ext; w.cDigits.stringValue = digits
+        w.refresh()
+    }
+
     static func show(files: [URL], onChange: @escaping (URL?) -> Void) {
         current?.window.close()
         let w = MultiRenameWindow(files: files, onChange: onChange)

@@ -218,6 +218,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let e = try? LocalFileSystem().stat(u) { DispatchQueue.main.async { _ = PropertiesDialog(entries: [e]).run() } }
         }
         if let i = CommandLine.arguments.firstIndex(of: "--help-page"), i + 1 < CommandLine.arguments.count { HelpWindow.show(page: CommandLine.arguments[i + 1]) }     // ladění
+        // snímky obrazovky: --mark "*.png" (označí soubory v aktivním panelu), --search-run "*.swift" ["text"], --multirename "[N]-[C].[E]" "3"
+        if let i = CommandLine.arguments.firstIndex(of: "--mark"), i + 1 < CommandLine.arguments.count {
+            AppModel.shared.source.mark(matching: CommandLine.arguments[i + 1], on: true)
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--search-run"), i + 1 < CommandLine.arguments.count {
+            let mask = CommandLine.arguments[i + 1], text = i + 2 < CommandLine.arguments.count && !CommandLine.arguments[i + 2].hasPrefix("--") ? CommandLine.arguments[i + 2] : nil
+            AppModel.shared.search()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { SearchWindow.debugRun(masks: mask, text: text) }
+        }
+        if let i = CommandLine.arguments.firstIndex(of: "--multirename"), i + 2 < CommandLine.arguments.count {
+            AppModel.shared.multiRename()
+            let name = CommandLine.arguments[i + 1], digits = CommandLine.arguments[i + 2]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { MultiRenameWindow.debugSet(name: name, ext: "[E]", digits: digits) }
+        }
         if CommandLine.arguments.contains("--settings") { AppModel.shared.perform("cm_settings") }     // ladění
         if CommandLine.arguments.contains("--search") { AppModel.shared.search() }
         if CommandLine.arguments.contains("--demo-job") {      // ladění: simulované úlohy ve frontě

@@ -90,3 +90,7 @@ Název v App Store Connect jde změnit do odeslání; v kódu je třeba přepsat
 - [ ] V App Store Connect jsou texty, snímky, soukromí, cena, věkové hodnocení
 - [ ] Název „TCommander“ je právně zkontrolovaný
 - [ ] Web běží na GitHub Pages a odkazy na zásady soukromí a podporu fungují
+
+## Stránka se všemi texty
+
+`appstore/listing.html` obsahuje všechna pole pro App Store Connect (texty v en-US a cs s počítadly znaků, odkazy, odpovědi na dotazníky, poznámku pro recenzenta) a všechny snímky. Sestavuje se příkazem `python3 scripts/build_listing.py` z `appstore/metadata`. Snímky se pořizují příkazem `scripts/screenshots/take.sh` (vždy anglicky, 2880×1800).
