@@ -176,6 +176,7 @@ extension PluginHostTests {
 }
 }
 
+extension PluginHostTests {
 @Suite struct PluginExamplesInstallTests {
     @Test func installsMissingExamplesAndKeepsExistingOnes() throws {
         let d = try makeTempDir(); defer { try? FileManager.default.removeItem(at: d) }
@@ -206,4 +207,5 @@ extension PluginHostTests {
         #expect(PluginExamples.sourceDirectory(resources: nil, executable: exe)?.lastPathComponent == "plugin-examples")
         #expect(PluginExamples.sourceDirectory(resources: nil, executable: d.appendingPathComponent("x/y/prog")) == nil)
     }
+}
 }
