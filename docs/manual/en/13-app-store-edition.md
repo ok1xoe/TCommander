@@ -12,18 +12,29 @@ The Mac App Store requires every app to run in the **App Sandbox**, a protection
 
 The dialog is shown by macOS itself, so TCommander never sees anything outside the folders you choose.
 
-## Differences from the GitHub edition
+## Which edition should I choose?
 
-| Feature | App Store edition |
-|---|---|
-| SFTP | not available (it needs the system `ssh` with your keys) |
-| Plugins | not available (Apple does not allow apps to run downloaded code) |
-| PlantUML diagrams | not available (they need Java); the source is shown as text |
-| FTP, FTPS, SMB, WebDAV | available |
-| Terminal | available; the shell can only reach the folders you have allowed |
-| Everything else | the same |
+TCommander is **one app in two editions** that share the same code, the same look and the same manual. They differ only where Apple's rules for the Mac App Store do not allow a feature.
 
-Both editions use the same settings format, and the same manual.
+- **GitHub edition**: a free download with full access to your disk. Choose it if you need SFTP, plugins or PlantUML diagrams, or if you simply prefer to install apps yourself.
+- **Mac App Store edition**: installed and updated automatically by the App Store. Choose it if you want the easiest setup and do not need the three features below.
+
+## Differences between the editions
+
+| Feature | GitHub edition | Mac App Store edition | Why |
+|---|---|---|---|
+| File manager, viewer, editor, search, compare, sync, archives | ✓ | ✓ | |
+| FTP, FTPS, SMB, WebDAV | ✓ | ✓ | |
+| Built-in terminal | ✓ | ✓ | In the App Store edition the shell reaches only the folders you allowed. |
+| SFTP | ✓ | ✗ | It needs the system `ssh` and your keys, which the sandbox blocks. |
+| Plugins | ✓ | ✗ | Apple does not allow apps to run downloaded code. |
+| PlantUML diagrams | ✓ | ✗ | They need Java and an external program. The diagram source is still shown as text. |
+| Access to your files | whole disk (macOS asks once per protected folder, such as Documents) | only folders you choose, once | The App Sandbox is required for every app in the store. |
+| Updates | download a new release | automatic, through the App Store | |
+
+✓ means available, ✗ means not available in that edition.
+
+**Settings are not shared between the editions.** Both use the same file format, but each edition keeps its files in its own place (the GitHub edition in `~/Library/Application Support/TCommander/`, the App Store edition in its sandbox container). If you switch editions, you can copy your settings, shortcuts and favorites over, or export and import them.
 
 ## Privacy
 

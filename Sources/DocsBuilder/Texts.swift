@@ -9,10 +9,13 @@ struct Strings {
     let tagline: String, subtitle: String, featuresTitle: String, editionsTitle: String, screenshotsTitle: String, footerNote: String
     let features: [(String, String)]
     let editionsIntro: String
-    let editionRows: [(String, String, String)]      // funkce, App Store, GitHub
-    let editionHeads: (String, String, String)
+    let editionRows: [(String, String, String, String)]      // funkce, GitHub, App Store, důvod
+    let editionHeads: (String, String, String, String)
     let privacy: String, support: String, license: String, home: String, requirements: String, faqTitle: String
     let faq: [(String, String)]
+    let downloadTitle: String, githubEditionTitle: String, githubEditionText: String, storeEditionTitle: String, storeEditionText: String
+    let yes: String, no: String, allScreenshots: String
+    let switchTitle: String, switchItems: [(String, String)], notFoundText: String
 
     static let en = Strings(
         lang: "en", locale: "en_US",
@@ -36,15 +39,29 @@ struct Strings {
             ("Make it yours", "Change every keyboard shortcut, buttons, the Start menu and the main menu; add your own commands; import your Total Commander settings."),
             ("Plugins", "Extend it with plugins in any language: columns, viewers, archive formats and file systems. Ten working examples included."),
             ("Native and fast", "A native Apple silicon and Intel app. APFS cloning makes copies instant. English and Czech interface.")],
-        editionsIntro: "TCommander is available as a free download from GitHub and on the Mac App Store. The App Store edition runs in Apple's App Sandbox: it asks once for the folders it may use, and leaves out the features that need to run other programs.",
-        editionRows: [("Core file manager, viewer, editor, search, compare, sync, archives", "✓", "✓"), ("FTP, FTPS, SMB, WebDAV", "✓", "✓"), ("Built-in terminal", "✓ (allowed folders only)", "✓"),
-                      ("SFTP", "–", "✓"), ("Plugins", "–", "✓"), ("PlantUML diagrams", "–", "✓"), ("Access to files", "folders you allow", "full disk")],
-        editionHeads: ("", "Mac App Store", "GitHub"),
+        editionsIntro: "TCommander is one app in two editions. The GitHub edition is a free download with full access to your disk. The Mac App Store edition is installed and updated by the App Store and runs in Apple's App Sandbox, a protection Apple requires of every app in the store. It asks you once which folders it may use, and a few features that need to run other programs are left out.",
+        editionRows: [("File manager, viewer, editor, search, compare, sync, archives", "✓", "✓", ""),
+                      ("FTP, FTPS, SMB, WebDAV", "✓", "✓", ""),
+                      ("Built-in terminal", "✓", "✓", "In the App Store edition the shell reaches only the folders you allowed."),
+                      ("SFTP", "✓", "✗", "It needs the system ssh and your keys, which the sandbox blocks."),
+                      ("Plugins", "✓", "✗", "Apple does not allow apps to run downloaded code."),
+                      ("PlantUML diagrams", "✓", "✗", "They need Java and an external program. The diagram source is still shown as text."),
+                      ("Access to your files", "Whole disk (macOS asks once per protected folder)", "Only folders you choose, once", "The App Sandbox is required for every app in the store."),
+                      ("Updates", "Download a new release", "Automatic, through the App Store", "")],
+        editionHeads: ("Feature", "GitHub edition", "Mac App Store edition", "Why"),
         privacy: "Privacy Policy", support: "Support", license: "Source code", home: "Home", requirements: "Requires macOS 14 Sonoma or later. Apple silicon and Intel.",
         faqTitle: "Questions",
         faq: [("Is it like Total Commander?", "Yes, in spirit: two panels, function keys and the same logic. Most keys are identical, and you can import your wincmd.ini."),
               ("Does it collect any data?", "No. No accounts, no analytics, no tracking. See the privacy policy."),
-              ("Which macOS versions are supported?", "macOS 14 Sonoma and later, on Apple silicon and Intel Macs.")])
+              ("Which macOS versions are supported?", "macOS 14 Sonoma and later, on Apple silicon and Intel Macs.")],
+        downloadTitle: "Get TCommander", githubEditionTitle: "GitHub edition", githubEditionText: "A free download with every feature: a universal disk image or zip for macOS 14 or later. On first launch, right-click the app and choose Open.",
+        storeEditionTitle: "Mac App Store edition", storeEditionText: "Installs and updates automatically. It runs in the App Sandbox, so you allow your folders once. SFTP, plugins and PlantUML diagrams are not included.",
+        yes: "Yes", no: "No", allScreenshots: "Show all screenshots",
+        switchTitle: "Coming from Total Commander?",
+        switchItems: [("The same keys", "F3 view, F4 edit, F5 copy, F6 move, F7 new folder, F8 delete: your fingers already know them."),
+                      ("Bring your settings", "Import your wincmd.ini: shortcuts, the button bar and the Start menu come across."),
+                      ("Made for the Mac", "Retina and dark mode, Quick View, the Keychain, APFS cloning and a real terminal.")],
+        notFoundText: "This page does not exist. Go to the home page or search the guide.")
 
     static let cs = Strings(
         lang: "cs", locale: "cs_CZ",
@@ -68,13 +85,27 @@ struct Strings {
             ("Přizpůsobte si ho", "Změňte každou klávesovou zkratku, tlačítka, menu Start i hlavní menu; přidejte vlastní příkazy; naimportujte nastavení z Total Commanderu."),
             ("Pluginy", "Rozšiřte ho pluginy v libovolném jazyce: sloupce, prohlížeče, formáty archivů a souborové systémy. Deset funkčních příkladů v balení."),
             ("Nativní a rychlý", "Nativní aplikace pro Apple silicon i Intel. Klonování na APFS dělá kopie okamžité. Rozhraní v angličtině a češtině.")],
-        editionsIntro: "TCommander je k dispozici jako bezplatné stažení z GitHubu i v Mac App Store. Edice z App Store běží v App Sandboxu Applu: jednou se zeptá, které složky smí používat, a vynechává funkce, které potřebují spouštět jiné programy.",
-        editionRows: [("Správce souborů, prohlížeč, editor, hledání, porovnání, synchronizace, archivy", "✓", "✓"), ("FTP, FTPS, SMB, WebDAV", "✓", "✓"), ("Vestavěný terminál", "✓ (jen povolené složky)", "✓"),
-                      ("SFTP", "–", "✓"), ("Pluginy", "–", "✓"), ("Diagramy PlantUML", "–", "✓"), ("Přístup k souborům", "složky, které povolíte", "celý disk")],
-        editionHeads: ("", "Mac App Store", "GitHub"),
+        editionsIntro: "TCommander je jedna aplikace ve dvou edicích. Edice z GitHubu je bezplatné stažení s plným přístupem k disku. Edice z Mac App Store se instaluje a aktualizuje přes App Store a běží v App Sandboxu, což je ochrana, kterou Apple vyžaduje u každé aplikace v obchodě. Jednou se zeptá, které složky smí používat, a pár funkcí, které potřebují spouštět jiné programy, v ní není.",
+        editionRows: [("Správce souborů, prohlížeč, editor, hledání, porovnání, synchronizace, archivy", "✓", "✓", ""),
+                      ("FTP, FTPS, SMB, WebDAV", "✓", "✓", ""),
+                      ("Vestavěný terminál", "✓", "✓", "V edici z App Store dosáhne shell jen na složky, které jste povolili."),
+                      ("SFTP", "✓", "✗", "Potřebuje systémový ssh a vaše klíče, které sandbox blokuje."),
+                      ("Pluginy", "✓", "✗", "Apple nepovoluje aplikacím spouštět stažený kód."),
+                      ("Diagramy PlantUML", "✓", "✗", "Potřebují Javu a externí program. Zdroj diagramu se dál zobrazí jako text."),
+                      ("Přístup k souborům", "Celý disk (macOS se zeptá jednou u každé chráněné složky)", "Jen složky, které jednou vyberete", "App Sandbox je u každé aplikace v obchodě povinný."),
+                      ("Aktualizace", "Stáhnete novou verzi", "Automaticky přes App Store", "")],
+        editionHeads: ("Funkce", "Edice z GitHubu", "Edice z Mac App Store", "Proč"),
         privacy: "Zásady ochrany soukromí", support: "Podpora", license: "Zdrojový kód", home: "Domů", requirements: "Vyžaduje macOS 14 Sonoma nebo novější. Apple silicon i Intel.",
         faqTitle: "Otázky",
         faq: [("Je to jako Total Commander?", "Ano, duchem: dva panely, funkční klávesy a stejná logika. Většina kláves je shodná a můžete naimportovat svůj wincmd.ini."),
               ("Shromažďuje nějaká data?", "Ne. Žádné účty, analytika ani sledování. Viz zásady ochrany soukromí."),
-              ("Jaké verze macOS jsou podporované?", "macOS 14 Sonoma a novější, na Macích s Apple silicon i Intel.")])
+              ("Jaké verze macOS jsou podporované?", "macOS 14 Sonoma a novější, na Macích s Apple silicon i Intel.")],
+        downloadTitle: "Získejte TCommander", githubEditionTitle: "Edice z GitHubu", githubEditionText: "Bezplatné stažení se všemi funkcemi: univerzální obraz disku nebo zip pro macOS 14 a novější. Při prvním spuštění klepněte na aplikaci pravým tlačítkem a zvolte Otevřít.",
+        storeEditionTitle: "Edice z Mac App Store", storeEditionText: "Instaluje se a aktualizuje automaticky. Běží v App Sandboxu, takže své složky povolíte jednou. SFTP, pluginy a diagramy PlantUML v ní nejsou.",
+        yes: "Ano", no: "Ne", allScreenshots: "Zobrazit všechny snímky",
+        switchTitle: "Přicházíte z Total Commanderu?",
+        switchItems: [("Stejné klávesy", "F3 prohlížet, F4 upravit, F5 kopírovat, F6 přesunout, F7 nová složka, F8 smazat: prsty je už znají."),
+                      ("Přeneste si nastavení", "Naimportujte svůj wincmd.ini: zkratky, tlačítková lišta i menu Start se převedou."),
+                      ("Stvořený pro Mac", "Retina a tmavý vzhled, Quick View, Klíčenka, klonování na APFS a skutečný terminál.")],
+        notFoundText: "Tato stránka neexistuje. Přejděte na úvodní stránku nebo hledejte v příručce.")
 }

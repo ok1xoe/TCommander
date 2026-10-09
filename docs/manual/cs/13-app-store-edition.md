@@ -12,18 +12,29 @@ Mac App Store vyžaduje, aby každá aplikace běžela v **App Sandboxu**, ochra
 
 Dialog zobrazuje samotný macOS, takže TCommander nikdy nevidí nic mimo složky, které vyberete.
 
-## Rozdíly oproti edici z GitHubu
+## Kterou edici zvolit?
 
-| Funkce | Edice z App Store |
-|---|---|
-| SFTP | není (potřebuje systémový `ssh` s vašimi klíči) |
-| Pluginy | nejsou (Apple nepovoluje aplikacím spouštět stažený kód) |
-| Diagramy PlantUML | nejsou (potřebují Javu); zdroj se zobrazí jako text |
-| FTP, FTPS, SMB, WebDAV | jsou |
-| Terminál | je; shell dosáhne jen na složky, které jste povolili |
-| Vše ostatní | stejné |
+TCommander je **jedna aplikace ve dvou edicích**, které sdílejí stejný kód, stejný vzhled i stejnou příručku. Liší se jen tam, kde pravidla Applu pro Mac App Store nějakou funkci nepovolují.
 
-Obě edice používají stejný formát nastavení i stejnou příručku.
+- **Edice z GitHubu**: bezplatné stažení s plným přístupem k disku. Zvolte ji, pokud potřebujete SFTP, pluginy nebo diagramy PlantUML, nebo si aplikace raději instalujete sami.
+- **Edice z Mac App Store**: instaluje a aktualizuje ji automaticky App Store. Zvolte ji, pokud chcete nejjednodušší instalaci a tři funkce níže nepotřebujete.
+
+## Rozdíly mezi edicemi
+
+| Funkce | Edice z GitHubu | Edice z Mac App Store | Proč |
+|---|---|---|---|
+| Správce souborů, prohlížeč, editor, hledání, porovnání, synchronizace, archivy | ✓ | ✓ | |
+| FTP, FTPS, SMB, WebDAV | ✓ | ✓ | |
+| Vestavěný terminál | ✓ | ✓ | V edici z App Store dosáhne shell jen na složky, které jste povolili. |
+| SFTP | ✓ | ✗ | Potřebuje systémový `ssh` a vaše klíče, které sandbox blokuje. |
+| Pluginy | ✓ | ✗ | Apple nepovoluje aplikacím spouštět stažený kód. |
+| Diagramy PlantUML | ✓ | ✗ | Potřebují Javu a externí program. Zdroj diagramu se dál zobrazí jako text. |
+| Přístup k souborům | celý disk (macOS se zeptá jednou u každé chráněné složky, např. Dokumenty) | jen složky, které jednou vyberete | App Sandbox je u každé aplikace v obchodě povinný. |
+| Aktualizace | stáhnete novou verzi | automaticky přes App Store | |
+
+✓ znamená, že funkce je k dispozici, ✗ že v dané edici není.
+
+**Nastavení se mezi edicemi nesdílí.** Obě používají stejný formát souborů, ale každá je ukládá na jiné místo (edice z GitHubu do `~/Library/Application Support/TCommander/`, edice z App Store do své sandboxové složky). Při přechodu mezi edicemi můžete nastavení, zkratky a oblíbené zkopírovat nebo exportovat a importovat.
 
 ## Soukromí
 
