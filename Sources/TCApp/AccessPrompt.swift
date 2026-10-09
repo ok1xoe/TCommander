@@ -13,11 +13,18 @@ enum AccessPrompt {
         ready = true
         guard Sandbox.isSandboxed else { return }
         if AccessManager.shared.roots.isEmpty {
-            let welcome = Dialogs.confirm(
-                title: "Vítejte v TCommanderu",
-                message: "Aby mohl TCommander pracovat s vašimi soubory, potřebuje váš souhlas s přístupem ke složce. Doporučujeme vybrat celou domovskou složku; později můžete povolit další složky nebo disky (stačí je v panelu otevřít). Souhlas se uloží a příště se neptá.",
-                ok: "Vybrat složku…")
-            if welcome { _ = choose(directory: Sandbox.home, message: "Vyberte složku, ke které chcete TCommanderu povolit přístup (doporučeno: vaše domovská složka).", target: nil) }
+            // Povolení celého disku stačí udělit jednou; pak už se nikdo neptá (kromě dalších disků a systémových složek chráněných macOS).
+            let whole = L("Celý disk (doporučeno, pak se už nikdo neptá)"), homeOnly = L("Jen moje domovská složka")
+            if let choice = Dialogs.choose(
+                title: L("Vítejte v TCommanderu"),
+                message: L("Aby mohl TCommander pracovat s vašimi soubory, potřebuje váš souhlas s přístupem. Povolíte-li celý disk, stačí to udělat jednou. Souhlas se uloží a příště se neptá."),
+                options: [whole, homeOnly], ok: L("Pokračovat…")) {
+                if choice == 0 {
+                    _ = choose(directory: URL(fileURLWithPath: "/"), message: L("Potvrďte tlačítkem „Povolit přístup“. TCommander tak získá přístup ke všemu, co smíte otevřít; systémové složky chráněné macOS zůstanou nedostupné."), target: nil)
+                } else {
+                    _ = choose(directory: Sandbox.home, message: L("Vyberte složku, ke které chcete TCommanderu povolit přístup (doporučeno: vaše domovská složka)."), target: nil)
+                }
+            }
         }
         AppModel.shared.reloadAll()
     }
