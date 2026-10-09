@@ -62,6 +62,9 @@ elif [ "$DRY" != "1" ]; then
 fi
 
 echo "==> Podpis (${APP_IDENTITY/#-/ad-hoc})"
+# profil stažený z prohlížeče nese atribut com.apple.quarantine, který App Store v balíčku nepřijme (chyba 91109)
+xattr -cr "$APP"
+if xattr -lr "$APP" | grep -q "com.apple.quarantine"; then echo "CHYBA: v aplikaci zůstal atribut com.apple.quarantine." >&2; exit 1; fi
 if [ "$APP_IDENTITY" = "-" ]; then codesign --force --sign - --entitlements "$ENT" "$APP"
 else codesign --force --timestamp --options runtime --sign "$APP_IDENTITY" --entitlements "$ENT" "$APP"; fi
 codesign --verify --deep --strict --verbose=2 "$APP"

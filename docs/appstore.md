@@ -94,3 +94,10 @@ Název v App Store Connect jde změnit do odeslání; v kódu je třeba přepsat
 ## Stránka se všemi texty
 
 `appstore/listing.html` obsahuje všechna pole pro App Store Connect (texty v en-US a cs s počítadly znaků, odkazy, odpovědi na dotazníky, poznámku pro recenzenta) a všechny snímky. Sestavuje se příkazem `python3 scripts/build_listing.py` z `appstore/metadata`. Snímky se pořizují příkazem `scripts/screenshots/take.sh` (vždy anglicky, 2880×1800).
+
+## Chyby při nahrání, které jsme řešili
+
+- **Nebyly nalezeny vhodné záznamy aplikací** (Transporter): nejdřív založte aplikaci v App Store Connect (Apps › + › New App s Bundle ID `cz.ok1xoe.TCommander`), teprve potom nahrávejte.
+- **90788, LSHandlerRank**: každý typ dokumentu v `Info.plist` musí mít `LSHandlerRank` (u složek `Alternate`).
+- **91109, com.apple.quarantine**: profil stažený z prohlížeče nese karanténní atribut. `scripts/appstore.sh` ho před podpisem odstraňuje (`xattr -cr`) a ověřuje.
+- Každé další nahrání potřebuje vyšší `BUILD_NUMBER` (1, 2 a 3 už Apple viděl; poslední zpracované sestavení je 3).
