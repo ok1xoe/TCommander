@@ -33,6 +33,8 @@ jobs:
       - name: Sestavení webu
         env:
           APPSTORE_URL: ${{ vars.APPSTORE_URL }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
         run: scripts/build_site.sh
       - uses: actions/upload-pages-artifact@v3
         with:

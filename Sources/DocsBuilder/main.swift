@@ -2,15 +2,15 @@ import Foundation
 import TCCore
 
 // Generátor webu a příručky: docs/manual/<jazyk>/*.md → site/ (HTML, vyhledávací index, úvodní stránky, mapa webu).
-// Použití: DocsBuilder [--manual docs/manual] [--web docs/web] [--out site] [--version 1.0.0] [--site-url https://…] [--repo https://github.com/…] [--appstore-url https://…]
+// Použití: DocsBuilder [--manual docs/manual] [--web docs/web] [--out site] [--version 1.0.0] [--site-url https://…] [--repo https://github.com/…] [--appstore-url https://…] [--custom-domain tcommander.example.com]
 
 var options: [String: String] = ["--manual": "docs/manual", "--web": "docs/web", "--out": "site", "--version": TCVersion.string,
-                                 "--site-url": "https://ok1xoe.github.io/TCommander", "--repo": "https://github.com/ok1xoe/TCommander", "--appstore-url": ""]
+                                 "--site-url": "https://ok1xoe.github.io/TCommander", "--repo": "https://github.com/ok1xoe/TCommander", "--appstore-url": "", "--custom-domain": ""]
 var argv = Array(CommandLine.arguments.dropFirst())
 while argv.count >= 2 { if options[argv[0]] != nil || argv[0].hasPrefix("--") { options[argv[0]] = argv[1] }; argv.removeFirst(2) }
 let fm = FileManager.default
 let manual = URL(fileURLWithPath: options["--manual"]!), web = URL(fileURLWithPath: options["--web"]!), out = URL(fileURLWithPath: options["--out"]!)
-let version = options["--version"]!, siteURL = options["--site-url"]!, repo = options["--repo"]!, appStoreURL = options["--appstore-url"]!
+let version = options["--version"]!, siteURL = options["--site-url"]!.hasSuffix("/") ? String(options["--site-url"]!.dropLast()) : options["--site-url"]!, repo = options["--repo"]!, appStoreURL = options["--appstore-url"]!, customDomain = options["--custom-domain"]!
 var warnings: [String] = []
 
 func esc(_ s: String) -> String { MarkdownHTML.escape(s) }
@@ -169,9 +169,15 @@ func landing(_ s: Strings, hasScreens: [String]) -> String {
     let download = "\(repo)/releases/latest"
     let storeButton = appStoreURL.isEmpty ? "<span class=\"btn disabled\">\(s.appStoreSoon)</span>" : "<a class=\"btn\" href=\"\(esc(appStoreURL))\">\(s.appStore)</a>"
     let features = s.features.map { "<div class=\"card\"><h3>\(esc($0.0))</h3><p>\(esc($0.1))</p></div>" }.joined(separator: "\n")
-    let rows = s.editionRows.map { "<tr><td>\(esc($0.0))</td><td>\(esc($0.1))</td><td>\(esc($0.2))</td></tr>" }.joined()
+    func mark(_ v: String) -> String { v == "✓" ? "<span class=\"yes\" role=\"img\" aria-label=\"\(s.yes)\">✓</span>" : (v == "✗" ? "<span class=\"no\" role=\"img\" aria-label=\"\(s.no)\">✗</span>" : esc(v)) }
+    let rows = s.editionRows.map { "<tr><th scope=\"row\">\(esc($0.0))</th><td>\(mark($0.1))</td><td>\(mark($0.2))</td><td class=\"why\">\(esc($0.3))</td></tr>" }.joined()
+    let heads = s.editionHeads
+    let switchCards = s.switchItems.map { "<div class=\"card\"><h3>\(esc($0.0))</h3><p>\(esc($0.1))</p></div>" }.joined(separator: "\n")
     let faq = s.faq.map { "<details><summary>\(esc($0.0))</summary><p>\(esc($0.1))</p></details>" }.joined(separator: "\n")
-    let screens = hasScreens.isEmpty ? "" : "<section class=\"shots\"><h2>\(s.screenshotsTitle)</h2><div class=\"grid shots-grid\">" + hasScreens.map { "<a href=\"\(assets)img/\($0)\"><img src=\"\(assets)img/\($0)\" alt=\"TCommander screenshot\" loading=\"lazy\"></a>" }.joined() + "</div></section>"
+    func shot(_ f: String) -> String { "<a href=\"\(assets)img/\(f)\"><img src=\"\(assets)img/\(f)\" alt=\"TCommander screenshot\" loading=\"lazy\"></a>" }
+    let firstShots = hasScreens.prefix(6), moreShots = hasScreens.dropFirst(6)
+    let moreBlock = moreShots.isEmpty ? "" : "<details class=\"more-shots\"><summary>\(s.allScreenshots)</summary><div class=\"grid shots-grid\">" + moreShots.map(shot).joined() + "</div></details>"
+    let screens = hasScreens.isEmpty ? "" : "<section class=\"shots\"><h2>\(s.screenshotsTitle)</h2><div class=\"grid shots-grid\">" + firstShots.map(shot).joined() + "</div>" + moreBlock + "</section>"
     let ld = """
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"TCommander","operatingSystem":"macOS 14+","applicationCategory":"UtilitiesApplication","softwareVersion":"\(version)","description":"\(esc(s.subtitle))","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"\(canonical)"}</script>
     """
@@ -187,11 +193,24 @@ func landing(_ s: Strings, hasScreens: [String]) -> String {
     </section>
     \(screens)
     <section><h2>\(s.featuresTitle)</h2><div class="grid">\(features)</div></section>
+    <section class="switch"><h2>\(s.switchTitle)</h2><div class="grid">\(switchCards)</div></section>
     <section class="editions"><h2>\(s.editionsTitle)</h2><p>\(esc(s.editionsIntro))</p>
-      <table><thead><tr><th>\(esc(s.editionHeads.0))</th><th>\(esc(s.editionHeads.1))</th><th>\(esc(s.editionHeads.2))</th></tr></thead><tbody>\(rows)</tbody></table></section>
+      <div class="table-wrap"><table><thead><tr><th scope="col">\(esc(heads.0))</th><th scope="col">\(esc(heads.1))</th><th scope="col">\(esc(heads.2))</th><th scope="col">\(esc(heads.3))</th></tr></thead><tbody>\(rows)</tbody></table></div></section>
+    <section class="get"><h2>\(s.downloadTitle)</h2><div class="grid two">
+      <div class="card"><h3>\(esc(s.githubEditionTitle))</h3><p>\(esc(s.githubEditionText))</p><p class="cta left"><a class="btn primary" href="\(download)">\(s.download)</a></p></div>
+      <div class="card"><h3>\(esc(s.storeEditionTitle))</h3><p>\(esc(s.storeEditionText))</p><p class="cta left">\(storeButton)</p></div></div></section>
     <section class="faq"><h2>\(s.faqTitle)</h2>\(faq)</section>
     <footer class="foot"><p>\(s.footerNote)</p><p><a href="\(docs)">\(s.guide)</a> · <a href="\(privacyURL)">\(s.privacy)</a> · <a href="\(repo)/issues">\(s.support)</a> · <a href="\(repo)">\(s.license)</a></p><p class="small">© 2026 Tomáš Kaplan · TCommander is an independent project and is not affiliated with Total Commander or its author.</p></footer>
     </body></html>
+    """
+}
+
+func notFoundPage(_ s: Strings) -> String {
+    // 404.html se zobrazuje na libovolné adrese, proto má odkazy absolutní
+    let assets = siteURL + "/assets/"
+    return head(s, title: "404 – TCommander", description: s.notFoundText, assets: assets, canonical: siteURL + "/404.html", alternate: siteURL + "/", searchIndex: nil) + """
+    <body class="landing"><header class="top"><a class="brand" href="\(siteURL)/"><img src="\(assets)img/icon-64.png" alt="" width="28" height="28"><b>TCommander</b></a></header>
+    <section class="hero"><h1>404</h1><p class="sub">\(esc(s.notFoundText))</p><p class="cta"><a class="btn primary" href="\(siteURL)/">\(s.home)</a> <a class="btn" href="\(siteURL)/docs/en/index.html">\(s.guide)</a></p></section></body></html>
     """
 }
 
@@ -242,6 +261,8 @@ let screens = images.filter { $0.hasPrefix("screenshot-") }.sorted()
 write(landing(.en, hasScreens: screens), to: out.appendingPathComponent("index.html"))
 write(landing(.cs, hasScreens: screens), to: out.appendingPathComponent("cs/index.html"))
 write("", to: out.appendingPathComponent(".nojekyll"))
+if !customDomain.isEmpty { write(customDomain + "\n", to: out.appendingPathComponent("CNAME")) }
+write(notFoundPage(.en), to: out.appendingPathComponent("404.html"))
 write("User-agent: *\nAllow: /\nSitemap: \(siteURL)/sitemap.xml\n", to: out.appendingPathComponent("robots.txt"))
 write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" + sitemap.map { "  <url><loc>\($0)</loc></url>" }.joined(separator: "\n") + "\n</urlset>\n", to: out.appendingPathComponent("sitemap.xml"))
 if !appStoreURL.isEmpty { write(appStoreURL, to: out.appendingPathComponent("appstore-url.txt")) }
