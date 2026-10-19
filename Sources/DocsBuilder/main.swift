@@ -5,12 +5,13 @@ import TCCore
 // Použití: DocsBuilder [--manual docs/manual] [--web docs/web] [--out site] [--version 1.0.0] [--site-url https://…] [--repo https://github.com/…] [--appstore-url https://…] [--custom-domain tcommander.example.com]
 
 var options: [String: String] = ["--manual": "docs/manual", "--web": "docs/web", "--out": "site", "--version": TCVersion.string,
-                                 "--site-url": "https://ok1xoe.github.io/TCommander", "--repo": "https://github.com/ok1xoe/TCommander", "--appstore-url": "", "--custom-domain": ""]
+                                 "--site-url": "https://ok1xoe.github.io/TCommander", "--repo": "https://github.com/ok1xoe/TCommander", "--appstore-url": "", "--custom-domain": "", "--docs-dir": "docs", "--home-url": "", "--guide-only": ""]
 var argv = Array(CommandLine.arguments.dropFirst())
 while argv.count >= 2 { if options[argv[0]] != nil || argv[0].hasPrefix("--") { options[argv[0]] = argv[1] }; argv.removeFirst(2) }
 let fm = FileManager.default
 let manual = URL(fileURLWithPath: options["--manual"]!), web = URL(fileURLWithPath: options["--web"]!), out = URL(fileURLWithPath: options["--out"]!)
 let version = options["--version"]!, siteURL = options["--site-url"]!.hasSuffix("/") ? String(options["--site-url"]!.dropLast()) : options["--site-url"]!, repo = options["--repo"]!, appStoreURL = options["--appstore-url"]!, customDomain = options["--custom-domain"]!
+let docsDir = options["--docs-dir"]!, homeURL = options["--home-url"]!, guideOnly = !options["--guide-only"]!.isEmpty   // XOE: příručka jako /tcommander/manual/…, odkaz „Domů“ na ručně psanou produktovou stránku
 var warnings: [String] = []
 
 func esc(_ s: String) -> String { MarkdownHTML.escape(s) }
@@ -133,10 +134,10 @@ func renderGuidePage(_ s: Strings, pages: [Page], index: Int) -> String {
     }.joined(separator: "\n")
     let prev = index > 0 ? "<a class=\"prev\" href=\"\(htmlFileName(pages[index - 1].slug))\">← \(s.previous)<span>\(esc(pages[index - 1].title))</span></a>" : "<span></span>"
     let next = index + 1 < pages.count ? "<a class=\"next\" href=\"\(htmlFileName(pages[index + 1].slug))\">\(s.next) →<span>\(esc(pages[index + 1].title))</span></a>" : "<span></span>"
-    let canonical = "\(siteURL)/docs/\(langPath)/\(htmlFileName(p.slug))"
-    let alt = "\(siteURL)/docs/\(s.otherLanguage)/\(htmlFileName(p.slug))"
+    let canonical = "\(siteURL)/\(docsDir)/\(langPath)/\(htmlFileName(p.slug))"
+    let alt = "\(siteURL)/\(docsDir)/\(s.otherLanguage)/\(htmlFileName(p.slug))"
     let desc = String(p.plain.prefix(155))
-    let landing = s.lang == "en" ? "../../index.html" : "../../cs/index.html"
+    let landing = !homeURL.isEmpty ? homeURL : (s.lang == "en" ? "../../index.html" : "../../cs/index.html")
     return head(s, title: "\(p.title) – TCommander", description: desc, assets: "../../assets/", canonical: canonical, alternate: alt, searchIndex: "search-index.js") + """
     <body class="guide">
     <header class="top">
@@ -152,7 +153,7 @@ func renderGuidePage(_ s: Strings, pages: [Page], index: Int) -> String {
     \(p.html)
       </article>
       <div class="pager">\(prev)\(next)</div>
-      <footer><a href="privacy.html">\(s.privacy)</a> · <a href="support.html">\(s.support)</a> · <a href="\(repo)">\(s.license)</a> · TCommander \(version)</footer>
+      <footer><a href="\(homeURL.isEmpty ? "privacy.html" : homeURL + "privacy/")">\(s.privacy)</a> · <a href="\(homeURL.isEmpty ? "support.html" : homeURL + "support/")">\(s.support)</a> · <a href="\(repo)">\(s.license)</a> · TCommander \(version)</footer>
       </main>
     </div>
     </body></html>
@@ -238,9 +239,9 @@ for s in [Strings.en, Strings.cs] {
     }
     var index: [[String: String]] = []
     for (i, p) in pages.enumerated() {
-        write(renderGuidePage(s, pages: pages, index: i), to: out.appendingPathComponent("docs/\(s.lang)/\(htmlFileName(p.slug))"))
+        write(renderGuidePage(s, pages: pages, index: i), to: out.appendingPathComponent("\(docsDir)/\(s.lang)/\(htmlFileName(p.slug))"))
         index.append(["t": p.title, "u": htmlFileName(p.slug), "x": String(p.plain.prefix(12000))])
-        sitemap.append("\(siteURL)/docs/\(s.lang)/\(htmlFileName(p.slug))")
+        sitemap.append("\(siteURL)/\(docsDir)/\(s.lang)/\(htmlFileName(p.slug))")
         // odkazy mezi stránkami musí vést na existující soubory
         for m in (try? NSRegularExpression(pattern: #"href="([^":#]+\.html)(?:#[^"]*)?""#))?.matches(in: p.html, range: NSRange(p.html.startIndex..., in: p.html)) ?? [] {
             let target = (p.html as NSString).substring(with: m.range(at: 1))
@@ -248,7 +249,7 @@ for s in [Strings.en, Strings.cs] {
         }
     }
     let json = String(decoding: (try? JSONSerialization.data(withJSONObject: index, options: [])) ?? Data("[]".utf8), as: UTF8.self)
-    write("window.TC_SEARCH = \(json);\n", to: out.appendingPathComponent("docs/\(s.lang)/search-index.js"))
+    write("window.TC_SEARCH = \(json);\n", to: out.appendingPathComponent("\(docsDir)/\(s.lang)/search-index.js"))
 }
 
 // statické soubory a úvodní stránky
@@ -260,6 +261,7 @@ try? fm.createDirectory(at: imgOut, withIntermediateDirectories: true)
 let images = ((try? fm.contentsOfDirectory(atPath: imgIn.path)) ?? []).filter { !$0.hasPrefix(".") }
 for f in images { try? fm.copyItem(at: imgIn.appendingPathComponent(f), to: imgOut.appendingPathComponent(f)) }
 let screens = images.filter { $0.hasPrefix("screenshot-") }.sorted()
+if guideOnly { for w in warnings { fputs("VAROVÁNÍ: \(w)\n", stderr) }; print("Hotovo (jen příručka): \(out.path)"); exit(warnings.isEmpty || ProcessInfo.processInfo.environment["DOCS_STRICT"] != "1" ? 0 : 2) }
 write(landing(.en, hasScreens: screens), to: out.appendingPathComponent("index.html"))
 write(landing(.cs, hasScreens: screens), to: out.appendingPathComponent("cs/index.html"))
 write("", to: out.appendingPathComponent(".nojekyll"))
