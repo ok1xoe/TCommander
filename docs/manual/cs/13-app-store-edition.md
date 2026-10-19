@@ -4,7 +4,7 @@ Mac App Store vyžaduje, aby každá aplikace běžela v **App Sandboxu**, ochra
 
 ## Povolení přístupu k souborům
 
-- Při prvním spuštění vás TCommander požádá o výběr složky. **Vyberte svou domovskou složku** (nebo jakoukoli jinou): TCommander pak může otevřít tu složku i vše v ní.
+- Při prvním spuštění se TCommander v úvodním dialogu zeptá, co smí. **Vyberte *Celý disk* (doporučeno)** a potvrďte tlačítkem *Povolit přístup*: TCommander pak může otevřít vše, co smíte otevřít, a už se neptá. Pro užší oprávnění zvolte *Jen moje domovská složka*. Systémové složky chráněné macOS zůstanou nedostupné v obou případech.
 - Když později otevřete místo, které ještě není pokryté (např. jiný disk v `/Volumes` nebo složku mimo domov), objeví se stejný dialog pro ně. Můžete vybrat celý disk a povolit ho celý.
 - Vaše volby se pamatují; znovu se neptá.
 - Můžete také **přetáhnout složku na ikonu TCommanderu** v Docku nebo použít *Otevřít v ▸ TCommander* ve Finderu, čímž složku povolíte.

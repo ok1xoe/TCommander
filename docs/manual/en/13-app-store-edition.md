@@ -4,7 +4,7 @@ The Mac App Store requires every app to run in the **App Sandbox**, a protection
 
 ## Allowing access to your files
 
-- The first time you start TCommander it asks you to choose a folder. **Choose your home folder** (or any other folder): TCommander can then open that folder and everything inside it.
+- The first time you start TCommander a welcome dialog asks what to allow. **Choose *Whole disk* (recommended)** and confirm with *Allow Access*: TCommander can then open everything you are allowed to open, and you are not asked again. Choose *Only my home folder* for a narrower permission. System folders protected by macOS stay unavailable either way.
 - If you later open a place that is not covered yet (for example another disk in `/Volumes`, or a folder outside your home), the same dialog appears for it. You can choose a whole disk to allow it entirely.
 - Your choices are remembered; you are not asked again.
 - You can also **drop a folder on the TCommander icon** in the Dock, or use *Open With ▸ TCommander* in Finder, which allows that folder.
