@@ -26,8 +26,9 @@ struct Page { var slug: String; var title: String; var markdown: String; var htm
 func loadPages(_ lang: String) -> [Page] {
     let dir = manual.appendingPathComponent(lang)
     let names = ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).filter { $0.hasSuffix(".md") }.sorted { a, b in
-        // privacy.md až na konec, ostatní podle čísla
-        if a == "privacy.md" { return false }; if b == "privacy.md" { return true }; return a < b
+        // support.md a privacy.md až na konec, ostatní podle čísla
+        func rank(_ n: String) -> Int { n == "privacy.md" ? 2 : (n == "support.md" ? 1 : 0) }
+        return rank(a) != rank(b) ? rank(a) < rank(b) : a < b
     }
     var pages: [Page] = []
     for n in names {
@@ -151,7 +152,7 @@ func renderGuidePage(_ s: Strings, pages: [Page], index: Int) -> String {
     \(p.html)
       </article>
       <div class="pager">\(prev)\(next)</div>
-      <footer><a href="privacy.html">\(s.privacy)</a> · <a href="\(repo)/issues">\(s.support)</a> · <a href="\(repo)">\(s.license)</a> · TCommander \(version)</footer>
+      <footer><a href="privacy.html">\(s.privacy)</a> · <a href="support.html">\(s.support)</a> · <a href="\(repo)">\(s.license)</a> · TCommander \(version)</footer>
       </main>
     </div>
     </body></html>
@@ -163,6 +164,7 @@ func landing(_ s: Strings, hasScreens: [String]) -> String {
     let assets = isEN ? "assets/" : "../assets/"
     let docs = isEN ? "docs/en/index.html" : "../docs/cs/index.html"
     let privacyURL = isEN ? "docs/en/privacy.html" : "../docs/cs/privacy.html"
+    let supportURL = isEN ? "docs/en/support.html" : "../docs/cs/support.html"
     let other = isEN ? "cs/index.html" : "../index.html"
     let canonical = isEN ? "\(siteURL)/" : "\(siteURL)/cs/"
     let alternate = isEN ? "\(siteURL)/cs/" : "\(siteURL)/"
@@ -200,7 +202,7 @@ func landing(_ s: Strings, hasScreens: [String]) -> String {
       <div class="card"><h3>\(esc(s.githubEditionTitle))</h3><p>\(esc(s.githubEditionText))</p><p class="cta left"><a class="btn primary" href="\(download)">\(s.download)</a></p></div>
       <div class="card"><h3>\(esc(s.storeEditionTitle))</h3><p>\(esc(s.storeEditionText))</p><p class="cta left">\(storeButton)</p></div></div></section>
     <section class="faq"><h2>\(s.faqTitle)</h2>\(faq)</section>
-    <footer class="foot"><p>\(s.footerNote)</p><p><a href="\(docs)">\(s.guide)</a> · <a href="\(privacyURL)">\(s.privacy)</a> · <a href="\(repo)/issues">\(s.support)</a> · <a href="\(repo)">\(s.license)</a></p><p class="small">© 2026 Tomáš Kaplan · TCommander is an independent project and is not affiliated with Total Commander or its author.</p></footer>
+    <footer class="foot"><p>\(s.footerNote)</p><p><a href="\(docs)">\(s.guide)</a> · <a href="\(privacyURL)">\(s.privacy)</a> · <a href="\(supportURL)">\(s.support)</a> · <a href="\(repo)">\(s.license)</a></p><p class="small">© 2026 Tomáš Kaplan · TCommander is an independent project and is not affiliated with Total Commander or its author.</p></footer>
     </body></html>
     """
 }
@@ -227,7 +229,7 @@ for s in [Strings.en, Strings.cs] {
     let sc = shortcutsMarkdown(cs: s.lang == "cs")
     let shortcutsPage = Page(slug: "12-shortcuts", title: String(sc.split(separator: "\n").first!.dropFirst(2)), markdown: sc)
     if !pages.contains(where: { $0.slug == "12-shortcuts" }) {
-        let at = pages.firstIndex { $0.slug > "12-shortcuts" && $0.slug != "privacy" } ?? pages.firstIndex { $0.slug == "privacy" } ?? pages.count
+        let at = pages.firstIndex { $0.slug > "12-shortcuts" && $0.slug != "privacy" && $0.slug != "support" } ?? pages.firstIndex { $0.slug == "privacy" } ?? pages.count
         pages.insert(shortcutsPage, at: at)
     }
     for i in pages.indices {
