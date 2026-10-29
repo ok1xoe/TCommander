@@ -17,10 +17,10 @@ enum AccessPrompt {
             let whole = L("Celý disk (doporučeno, pak se už nikdo neptá)"), homeOnly = L("Jen moje domovská složka")
             if let choice = Dialogs.choose(
                 title: L("Vítejte v TCommanderu"),
-                message: L("Aby mohl TCommander pracovat s vašimi soubory, potřebuje váš souhlas s přístupem. Povolíte-li celý disk, stačí to udělat jednou. Souhlas se uloží a příště se neptá."),
+                message: L("Aby mohl TCommander pracovat s vašimi soubory, potřebuje váš souhlas s přístupem; bez něj nemá přístup k ničemu. Souhlas udělujete sami v systémovém dialogu. Nejde o oprávnění správce a TCommander po vás heslo správce ani zvýšená práva nikdy nežádá. Povolíte-li celý disk, stačí to udělat jednou, ale ani tak se vám neotevřou systémové složky chráněné macOS – ty zůstanou nedostupné. Souhlas se uloží a příště se neptá."),
                 options: [whole, homeOnly], ok: L("Pokračovat…")) {
                 if choice == 0 {
-                    _ = choose(directory: URL(fileURLWithPath: "/"), message: L("Potvrďte tlačítkem „Povolit přístup“. TCommander tak získá přístup ke všemu, co smíte otevřít; systémové složky chráněné macOS zůstanou nedostupné."), target: nil)
+                    _ = choose(directory: URL(fileURLWithPath: "/"), message: L("Potvrďte tlačítkem „Povolit přístup“. Jde o běžný souhlas uživatele, nikoli o oprávnění správce: TCommander nežádá heslo správce ani zvýšená práva. Získá přístup jen k tomu, co smíte otevřít vy sami; systémové složky chráněné macOS zůstanou nedostupné."), target: nil)
                 } else {
                     _ = choose(directory: Sandbox.home, message: L("Vyberte složku, ke které chcete TCommanderu povolit přístup (doporučeno: vaše domovská složka)."), target: nil)
                 }
